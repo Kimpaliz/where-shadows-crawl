@@ -3,6 +3,36 @@
 Oben das Neueste. Jeder Eintrag sagt **was**, **warum** und **womit
 gemessen** — nicht nur, dass etwas anders ist.
 
+## 0.6.1 — Phase 11: Koop über das Netz (05.09.2026)
+
+Janniks Antwort auf #46: *„Koop über webbrowser zugleich."* — also
+online, im Browser, gleichzeitig. Fünf neue Schritte (#53 bis #58).
+
+**Was diese Antwort sofort ändert, obwohl noch keine Zeile Netzcode
+existiert:** Die Regeln aus `CLAUDE.md` — `spiel/` kennt keinen
+Browser, kein `Math.random`, fester Schritt von 1/60 s — sind ab jetzt
+**tragend** statt ordentlich. Zwei Rechner mit derselben Saat und
+denselben Tastendrücken rechnen dieselbe Welt aus; über die Leitung
+müssen dann nur zwei Achsen und ein Knopf je Spieler und Bild.
+
+Jedes `Math.random` im Kern lässt die beiden Rechner auseinanderlaufen,
+und zwar **langsam** — man merkt es erst nach Minuten, wenn die Welten
+sich schon widersprechen. `pruefe-kern.mjs` hält alle drei Regeln
+bereits fest; er ist ab dieser Entscheidung kein Ordnungsdienst mehr,
+sondern die Sicherung.
+
+Deshalb steht Schritt **11.1 vor allem anderen**: Zwei Welten im selben
+Prozess, gefüttert mit denselben Eingaben, müssen nach zehn Minuten
+bitgleich sein — und ein absichtlich eingebautes `Math.random` muss das
+Werkzeug melden. Erst danach geht etwas über eine Leitung.
+
+**Ein Fund am Rande:** GitHubs Liste der Vorgänge hinkt dem Anlegen um
+Sekunden hinterher. Das Skript, das die Nummern in den Fahrplan
+zurückträgt, hat die zwei fehlenden **gemeldet** statt sie aus der
+Reihenfolge zu raten — eine geratene Nummer wäre still falsch gewesen.
+
+---
+
 ## 0.6.0 — Endlose Nächte, und drei Löcher, die sie aufgedeckt haben (05.09.2026)
 
 Janniks Ansagen: *„Im arena modus endloswellen, jede welle 30 sekunden
