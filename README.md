@@ -1,4 +1,4 @@
-# Nachtzehrer
+# Where Shadows Crawl
 
 Ein Wellen-Überlebensspiel für den Browser, zu **einem bis vier** an
 einem Rechner. Dark Fantasy, exakt von oben, Pixelgrafik.
@@ -82,17 +82,17 @@ Spiel besteht aus Dateien in diesem Ordner.
 
 ## Wo die Arbeit steht
 
-Das Repository ist <https://github.com/Kimpaliz/nachtzehrer> (privat).
+Das Repository ist <https://github.com/Kimpaliz/where-shadows-crawl> (privat).
 Der Stand einer Sache steht **nicht** in einem Dokument, sondern in
 ihrem Vorgang — ein Dokument, das „ist erledigt" sagt, veraltet
 lautlos.
 
 | Was du willst | wo |
 | --- | --- |
-| Etwas wünschen | [neuer Vorgang → Wunsch](https://github.com/Kimpaliz/nachtzehrer/issues/new?template=wunsch.yml) |
-| Etwas melden, das nicht tut | [neuer Vorgang → Fehler](https://github.com/Kimpaliz/nachtzehrer/issues/new?template=fehler.yml) |
-| Eine Frage stellen, die etwas blockiert | [neuer Vorgang → Entscheidung](https://github.com/Kimpaliz/nachtzehrer/issues/new?template=entscheidung.yml) |
-| Sehen, was ansteht | [die Phasen](https://github.com/Kimpaliz/nachtzehrer/labels/track) · [die offenen Fragen](https://github.com/Kimpaliz/nachtzehrer/labels/entscheidung) |
+| Etwas wünschen | [neuer Vorgang → Wunsch](https://github.com/Kimpaliz/where-shadows-crawl/issues/new?template=wunsch.yml) |
+| Etwas melden, das nicht tut | [neuer Vorgang → Fehler](https://github.com/Kimpaliz/where-shadows-crawl/issues/new?template=fehler.yml) |
+| Eine Frage stellen, die etwas blockiert | [neuer Vorgang → Entscheidung](https://github.com/Kimpaliz/where-shadows-crawl/issues/new?template=entscheidung.yml) |
+| Sehen, was ansteht | [die Phasen](https://github.com/Kimpaliz/where-shadows-crawl/labels/track) · [die offenen Fragen](https://github.com/Kimpaliz/where-shadows-crawl/labels/entscheidung) |
 
 Die Begründung steht dagegen im Repository:
 [docs/ROADMAP.md](docs/ROADMAP.md) sagt, **warum** die Reihenfolge so

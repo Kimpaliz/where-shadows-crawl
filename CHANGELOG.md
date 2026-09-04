@@ -3,6 +3,28 @@
 Oben das Neueste. Jeder Eintrag sagt **was**, **warum** und **womit
 gemessen** — nicht nur, dass etwas anders ist.
 
+## 0.5.0 — Das Spiel heißt **Where Shadows Crawl** (05.09.2026)
+
+Janniks Entscheidung (#48). Der Arbeitstitel „Nachtzehrer" ist damit
+Geschichte.
+
+Geändert: Titelbild, `<title>`, README, `CLAUDE.md`, der Entwurf und
+die Meldung des Vorschau-Servers. Das **Repository** heißt jetzt
+`Kimpaliz/where-shadows-crawl` — GitHub leitet die alte Adresse
+dauerhaft weiter, und `alpha-code.json` ist nachgezogen.
+
+**Der Ordner bleibt `Nachtzehrer`.** Ein Umbenennen bräche die
+Vorschau-Konfiguration und jeden Pfad, der irgendwo notiert ist, und
+brächte nichts — dasselbe gilt bei Scotophobia, das im Ordner
+„Granithoehle" liegt.
+
+**Ein Untertitel ist dabei mitgestorben:** „ZWÖLF STUNDEN, EIN
+BANNKREIS" versprach eine Regel, die es nicht mehr gibt — mit
+Endloswellen kommt kein Morgen. Jetzt steht dort „EIN BANNKREIS · EINE
+FACKEL · KEIN MORGEN".
+
+---
+
 ## 0.4.1 — Janniks Silhouetten (05.09.2026)
 
 Seine Wahl aus den zehn Fassungen (#47): **Jäger schmal**,

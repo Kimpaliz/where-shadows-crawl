@@ -186,8 +186,8 @@ export function zeichneLaden(c, welt, menue) {
 export function zeichneVorspiel(c, menue, padZahl) {
   c.fillStyle = "#07060c";
   c.fillRect(0, 0, BREITE, HOEHE);
-  zeichneTextMittig(c, "NACHTZEHRER", BREITE / 2, 46, FARBEN.flammeHell, FARBEN.kontur);
-  zeichneTextMittig(c, "ZWÖLF STUNDEN, EIN BANNKREIS", BREITE / 2, 60, FARBEN.schriftMatt);
+  zeichneTextMittig(c, "WHERE SHADOWS CRAWL", BREITE / 2, 46, FARBEN.flammeHell, FARBEN.kontur);
+  zeichneTextMittig(c, "EIN BANNKREIS · EINE FACKEL · KEIN MORGEN", BREITE / 2, 60, FARBEN.schriftMatt);
 
   zeichneTextMittig(c, "WIE VIELE JÄGER?", BREITE / 2, 96, FARBEN.schrift);
   for (let i = 1; i <= 4; i++) {

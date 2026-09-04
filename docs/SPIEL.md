@@ -1,4 +1,4 @@
-# Nachtzehrer — der Entwurf
+# Where Shadows Crawl — der Entwurf
 
 > Janniks Auftrag, wörtlich: *„Meine freunde und ich brauchen ein
 > webbrowser game koop wie 'Brotatoe' selbes game design, aber ander
@@ -51,7 +51,7 @@ ablenken. Wer sie hinzufügt, baut ein anderes Spiel.
 
 ## 2 · Was hier anders wird — und was nicht
 
-| | Brotato | Nachtzehrer |
+| | Brotato | Where Shadows Crawl |
 | --- | --- | --- |
 | Bauteile 1 bis 12 | | **unverändert übernommen** |
 | Stil | bunte Kartoffeln | **Dark Fantasy**: Nacht, Fackelschein, Untote |

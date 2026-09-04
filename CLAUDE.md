@@ -1,4 +1,4 @@
-# Nachtzehrer — zuerst lesen
+# Where Shadows Crawl — zuerst lesen
 
 Ein Wellen-Überlebensspiel für den Browser, zu zweit bis viert. Janniks
 Auftrag wörtlich: *„Meine freunde und ich brauchen ein webbrowser game koop
