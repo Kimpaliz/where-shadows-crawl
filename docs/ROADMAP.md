@@ -82,6 +82,8 @@ Diese Punkte hängen an keiner Phase und können jederzeit dazwischen:
 
 ## Phase 1 — Der Modus-Begriff
 
+Vorgang: #1
+
 Aus „dem Spiel" wird „ein Modus des Spiels". Arena bekommt einen Namen,
 und der Ablauf fragt den Modus, statt ihn zu kennen.
 
@@ -96,6 +98,8 @@ nach dem Umbau **dieselben** Zahlen, und die Kette ist grün.
 
 ### 1.1 · Ein Modus ist ein Eintrag, kein Zweig
 
+Vorgang: #2
+
 Ein Katalog `spiel/katalog/modi.mjs` mit einem Eintrag „Arena": Name,
 Weltform, Ablauf, Verliererbedingung.
 
@@ -103,6 +107,8 @@ Weltform, Ablauf, Verliererbedingung.
 Regelkern enthält kein `if (modus === …)`.
 
 ### 1.2 · Die Verliererbedingung kommt aus dem Modus
+
+Vorgang: #3
 
 Heute steht „alle liegen" fest in `schritt()`. Der Karawanen-Modus
 verliert anders (die Kutsche fällt).
@@ -112,10 +118,14 @@ ruft sie, ohne sie zu kennen.
 
 ### 1.3 · Der Prüfstand kennt den Modus
 
+Vorgang: #4
+
 **Fertig, wenn:** `balance.mjs --modus arena` läuft und die Tabelle
 sagt, welcher Modus gemessen wurde.
 
 ### 1.4 · Modusauswahl im Vorspiel
+
+Vorgang: #5
 
 **Fertig, wenn:** Die Wahl steht neben der Spielerzahl und wird mit
 derselben Achse und demselben Knopf bedient.
@@ -123,6 +133,8 @@ derselben Achse und demselben Knopf bedient.
 ---
 
 ## Phase 2 — Besitz: Inventar, Ausrüstung, Waffen
+
+Vorgang: #6
 
 Janniks Wünsche 1 und 5. Ein Inventar mit Plätzen; Ausrüstung wird
 **angelegt** statt für immer eingerechnet.
@@ -137,6 +149,8 @@ sich durch den Umbau nicht.
 
 ### 2.1 · Werte = Grundwerte plus Angelegtes
 
+Vorgang: #7
+
 Heute rechnet `laden.mjs` gekaufte Werte direkt und dauerhaft in
 `spieler.werte`. Das wird zu einer Rechnung aus Grundwerten und dem,
 was gerade angelegt ist.
@@ -146,6 +160,8 @@ wie vorher — an einem Balancelauf mit festen Saaten belegt.
 
 ### 2.2 · Vier Ausrüstungsplätze
 
+Vorgang: #8
+
 Kopf, Leib, Hand, Ring. Genug zum Abwägen, wenig genug zum
 Überblicken.
 
@@ -154,6 +170,8 @@ landet im Inventar statt zu verschwinden.
 
 ### 2.3 · Das Inventar mit Grenze
 
+Vorgang: #9
+
 Zwanzig Plätze. Eine Grenze macht aus „mitnehmen" eine Entscheidung.
 
 **Fertig, wenn:** Ein volles Inventar nimmt nichts mehr auf und sagt
@@ -161,10 +179,14 @@ das, statt still zu schlucken.
 
 ### 2.4 · Vergleichen und Tauschen auf dem Bildschirm
 
+Vorgang: #10
+
 **Fertig, wenn:** Beim Anwählen eines Stücks steht der Unterschied zum
 angelegten daneben — grün, was besser wird, rot, was schlechter.
 
 ### 2.5 · Waffen ziehen ins Inventar um
+
+Vorgang: #11
 
 Die sechs Waffenplätze werden Ausrüstungsplätze einer eigenen Art.
 ⚠️ Ausrüstung darf **nie** um die sechs Waffenplätze konkurrieren
@@ -176,6 +198,8 @@ Wächter hält fest, dass Ausrüstung keinen Waffenplatz belegt.
 ---
 
 ## Phase 3 — Götter und Segen
+
+Vorgang: #12
 
 Die Aufstiegskarten kommen aus dem Vorrat eines gewählten Gottes statt
 aus einem flachen Topf. Segen haben Stufen und greifen ineinander.
@@ -189,21 +213,29 @@ anderen Endbau.
 
 ### 3.1 · Ein Gott als Kartenvorrat
 
+Vorgang: #13
+
 **Fertig, wenn:** `ziehKarten` bekommt einen Gott und zieht
 nachweislich nur aus dessen Vorrat.
 
 ### 3.2 · Segen mit Stufen
+
+Vorgang: #14
 
 **Fertig, wenn:** Eine Stufe 3 kann nachweislich nicht als erste Karte
 erscheinen.
 
 ### 3.3 · Gottwahl im Vorspiel
 
+Vorgang: #15
+
 **Fertig, wenn:** Die Wahl steht neben Spielerzahl und Modus.
 
 ---
 
 ## Phase 4 — Zufallseigenschaften
+
+Vorgang: #16
 
 Ein Fundstück ist ein Grundstück plus ein bis vier gewürfelte
 Eigenschaften; die Seltenheit bestimmt, wie viele.
@@ -219,15 +251,21 @@ als der Hälfte aller Stücke vor.
 
 ### 4.1 · Der Eigenschaften-Erzeuger
 
+Vorgang: #17
+
 **Fertig, wenn:** Aus Grundstück und Saat entsteht wiederholbar
 dasselbe Stück.
 
 ### 4.2 · Seltenheit bestimmt die Zahl der Eigenschaften
 
+Vorgang: #18
+
 **Fertig, wenn:** Ein Stück der höchsten Seltenheit trägt nachweislich
 mehr Eigenschaften als eines der niedrigsten.
 
 ### 4.3 · Eigenschaften mit Merkmalsbezug
+
+Vorgang: #19
 
 Eine Eigenschaft, die nur auf `Schnitt`-Waffen wirkt, macht aus einem
 Fund eine Bauentscheidung.
@@ -239,6 +277,8 @@ Merkmal, und die Prüfung belegt, dass sie sonst nichts tut.
 
 ## Phase 5 — Beute, die fällt
 
+Vorgang: #20
+
 Hauptleute und seltene Gegner lassen Ausrüstung fallen statt nur Gold.
 
 **Fertig, wenn:** Ein Hauptmann lässt nachweislich ein Stück fallen,
@@ -246,15 +286,21 @@ das sich von allem im Krämerangebot unterscheidet.
 
 ### 5.1 · Falltabellen je Gegnerart
 
+Vorgang: #21
+
 **Fertig, wenn:** Die Wahrscheinlichkeit steht im Katalog und nicht im
 Programm.
 
 ### 5.2 · Ausrüstung aufheben wie Gold
 
+Vorgang: #22
+
 **Fertig, wenn:** Die Aufsammelreichweite gilt dafür wie für Gold, und
 was liegen bleibt, ist am Wellenende weg.
 
 ### 5.3 · Sichtbar, was da liegt
+
+Vorgang: #23
 
 **Fertig, wenn:** Man sieht am Boden, welcher Seltenheit ein
 liegendes Stück ist, ohne darüberzulaufen.
@@ -262,6 +308,8 @@ liegendes Stück ist, ohne darüberzulaufen.
 ---
 
 ## Phase 6 — Welt ohne Kreis
+
+Vorgang: #24
 
 Janniks Wunsch 2, und die Grundlage für Wunsch 4. Die Welt besteht
 nicht mehr aus einer festen Scheibe, sondern aus erzeugten Stücken,
@@ -278,6 +326,8 @@ ist damit bewiesen, bevor irgendetwas Neues darauf steht.
 
 ### 6.1 · Die Weltform als Begriff
 
+Vorgang: #25
+
 Eine Weltform beantwortet drei Fragen: Wo darf ein Ding sein? Wo
 erscheinen Gegner? Was sieht die Kamera?
 
@@ -285,6 +335,8 @@ erscheinen Gegner? Was sieht die Kamera?
 Regelkern kennt `arena.radius` nicht mehr direkt.
 
 ### 6.2 · Boden in Stücken statt als Scheibe
+
+Vorgang: #26
 
 Heute wird der Boden **einmal** in eine Leinwand gemalt. Eine endlose
 Welt kann das nicht.
@@ -294,10 +346,14 @@ vorher.
 
 ### 6.3 · Stücke wachsen nach
 
+Vorgang: #27
+
 **Fertig, wenn:** Man kann zehn Minuten in eine Richtung laufen, ohne
 dass die Welt endet oder der Speicher wächst.
 
 ### 6.4 · Gesät und wiederholbar
+
+Vorgang: #28
 
 **Fertig, wenn:** Dieselbe Saat erzeugt zweimal dieselbe Welt — an
 denselben Bildpunkten belegt.
@@ -305,6 +361,8 @@ denselben Bildpunkten belegt.
 ---
 
 ## Phase 7 — Biome
+
+Vorgang: #29
 
 Der dunkle Wald, aus dem Janniks Karawanen-Modus besteht, ist das
 erste Biom. Ein Biom bestimmt Boden, Bewuchs, Gegnermischung und
@@ -315,14 +373,20 @@ Gegnermischung **und** Helligkeit — nicht nur in der Farbe.
 
 ### 7.1 · Ein Biom ist ein Katalogeintrag
 
+Vorgang: #30
+
 **Fertig, wenn:** Ein neues Biom braucht keine Zeile Programm.
 
 ### 7.2 · Der dunkle Wald
+
+Vorgang: #31
 
 **Fertig, wenn:** Bäume versperren nachweislich den Weg und die
 Sichtweite ist messbar kleiner als in der Arena.
 
 ### 7.3 · Übergänge zwischen Biomen
+
+Vorgang: #32
 
 **Fertig, wenn:** Man sieht, dass sich die Gegend ändert, bevor sie
 sich geändert hat.
@@ -330,6 +394,8 @@ sich geändert hat.
 ---
 
 ## Phase 8 — Der Karawanen-Modus
+
+Vorgang: #33
 
 Janniks Wunsch 4. Man eskortiert eine Kutsche durch den dunklen Wald.
 **Die Kutsche ist die Lichtquelle.** Auf ihr sitzt der Händler und
@@ -344,10 +410,14 @@ Prüfstand misst ihn wie den Arena-Modus.
 
 ### 8.1 · Die Kutsche als Ding mit Leben
 
+Vorgang: #34
+
 **Fertig, wenn:** Sie fährt, sie nimmt Schaden, und wenn sie fällt, ist
 der Lauf vorbei — über die Verliererbedingung aus Phase 1.
 
 ### 8.2 · Die Kutsche ist das Licht
+
+Vorgang: #35
 
 `welt.fackeln` ist bereits eine Liste; ein wanderndes Licht ist eine
 Zeile, die den Ort nachführt.
@@ -357,6 +427,8 @@ entfernt, steht im Dunkeln — messbar an der Helligkeit am Spielerort.
 
 ### 8.3 · Die Kutsche steht nicht still
 
+Vorgang: #36
+
 Sie fährt in Etappen; zwischen zwei Etappen ist Rast. Das ist der
 Takt, den heute die Welle vorgibt.
 
@@ -365,12 +437,16 @@ Takt, den heute die Welle vorgibt.
 
 ### 8.4 · Der Händler auf der Kutsche
 
+Vorgang: #37
+
 Derselbe Krämer, anders gerahmt.
 
 **Fertig, wenn:** Der Laden öffnet in der Rast und `oeffneKraemer()`
 ist unverändert.
 
 ### 8.5 · Gegner kommen von hinten und von der Seite
+
+Vorgang: #38
 
 In der Arena strömen sie von einem Kreisrand. Hier gibt es keinen.
 
@@ -380,6 +456,8 @@ erscheint so weit weg, dass er nie ankommt.
 ---
 
 ## Phase 9 — Danmaku für die Hauptleute
+
+Vorgang: #39
 
 Angekündigte Geschossmuster.
 
@@ -394,14 +472,20 @@ eigene.
 
 ### 9.1 · Ein Muster ist ein Katalogeintrag
 
+Vorgang: #40
+
 **Fertig, wenn:** Ein neues Muster braucht keine Zeile Programm.
 
 ### 9.2 · Die Ankündigung
+
+Vorgang: #41
 
 **Fertig, wenn:** Zwischen Ankündigung und Schuss liegt eine messbare
 halbe bis ganze Sekunde.
 
 ### 9.3 · Eigene und feindliche Geschosse trennen
+
+Vorgang: #42
 
 **Fertig, wenn:** Der Helligkeitsabstand ist gemessen und ein Wächter
 hält ihn fest.
@@ -409,6 +493,8 @@ hält ihn fest.
 ---
 
 ## Phase 10 — Fortschritt zwischen den Läufen
+
+Vorgang: #43
 
 Freischaltungen, die einen Lauf überdauern, gespeichert im Browser.
 
@@ -421,10 +507,14 @@ statt zu einem Absturz.
 
 ### 10.1 · Ein Spielstand mit Fassungsnummer
 
+Vorgang: #44
+
 **Fertig, wenn:** Ein Spielstand ohne Fassungsnummer wird verworfen
 statt falsch gelesen.
 
 ### 10.2 · Was sich freischalten lässt
+
+Vorgang: #45
 
 **Fertig, wenn:** Mindestens eine Freischaltung ist im Spiel sichtbar
 und im Spielstand nachweisbar.

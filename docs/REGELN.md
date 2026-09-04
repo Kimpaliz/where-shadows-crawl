@@ -228,16 +228,35 @@ Regel 13 sagt, **wo** der Stand lebt. Diese Regel sagt, **in welcher
 Form** — sobald das Projekt einen Vorgangs-Tracker hat (`vorgaenge` in
 `alpha-code.json`).
 
-**Drei Dinge werden zu Vorgängen:** der Fahrplan, jeder Fehlerbericht,
-jede offene Problematik. Nichts davon bleibt ein Absatz in einem
-Dokument.
+**Vier Dinge werden zu Vorgängen:** der Fahrplan, jeder rohe Wunsch,
+jeder Fehlerbericht, jede offene Problematik. Nichts davon bleibt ein
+Absatz in einem Dokument.
 
 | Form | Label | Eltern | trägt |
 | --- | --- | --- | --- |
 | **Phase** | `track` | keins | das Abnahmekriterium aus `docs/ROADMAP.md` |
 | **Schritt** | `schritt` | Phase | **ein** Fertig-Kriterium |
+| **Wunsch** | `wunsch` | **keins** | den Wortlaut, unverändert |
 | **Fehler** | `fehler` | frei | das Vier-Felder-Muster des Fehlerbuchs |
 | **Entscheidung** | `entscheidung` | **keins** | Frage, Optionen, Empfehlung |
+
+**Der Wunsch ist die fünfte Form** (Ansage Jannik, 05.09.2026). Er ist
+**roh**: aufgeschrieben, wie er gemeint war, nicht zerlegt und nicht
+bewertet. Ohne ihn müsste ein neuer Einfall sofort eine Phase werden —
+also sofort zerlegt, bevor jemand ihn angesehen hat — oder er bliebe
+in einem Chatverlauf liegen, und der ist keine gemeinsame Quelle.
+
+**Ein Wunsch verlässt diesen Zustand auf genau zwei Wegen:** Er wird
+eine **Phase** (dann ist er zerlegt und einsortiert) oder eine
+**Entscheidung** (dann fehlt eine Antwort, bevor man ihn überhaupt
+einordnen kann). Ein Wunsch, der Wunsch bleibt, ist einer, den niemand
+angesehen hat — und genau das soll man an der Liste sehen.
+
+**Ein Wunsch wird analysiert, nicht notiert.** Welche Fähigkeiten
+braucht er? Was davon gibt es schon? Was kostet der Rest, gemessen am
+Bestand? Wo gehört er in die Reihenfolge? Das Ergebnis kommt als
+Kommentar in denselben Vorgang — dorthin, wo der Wunsch steht, und
+nicht in ein Dokument daneben.
 
 **Große Vorgänge werden geteilt.** Eine Phase ist ein Sammelvorgang und
 enthält selbst keine Arbeit — die Arbeit sind ihre Schritte, und jeder

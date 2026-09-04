@@ -42,6 +42,25 @@ selbst** Vorgänge in der richtigen Form anlegen kann — leere Issues
 sind abgeschaltet. GitHubs neun Standardlabels sind entfernt; sie
 hätten neben den fünf Formen nur verwirrt.
 
+### Angelegt und nachgeprüft
+
+**49 Vorgänge**: 10 Phasen, 35 Schritte, 4 Entscheidungen. Die
+Hierarchie steht **dreifach** — GitHubs echte Unter-Vorgänge, die
+Aufgabenliste im Sammelvorgang (daraus rechnet GitHub den Fortschritt)
+und die Zeile `Teil von #1` im Kind. An Phase #1 nachgesehen: vier
+Unter-Vorgänge, vier Punkte in der Liste, jedes Kind mit Rückverweis.
+
+Die 45 Nummern stehen als `Vorgang: #N` im Fahrplan — **aus GitHub
+geholt und über den Titel gesucht**, nicht aus der Reihenfolge
+abgeleitet. Eine abgeleitete Nummer wäre beim nächsten Mal falsch, und
+zwar still. Gegenprobe: Der Trockenlauf meldet jetzt „Nichts
+anzulegen".
+
+Vier Entscheidungen warten auf Jannik: Netz-Koop (#46), die zehn
+Sprite-Fassungen (#47), der Name (#48), die Länge eines Laufs (#49).
+Jede mit Möglichkeiten, Preis und Empfehlung — eine Frage ohne
+Empfehlung schiebt die Arbeit nur weiter.
+
 ### Der Fahrplan — Janniks fünf Punkte zerlegt, nicht abgeschrieben
 
 **Sechs Befunde, alle am Bestand gemessen:**
