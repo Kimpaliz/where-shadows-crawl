@@ -19,8 +19,8 @@ import { WELLEN_JE_LAUF } from "./katalog/wellen.mjs";
 
 export { SCHRITT, WELLEN_JE_LAUF };
 
-export function starteLauf({ spielerzahl = 1, saat = 1 } = {}) {
-  const welt = macheWelt({ spielerzahl, saat });
+export function starteLauf({ spielerzahl = 1, saat = 1, modusId } = {}) {
+  const welt = macheWelt({ spielerzahl, saat, modusId });
   welt.phase = "vorspiel";
   return welt;
 }

@@ -52,12 +52,24 @@ function leiste(c, x, y, b, anteil, farbe, grund = FARBEN.kontur) {
 /* ── Anzeige während der Welle ───────────────────────────────────── */
 
 export function zeichneAnzeige(c, welt) {
+  /* Bei einer Bosswelle laeuft keine Uhr — sie endet, wenn er faellt. */
+  const bossWelle = welt.endet === "elite";
   const rest = Math.max(0, Math.ceil(welt.dauer - welt.zeit));
-  const kopf = `NACHT ${welt.welle}/${WELLEN_JE_LAUF}`;
+  /* Ein endloser Modus hat keinen Nenner. „NACHT 3/12" waere dort
+     eine Zahl, die etwas verspricht, das es nicht gibt. */
+  const kopf = welt.modus.endlos
+    ? `NACHT ${welt.welle}`
+    : `NACHT ${welt.welle}/${welt.modus.wellenJeLauf ?? WELLEN_JE_LAUF}`;
   zeichneTextUmrandet(c, kopf, 4, 4);
-  const uhr = `${rest}`;
-  zeichneTextMittig(c, uhr, BREITE / 2, 4, rest <= 5 ? FARBEN.flammeHell : FARBEN.schrift, FARBEN.kontur);
-  leiste(c, BREITE / 2 - 40, 12, 80, 1 - welt.zeit / welt.dauer, FARBEN.flamme);
+  if (bossWelle) {
+    const boss = welt.gegner.find((g) => g.art.elite && !g.tot);
+    zeichneTextMittig(c, "HAUPTMANN", BREITE / 2, 4, FARBEN.blutHell, FARBEN.kontur);
+    leiste(c, BREITE / 2 - 40, 12, 80, boss ? boss.leben / boss.lebenMax : 0, FARBEN.blutHell);
+  } else {
+    zeichneTextMittig(c, `${rest}`, BREITE / 2, 4,
+      rest <= 5 ? FARBEN.flammeHell : FARBEN.schrift, FARBEN.kontur);
+    leiste(c, BREITE / 2 - 40, 12, 80, 1 - welt.zeit / welt.dauer, FARBEN.flamme);
+  }
 
   /* Je Spieler eine kleine Tafel unten. Sie stehen nebeneinander,
      damit man den Zustand der Gruppe mit einem Blick erfasst — bei
@@ -186,8 +198,8 @@ export function zeichneLaden(c, welt, menue) {
 export function zeichneVorspiel(c, menue, padZahl) {
   c.fillStyle = "#07060c";
   c.fillRect(0, 0, BREITE, HOEHE);
-  zeichneTextMittig(c, "NACHTZEHRER", BREITE / 2, 46, FARBEN.flammeHell, FARBEN.kontur);
-  zeichneTextMittig(c, "ZWÖLF STUNDEN, EIN BANNKREIS", BREITE / 2, 60, FARBEN.schriftMatt);
+  zeichneTextMittig(c, "WHERE SHADOWS CRAWL", BREITE / 2, 46, FARBEN.flammeHell, FARBEN.kontur);
+  zeichneTextMittig(c, "EIN BANNKREIS · EINE FACKEL · KEIN MORGEN", BREITE / 2, 60, FARBEN.schriftMatt);
 
   zeichneTextMittig(c, "WIE VIELE JÄGER?", BREITE / 2, 96, FARBEN.schrift);
   for (let i = 1; i <= 4; i++) {
@@ -219,7 +231,10 @@ export function zeichneEnde(c, welt) {
   const gewonnen = welt.phase === "gewonnen";
   zeichneTextMittig(c, gewonnen ? "DER MORGEN KOMMT" : "DIE NACHT BEHÄLT EUCH",
     BREITE / 2, 60, gewonnen ? FARBEN.flammeHell : FARBEN.blutHell, FARBEN.kontur);
-  zeichneTextMittig(c, `NACHT ${welt.welle} VON ${WELLEN_JE_LAUF}`, BREITE / 2, 78, FARBEN.schrift);
+  zeichneTextMittig(c, welt.modus.endlos
+    ? `BIS NACHT ${welt.welle}`
+    : `NACHT ${welt.welle} VON ${welt.modus.wellenJeLauf ?? WELLEN_JE_LAUF}`,
+    BREITE / 2, 78, FARBEN.schrift);
   welt.spieler.forEach((s, i) => {
     const farbe = JAEGER_FARBEN[s.id % JAEGER_FARBEN.length];
     zeichneTextMittig(c, `J${s.id + 1}  STUFE ${s.stufe}  ${s.getoetet ?? 0} ERSCHLAGEN`,

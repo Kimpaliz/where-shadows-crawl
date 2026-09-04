@@ -1,4 +1,4 @@
-/* [Aufgabe: Prüfwesen] Nachtzehrers Sprites für die Pixel-Werkstatt.
+/* [Aufgabe: Prüfwesen] Die Sprites für die Pixel-Werkstatt.
 
        node werkzeuge/werkstatt-auftrag.mjs [--nach <ordner>] [nur-diese-art]
 
@@ -8,7 +8,7 @@
    das Auge nicht zuverlässig sieht — Silhouette, Wertetrennung,
    Merkmalstreue über alle Dreh- und Größenstufen, Kontrast gegen den
    **echten** Untergrund. Er liest dafür ein Auftragsformat mit
-   Hex-Farben; Nachtzehrer schreibt Farb**namen**. Diese Datei ist die
+   Hex-Farben; dieses Spiel schreibt Farb**namen**. Diese Datei ist die
    Übersetzung.
 
    Ohne sie wäre die Messung eine einmalige Sache gewesen. Mit ihr ist sie

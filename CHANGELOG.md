@@ -3,6 +3,146 @@
 Oben das Neueste. Jeder Eintrag sagt **was**, **warum** und **womit
 gemessen** — nicht nur, dass etwas anders ist.
 
+## 0.6.0 — Endlose Nächte, und drei Löcher, die sie aufgedeckt haben (05.09.2026)
+
+Janniks Ansagen: *„Im arena modus endloswellen, jede welle 30 sekunden
+(boss wellen bis der boss besiegt ist)"* und *„die runde geht solange
+bis die kutsche den nächsten checkpoint erreicht hat. das kann 30-60
+sekunden dauern bei normaler schwierigkeit"*.
+
+### Der Modus-Begriff, weil es jetzt drei Endebedingungen gibt
+
+Neu ist `spiel/katalog/modi.mjs`. Vorher endete eine Runde an genau
+einer Stelle im Regelkern: wenn die Uhr abgelaufen war. Janniks zwei
+Sätze verlangen zwei weitere — und keine davon ist eine Zeit.
+
+| `endet` | die Runde endet, wenn … | wo |
+| --- | --- | --- |
+| `zeit` | die Uhr abgelaufen ist | Arena, normale Welle |
+| `elite` | der Hauptmann tot ist | Arena, jede vierte Welle |
+| `ort` | die Kutsche den Checkpoint erreicht | Karawane |
+
+Dazu die Verliererbedingung: In der Arena ist der Lauf vorbei, wenn
+alle liegen; in der Karawane, wenn **die Kutsche fällt** — auch wenn
+alle vier noch stehen. Beides stand vorher fest im Regelkern.
+
+Damit ist Phase 1 des Fahrplans gebaut (#1 bis #3). Die Karawane steht
+schon im Katalog, mit `gebaut: false` — sie begründet die Bedingung
+`ort`, die sonst wie Vorratsbau aussähe.
+
+### Drei Löcher, die erst das Endlose sichtbar gemacht hat
+
+**1 · Die Kurve konnte nicht endlos.** Gerechnet mit dem alten,
+unbegrenzt quadratischen Budget:
+
+| Welle | Gegner je Welle | gleichzeitig | nötige Schadensleistung |
+| ---: | ---: | ---: | ---: |
+| 12 | 87 | ~35 | 275 |
+| 30 | 393 | ~157 | **3.333** |
+| 50 | 1.084 | ~434 | **14.210** |
+
+Flüssig läuft es mit rund fünfzig gleichzeitig, und der stärkste
+gemessene Bau kommt auf gut zweihundert. Das Spiel wäre bei Welle 25 zu
+Ende gewesen — **an der Bildrate, nicht am Können.**
+
+Jetzt sättigt die **Zahl** der Gegner ab Welle 12; ihre Lebenspunkte
+und ihr Schaden wachsen weiter. Die nötige Schadensleistung steigt
+damit **linear** statt quadratisch: 275 bei Welle 12, 1.194 bei Welle
+60, bei konstant rund 87 Gegnern. Das kann ein Bau verfolgen, bis er es
+nicht mehr kann — und genau da endet der Lauf.
+
+**2 · Die Dichte war falsch gerechnet.** Die alte Kurve war auf
+**wachsende** Wellenlänge ausgelegt (23 s bis 55 s). Bei festen 30 s
+ist dasselbe Budget bei Welle 12 **1,83-mal so dicht**. Gerechnet wird
+jetzt in Budget **je Sekunde** — mit denselben Werten, die vorher gut
+waren (0,57 bei Welle 1, 5,13 bei Welle 12).
+
+**3 · Der unangenehmste: Wer sauber ausweicht, war unsterblich.**
+Gemessen war jede einzelne Gegnerart langsamer als der Spieler — von
+28 % (Wächter) bis 95 % (Aaskrähe) —, und daran änderte die Welle
+nichts. Lebenspunkte wuchsen, Schaden wuchs, **Tempo nicht.**
+
+Die Läufe waren dadurch **zweigipflig**: Sie endeten bei Welle 6 bis 11
+oder liefen bis 130 und weiter. Nichts dazwischen. Für einen Menschen
+gilt das abgeschwächt — man wird in die Enge getrieben —, aber für
+einen guten Spieler stieg die Gefahr sonst nie.
+
+Jetzt wächst auch das Tempo, **mit Deckel** bei 1,9: Ohne ihn wäre die
+Aaskrähe bei Welle 100 siebenmal so schnell und flöge durch die
+Trefferprüfung hindurch. Ab Welle 15 überholen Hetzer und Aaskrähe den
+Spieler, ab 31 endgültig. Ab da läuft man nicht mehr weg.
+
+### Was noch offen ist — und ehrlich als Sperrklinke steht
+
+**Zu mehreren endet der Lauf noch nicht zuverlässig.** Allein endet
+heute jeder; zu zweit und zu viert erreicht ein Teil die Notbremse bei
+Welle 200. `pruefe-balance.mjs` trägt die gemessene Zahl als
+**Sperrklinke**: Sie darf sinken, niemals steigen. Das Ziel ist null.
+
+Ich habe an dieser Stelle **aufgehört zu drehen**, und das mit Absicht:
+Der Kunstspieler weicht besser aus als jeder Mensch, und weiter gegen
+ihn zu balancieren würde ihn messen statt das Spiel. Der Weg zu null
+ist eine Regelentscheidung — was ein Sturz kostet —, und die trifft
+Jannik.
+
+Ein erster Versuch steckt schon drin und hat **nichts geändert**: Ein
+Niedergeschlagener steht am Wellenende nicht mehr von selbst auf
+(`stehtAmWellenendeAuf: false`). Die Läufe, die durchkommen, gehen gar
+nicht erst zu Boden.
+
+### Die Anzeige
+
+Kein „NACHT 3/12" mehr — ein endloser Modus hat keinen Nenner. Bei
+einer Hauptmannswelle steht statt der Uhr **„HAUPTMANN"** und seine
+Lebensleiste, weil dort keine Uhr läuft. Am Ende steht „BIS NACHT 14"
+statt „NACHT 14 VON 12".
+
+### Geprüft
+
+Kette grün, 16 Prüfläufe. `pruefe-balance.mjs` ist auf die neue
+Wirklichkeit umgeschrieben — „man kann gewinnen" gibt es nicht mehr,
+dafür „jeder Lauf endet", „keine Wand", „Koop nicht schwerer als
+allein" und die fünf Eigenschaften des Modus selbst.
+
+---
+
+## 0.5.0 — Das Spiel heißt **Where Shadows Crawl** (05.09.2026)
+
+Janniks Entscheidung (#48). Der Arbeitstitel „Nachtzehrer" ist damit
+Geschichte.
+
+Geändert: Titelbild, `<title>`, README, `CLAUDE.md`, der Entwurf und
+die Meldung des Vorschau-Servers. Das **Repository** heißt jetzt
+`Kimpaliz/where-shadows-crawl` — GitHub leitet die alte Adresse
+dauerhaft weiter, und `alpha-code.json` ist nachgezogen.
+
+**Der Ordner bleibt `Nachtzehrer`.** Ein Umbenennen bräche die
+Vorschau-Konfiguration und jeden Pfad, der irgendwo notiert ist, und
+brächte nichts — dasselbe gilt bei Scotophobia, das im Ordner
+„Granithoehle" liegt.
+
+**Ein Untertitel ist dabei mitgestorben:** „ZWÖLF STUNDEN, EIN
+BANNKREIS" versprach eine Regel, die es nicht mehr gibt — mit
+Endloswellen kommt kein Morgen. Jetzt steht dort „EIN BANNKREIS · EINE
+FACKEL · KEIN MORGEN".
+
+---
+
+## 0.4.1 — Janniks Silhouetten (05.09.2026)
+
+Seine Wahl aus den zehn Fassungen (#47): **Jäger schmal**,
+**Knochenritter wie heute**, **Schlurfer gebeugt**.
+
+Der Jäger ist damit schlanker und trägt einen längeren Mantel; der
+Schlurfer hat den Kopf tief und einen breiten Rücken statt der
+seitlichen Schräge. Der Knochenritter bleibt, wie er ist — nur mit dem
+gestern nachgedunkelten Knochenton.
+
+Alle drei bestehen unverändert beide Prüfungen: die sieben der
+Pixel-Werkstatt und die 94 der eigenen Kette.
+
+---
+
 ## 0.4.0 — Auf GitHub, mit Vorgangs-Infrastruktur (05.09.2026)
 
 Janniks Ansage: *„fest in das github projekt intigrieren. Issue

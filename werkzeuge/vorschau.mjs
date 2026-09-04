@@ -54,5 +54,5 @@ createServer(async (anfrage, antwort) => {
     antwort.end("nicht gefunden");
   }
 }).listen(HAFEN, "127.0.0.1", () => {
-  console.log(`Nachtzehrer laeuft auf http://127.0.0.1:${HAFEN}/`);
+  console.log(`Where Shadows Crawl laeuft auf http://127.0.0.1:${HAFEN}/`);
 });
