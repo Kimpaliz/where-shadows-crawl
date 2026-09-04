@@ -26,8 +26,9 @@ import { macheZufall } from "./zufall.mjs";
 import { macheGitter } from "./gitter.mjs";
 import { macheWerte, lebenMax, genesungJeWelle } from "./werte.mjs";
 import { macheWaffe } from "./katalog/waffen.mjs";
-import { GEGNER_NACH_ID, lebenInWelle, schadenInWelle } from "./katalog/gegner.mjs";
+import { GEGNER_NACH_ID, lebenInWelle, schadenInWelle, tempoInWelle } from "./katalog/gegner.mjs";
 import { baueWelle, dauerDerWelle, WELLEN_JE_LAUF } from "./katalog/wellen.mjs";
+import { modus as holeModus, STANDARD_MODUS } from "./katalog/modi.mjs";
 import { bewegeSpieler, bewegeGegner } from "./bewegung.mjs";
 import { feuereWaffen, feuereGegner, bewegeGeschosse, wirkeZeitschaden, beruehrung, heile } from "./kampf.mjs";
 import { bewegeBeute, raeumeBeute } from "./beute.mjs";
@@ -66,9 +67,10 @@ export function macheSpieler(id, spielerzahl) {
   return s;
 }
 
-export function macheWelt({ spielerzahl = 1, saat = 1 } = {}) {
+export function macheWelt({ spielerzahl = 1, saat = 1, modusId = STANDARD_MODUS } = {}) {
   const welt = {
     saat, spielerzahl,
+    modus: holeModus(modusId),
     zufall: macheZufall(saat),
     gitter: macheGitter(24),
     welle: 0, phase: "laden", zeit: 0, dauer: 0,
@@ -84,9 +86,13 @@ export function macheWelt({ spielerzahl = 1, saat = 1 } = {}) {
 export function starteWelle(welt, welle) {
   welt.welle = welle;
   welt.zeit = 0;
-  welt.dauer = dauerDerWelle(welle);
-  welt.plan = baueWelle(welle, welt.spielerzahl, welt.zufall).plan;
+  welt.dauer = dauerDerWelle(welle, welt.modus);
+  welt.plan = baueWelle(welle, welt.spielerzahl, welt.zufall, welt.modus).plan;
   welt.planIndex = 0;
+  /* Wie diese Runde endet, entscheidet der Modus — nicht der
+     Regelkern (spiel/katalog/modi.mjs). */
+  welt.endet = welt.modus.endet(welle);
+  welt.eliteGesetzt = false;
   welt.gegner = [];
   welt.geschosse = [];
   welt.beute = [];
@@ -114,6 +120,7 @@ function setzeGegner(welt, artId) {
     leben: lebenInWelle(art, welt.welle),
     lebenMax: lebenInWelle(art, welt.welle),
     schaden: schadenInWelle(art, welt.welle),
+    tempo: tempoInWelle(art, welt.welle),
     radius: art.radius, phase: z.zwischen(0, Math.PI * 2),
     brand: 0, brandRate: 0, gift: 0, giftRate: 0,
     frost: 0, frostStaerke: 0, bereitIn: z.zwischen(0.3, 1.6), tot: false
@@ -165,7 +172,9 @@ export function schritt(welt, eingaben = []) {
   welt.zeit += dt;
 
   while (welt.planIndex < welt.plan.length && welt.plan[welt.planIndex].zeit <= welt.zeit) {
-    setzeGegner(welt, welt.plan[welt.planIndex].art);
+    const art = welt.plan[welt.planIndex].art;
+    setzeGegner(welt, art);
+    if (GEGNER_NACH_ID.get(art).elite) welt.eliteGesetzt = true;
     welt.planIndex++;
   }
 
@@ -185,18 +194,38 @@ export function schritt(welt, eingaben = []) {
 
   if (welt.gegner.some((g) => g.tot)) welt.gegner = welt.gegner.filter((g) => !g.tot);
 
-  if (welt.spieler.every((s) => s.zustand === "liegt")) {
+  if (welt.modus.verloren(welt)) {
     welt.phase = "verloren";
     return welt.phase;
   }
 
   if (pruefeAufstieg(welt)) { welt.phase = "wahl"; return welt.phase; }
 
-  if (welt.zeit >= welt.dauer) {
+  if (rundeVorbei(welt)) {
     beendeWelle(welt);
     return welt.phase;
   }
   return welt.phase;
+}
+
+/* Die drei Endebedingungen (spiel/katalog/modi.mjs).
+
+   `elite` ist der Grund, warum es diese Funktion gibt: Eine Bosswelle,
+   die nach dreißig Sekunden endet, obwohl der Hauptmann noch steht,
+   wäre keine Bosswelle. Sie endet, wenn er liegt — und läuft notfalls
+   drei Minuten. */
+export function rundeVorbei(welt) {
+  if (welt.endet === "elite") {
+    if (!welt.eliteGesetzt) return false;
+    return !welt.gegner.some((g) => g.art.elite && !g.tot);
+  }
+  if (welt.endet === "ort") {
+    /* Karawane: die Kutsche ist noch nicht gebaut (Phase 6 und 7
+       stehen davor). Bis dahin fällt der Modus auf die Uhr zurück,
+       statt eine Runde zu bauen, die nie endet. */
+    return welt.kutsche ? welt.kutsche.amCheckpoint === true : welt.zeit >= welt.dauer;
+  }
+  return welt.zeit >= welt.dauer;
 }
 
 /* Nach der Wahl geht die Welle weiter — es sei denn, die Uhr ist
@@ -205,7 +234,7 @@ export function pruefeWeiter(welt) {
   if (welt.phase !== "wahl") return welt.phase;
   if (!alleGewaehlt(welt)) return welt.phase;
   welt.phase = "welle";
-  if (welt.zeit >= welt.dauer) beendeWelle(welt);
+  if (rundeVorbei(welt)) beendeWelle(welt);
   return welt.phase;
 }
 
@@ -215,9 +244,11 @@ export function beendeWelle(welt) {
   welt.geschosse = [];
 
   for (const s of welt.spieler) {
-    /* Wer liegt, steht am Wellenende von selbst wieder auf — verloren
-       ist erst, wenn alle gleichzeitig liegen. */
-    if (s.zustand === "liegt") {
+    /* Ob ein Niedergeschlagener am Wellenende von selbst aufsteht,
+       entscheidet der Modus (spiel/katalog/modi.mjs) — in einem
+       endlosen Lauf kostet ein Sturz sonst nichts, solange nicht alle
+       gleichzeitig liegen. */
+    if (s.zustand === "liegt" && welt.modus.stehtAmWellenendeAuf !== false) {
       s.zustand = "lebt";
       s.leben = Math.max(1, Math.round(s.lebenMax * AUFSTEH_ANTEIL));
       s.aufheben = 0;
@@ -226,5 +257,9 @@ export function beendeWelle(welt) {
     }
   }
 
-  welt.phase = welt.welle >= WELLEN_JE_LAUF ? "gewonnen" : "laden";
+  /* Ein endloser Modus kennt kein Gewinnen — nur ein „wie weit".
+     Deshalb fragt auch das der Modus und nicht der Regelkern. */
+  welt.phase = (!welt.modus.endlos
+    && welt.welle >= (welt.modus.wellenJeLauf ?? WELLEN_JE_LAUF))
+    ? "gewonnen" : "laden";
 }

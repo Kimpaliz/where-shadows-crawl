@@ -82,8 +82,37 @@ export const GEGNER_NACH_ID = new Map(GEGNER.map((g) => [g.id, g]));
 /* Gegner werden mit der Welle zäher — aber **nicht** mit der Zahl der
    Spieler (docs/SPIEL.md 4.4: mehr Gegner, nicht zähere). Die Zahl 0,22
    ist gemessen, nicht geraten: siehe `werkzeuge/balance.mjs`. */
-export const LEBEN_JE_WELLE = 0.30;
-export const SCHADEN_JE_WELLE = 0.06;
+/* Endlos heisst, dass der Lauf irgendwann endet — sonst ist es kein
+   Modus, sondern ein Bildschirmschoner. Mit 0,30 kamen die Laeufe, die
+   die fruehe Klippe ueberstanden, bis Welle **130**; das sind zwei
+   Stunden, in denen nichts mehr passiert. */
+export const LEBEN_JE_WELLE = 0.55;
+export const SCHADEN_JE_WELLE = 0.09;
+
+/* ── Warum auch das Tempo wachsen muss ──────────────────────────────
+
+   Gemessen am 05.09.2026, beim Bau der Endloswellen: **Jede** Gegnerart
+   ist langsamer als der Spieler — von 28 % (Wächter) bis 95 %
+   (Aaskrähe) —, und daran änderte die Welle nichts. Lebenspunkte
+   wuchsen, Schaden wuchs, Tempo nicht.
+
+   Die Folge war kein Balanceproblem, sondern ein Loch: **Wer sauber
+   ausweicht, ist unsterblich.** Der Prüfstand lief 130 Wellen lang
+   ohne einen Kratzer und wurde nur von der Notbremse gestoppt. Für
+   einen Menschen gilt das abgeschwächt — man wird in die Enge
+   getrieben —, aber für einen guten Spieler steigt die Gefahr sonst nie.
+
+   Deshalb wachsen die Gegner auch im Tempo, **mit Deckel**: Ohne ihn
+   wäre die Aaskrähe bei Welle 100 siebenmal so schnell und flöge durch
+   die Trefferprüfung hindurch. Mit dem Deckel bei 1,9 überholen Hetzer
+   und Aaskrähe den Spieler ab Welle 15 und sind ab 31 endgültig
+   schneller. Ab da läuft man nicht mehr weg — man kämpft oder fällt. */
+export const TEMPO_JE_WELLE = 0.030;
+export const TEMPO_DECKEL = 1.9;
+
+export function tempoInWelle(art, welle) {
+  return art.tempo * Math.min(TEMPO_DECKEL, 1 + TEMPO_JE_WELLE * (welle - 1));
+}
 
 export function lebenInWelle(art, welle) {
   return Math.round(art.leben * (1 + LEBEN_JE_WELLE * (welle - 1)));

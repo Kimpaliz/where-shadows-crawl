@@ -125,13 +125,19 @@ function botWaehlt(welt, zufall) {
   }
 }
 
-export function spieleLauf({ spielerzahl = 1, saat = 1 } = {}) {
-  const welt = starteLauf({ spielerzahl, saat });
+/* Eine Notbremse fuer endlose Modi. 200 Wellen sind rund zwei
+   Stunden Spielzeit — wer so weit kommt, hat das Spiel gebrochen, und
+   genau das soll die Messung melden statt ewig zu laufen. */
+export const WELLEN_DECKEL = 200;
+
+export function spieleLauf({ spielerzahl = 1, saat = 1, modusId } = {}) {
+  const welt = starteLauf({ spielerzahl, saat, modusId });
   const botZufall = macheZufall(saat ^ 0x5eed);
   const wellenBericht = [];
   let schritte = 0;
 
-  while (!["gewonnen", "verloren"].includes(welt.phase) && schritte < 60 * 60 * 30) {
+  while (!["gewonnen", "verloren"].includes(welt.phase)
+    && schritte < 60 * 60 * 240 && welt.welle <= WELLEN_DECKEL) {
     if (welt.phase === "laden" || welt.phase === "vorspiel") {
       if (welt.phase === "laden") {
         oeffneKraemer(welt);
@@ -179,8 +185,12 @@ export function messreihe({ laeufe = 40, spielerzahl = 1, saat = 1 } = {}) {
   /* Wie viele Läufe **in** Welle n enden. Der Mittelwert allein
      verdeckt genau das, was man wissen will: ob es eine Wand gibt.
      Eine Wand sieht im Mittelwert aus wie eine Kurve. */
-  const stirbtIn = new Array(WELLEN_JE_LAUF + 1).fill(0);
+  /* Bei einem endlosen Modus gibt es keine feste Wellenzahl — das
+     Histogramm muss so weit reichen wie der weiteste Lauf. */
+  const weiteste = Math.max(WELLEN_JE_LAUF, ...ergebnisse.map((e) => e.welle));
+  const stirbtIn = new Array(weiteste + 1).fill(0);
   for (const e of ergebnisse) if (e.phase === "verloren") stirbtIn[e.welle]++;
+  const abgebrochen = ergebnisse.filter((e) => e.phase !== "verloren" && e.phase !== "gewonnen").length;
 
   return {
     laeufe, spielerzahl,
@@ -189,7 +199,7 @@ export function messreihe({ laeufe = 40, spielerzahl = 1, saat = 1 } = {}) {
     welleMedian: wellen[Math.floor(wellen.length / 2)],
     welleSchlechteste: wellen[0],
     stufeMittel: mittel(stufen),
-    stirbtIn,
+    stirbtIn, abgebrochen,
     ergebnisse
   };
 }

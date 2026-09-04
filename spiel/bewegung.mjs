@@ -115,7 +115,11 @@ export function bewegeGegner(welt, dt) {
     }
 
     /* Frost bremst, Rückstoß überlagert. */
-    const tempo = art.tempo * (g.frost > 0 ? 1 - g.frostStaerke : 1);
+    /* `g.tempo` statt `art.tempo`: Der Wert wächst mit der Welle
+       (`katalog/gegner.mjs`, `tempoInWelle`). Wer hier den Katalogwert
+       liest, bekommt einen Gegner, der in Welle 50 so schnell läuft wie
+       in Welle 1 — und genau daran war der endlose Modus unendlich. */
+    const tempo = g.tempo * (g.frost > 0 ? 1 - g.frostStaerke : 1);
     let vx = wx * tempo + g.stossX;
     let vy = wy * tempo + g.stossY;
 
