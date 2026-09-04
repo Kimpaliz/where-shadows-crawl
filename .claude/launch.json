@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "nachtzehrer",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["werkzeuge/vorschau.mjs"],
+      "port": 8144
+    }
+  ]
+}

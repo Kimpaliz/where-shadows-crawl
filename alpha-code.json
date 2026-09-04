@@ -1,0 +1,8 @@
+{
+  "hauptzweig": "main",
+  "quellordner": ["."],
+  "endungen": [".js", ".mjs"],
+  "ausnahmen": ["node_modules", ".git", "vendor", "dist", "build"],
+  "altlasten": "docs/ALTLASTEN.md",
+  "zeilengrenze": 1000
+}
