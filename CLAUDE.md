@@ -72,6 +72,7 @@ sich wiederholen, und woran man sie erkennt, **bevor** man hineinläuft.
 | Welches System redet mit welchem, und warum? Wo fasse ich für Wunsch X an? | [docs/WEGWEISER.md](docs/WEGWEISER.md) |
 | Wer arbeitet gerade woran? | [WORKCLAIM.md](WORKCLAIM.md) |
 | Was wurde zuletzt gebaut, und warum — mit den Messungen | `CHANGELOG.md`, oberster Eintrag |
+| Was kommt als Nächstes? | [docs/ROADMAP.md](docs/ROADMAP.md) |
 | Welche Regeln gelten, welche Tags und Zweignamen gibt es? | [docs/REGELN.md](docs/REGELN.md) |
 | Welche Fehler wiederholen sich? | [docs/FEHLERBUCH.md](docs/FEHLERBUCH.md) |
 | Wie verteile ich Arbeit auf Agenten? | `.claude/PROJEKTPROFIL.md` |

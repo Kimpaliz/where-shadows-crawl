@@ -50,6 +50,8 @@ Laden und bei der Kartenwahl.
 | Frage | Datei |
 | --- | --- |
 | Was wird gebaut und warum so? | [docs/SPIEL.md](docs/SPIEL.md) |
+| Was kommt als Nächstes, und warum in dieser Reihenfolge? | [docs/ROADMAP.md](docs/ROADMAP.md) |
+| Die zweite Vorlage *Death Must Die* | [docs/ZWEITE-VORLAGE.md](docs/ZWEITE-VORLAGE.md) |
 | Wo fasse ich für Wunsch X an? | [docs/WEGWEISER.md](docs/WEGWEISER.md) |
 | Welche Regeln gelten? | [docs/REGELN.md](docs/REGELN.md) |
 | Welche Fehler wiederholen sich? | [docs/FEHLERBUCH.md](docs/FEHLERBUCH.md) |

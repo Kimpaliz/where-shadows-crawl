@@ -3,6 +3,42 @@
 Oben das Neueste. Jeder Eintrag sagt **was**, **warum** und **womit
 gemessen** — nicht nur, dass etwas anders ist.
 
+## 0.2.1 — Die zweite Vorlage ist zerlegt und einsortiert (04.09.2026)
+
+Janniks Nachtrag, wörtlich: *„'Death Must Die' ist auch eine gute
+danmaku vorlage! das hart ein tolles loot, ausrüstungs und
+fortschritts system"*. Nur Dokumentation — am Spiel ist keine Zeile
+geändert.
+
+**Der Befund, um den es geht:** *Brotatos Bau kommt aus dem Laden,
+Death-Must-Dies Bau kommt aus dem Boden.* Naiv nebeneinandergestellt
+entstehen zwei Wirtschaften, die nichts voneinander wissen, und die
+schnellere macht die andere bedeutungslos — fällt genug Ausrüstung, ist
+der Krämer Zierde. Der Ausweg ist, ihnen verschiedene Aufgaben zu
+geben: **der Krämer ist die verlässliche Quelle, die Beute die
+überraschende.** Dazu die harte Grenze, dass Ausrüstung nie um die
+sechs Waffenplätze konkurrieren darf.
+
+**Was das kostet, am Bestand gemessen:** Götter und Segen sind die
+billigste der fünf Änderungen — `spiel/stufen.mjs` zieht bereits vier
+Karten aus gewichteten Werten und braucht nur einen Vorrat und Stufen.
+Zufallseigenschaften kommen **vor** der fallenden Beute, damit der
+Erzeuger erprobt ist, bevor es ein Fallsystem gibt. Danmaku ist die
+meiste Arbeit und kommt zuletzt vor dem Fortschritt.
+
+**Zwei Warnungen, beide begründet:** Danmaku wird zu viert schnell
+unlesbar (Muster nur von Hauptleuten, Dichte unterlinear zur
+Spielerzahl, feindliche Geschosse heller als eigene). Und ein Muster
+ohne sichtbare Ankündigung erzeugt Tode, die niemand hätte vermeiden
+können — das liest sich als kaputt, nicht als schwer.
+
+Neu: `docs/ZWEITE-VORLAGE.md` (die Zerlegung samt sechs offener
+Entscheidungen), `docs/ROADMAP.md` (sechs Phasen, jede mit
+Abnahmekriterium). Verlinkt aus `SPIEL.md`, `README.md` und
+`CLAUDE.md`.
+
+---
+
 ## 0.2.0 — Eine Fackel in der Mitte (04.09.2026)
 
 Janniks Ansage, wörtlich: *„und tatsächlich möchte ich das nicht in der

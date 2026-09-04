@@ -216,6 +216,17 @@ Hauptmann. Wer die letzte Welle übersteht, sieht den Morgen.
 
 ---
 
+## 9b · Die zweite Vorlage
+
+Am 04.09.2026 kam *Death Must Die* als zweite Vorlage dazu — für Beute,
+Ausrüstung und Fortschritt, und für Danmaku. Sie stellt eine Frage, die
+Brotato allein nicht stellt: **Brotatos Bau kommt aus dem Laden,
+Death-Must-Dies Bau kommt aus dem Boden.** Zerlegt und einsortiert in
+[ZWEITE-VORLAGE.md](ZWEITE-VORLAGE.md); die Reihenfolge steht in
+[ROADMAP.md](ROADMAP.md).
+
+---
+
 ## 10 · Offene Fragen an Jannik
 
 | # | Frage | Empfehlung |
