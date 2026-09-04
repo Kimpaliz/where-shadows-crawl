@@ -3,6 +3,90 @@
 Oben das Neueste. Jeder Eintrag sagt **was**, **warum** und **womit
 gemessen** — nicht nur, dass etwas anders ist.
 
+## 0.4.0 — Auf GitHub, mit Vorgangs-Infrastruktur (05.09.2026)
+
+Janniks Ansage: *„fest in das github projekt intigrieren. Issue
+infrastruktur. mit main issus die aufgeteilt werden in sub issues. für
+Roadmap features, wünsche und fehler und bugs."* — dazu fünf
+Fahrplanpunkte.
+
+### Das Repository
+
+`https://github.com/Kimpaliz/nachtzehrer`, **privat**. `main` entstand
+aus der linearen Kette der vier Zweige (`a1dde00` → `9546e94`) — sie
+folgten aufeinander, es gab nichts zusammenzuführen.
+`pruefe-freigabe.mjs` lief vorher: nichts Verbotenes im Arbeitsstand,
+kein Geheimnismuster in der **gesamten** Historie.
+
+### Die Vorgangs-Infrastruktur
+
+Fünf Formen statt vier. Alpha-Code kennt Phase, Schritt, Fehler und
+Entscheidung; Jannik nannte zusätzlich **Wünsche** — und ein roher
+Wunsch ist keine der vier: Er ist noch nicht zerlegt.
+
+| Form | Label | Eltern | trägt |
+| --- | --- | --- | --- |
+| Phase | `track` | keins | das Abnahmekriterium |
+| Schritt | `schritt` | Phase | **ein** Fertig-Kriterium |
+| **Wunsch** | `wunsch` | keins | den Wortlaut, unverändert |
+| Fehler | `fehler` | frei | das Vier-Felder-Muster |
+| Entscheidung | `entscheidung` | **keins** | Frage, Optionen, Empfehlung |
+
+**Ein Wunsch verlässt seinen Zustand auf genau zwei Wegen:** Er wird
+eine Phase (dann wird er zerlegt) oder eine Entscheidung (dann fehlt
+eine Antwort, bevor man ihn einordnen kann). Ein Wunsch, der Wunsch
+bleibt, ist einer, den niemand angesehen hat.
+
+Dazu drei Vorlagen unter `.github/ISSUE_TEMPLATE/`, damit **Jannik
+selbst** Vorgänge in der richtigen Form anlegen kann — leere Issues
+sind abgeschaltet. GitHubs neun Standardlabels sind entfernt; sie
+hätten neben den fünf Formen nur verwirrt.
+
+### Angelegt und nachgeprüft
+
+**49 Vorgänge**: 10 Phasen, 35 Schritte, 4 Entscheidungen. Die
+Hierarchie steht **dreifach** — GitHubs echte Unter-Vorgänge, die
+Aufgabenliste im Sammelvorgang (daraus rechnet GitHub den Fortschritt)
+und die Zeile `Teil von #1` im Kind. An Phase #1 nachgesehen: vier
+Unter-Vorgänge, vier Punkte in der Liste, jedes Kind mit Rückverweis.
+
+Die 45 Nummern stehen als `Vorgang: #N` im Fahrplan — **aus GitHub
+geholt und über den Titel gesucht**, nicht aus der Reihenfolge
+abgeleitet. Eine abgeleitete Nummer wäre beim nächsten Mal falsch, und
+zwar still. Gegenprobe: Der Trockenlauf meldet jetzt „Nichts
+anzulegen".
+
+Vier Entscheidungen warten auf Jannik: Netz-Koop (#46), die zehn
+Sprite-Fassungen (#47), der Name (#48), die Länge eines Laufs (#49).
+Jede mit Möglichkeiten, Preis und Empfehlung — eine Frage ohne
+Empfehlung schiebt die Arbeit nur weiter.
+
+### Der Fahrplan — Janniks fünf Punkte zerlegt, nicht abgeschrieben
+
+**Sechs Befunde, alle am Bestand gemessen:**
+
+1. **„Arena Modus (aktuell vorhanden)" ist der wichtigste Satz.** Er
+   macht aus dem ganzen Spiel *einen Modus von mehreren*. Heute gibt es
+   keinen Modus-Begriff — ein struktureller Eingriff, kein Feature.
+2. **Der Bannkreis ist tragend:** 11 Stellen in vier Dateien. Der
+   Karawanen-Modus hat keinen Kreis. **Das ist die eine teure Sache.**
+3. **Karawane und „endlos generierte Welt" sind dasselbe System** —
+   zusammen bauen, nicht nacheinander.
+4. **Inventar, Ausrüstung und Waffen sind ein System, nicht drei.**
+5. **Der Händler auf der Kutsche ist derselbe Krämer** — er verkauft
+   zwischen den Runden, genau der Zeitpunkt, an dem heute
+   `oeffneKraemer()` läuft. Rahmung ändert sich, nicht der Aufbau.
+6. **Die Kutsche als Lichtquelle ist fast gebaut:** `welt.fackeln` ist
+   schon eine Liste, über die die Lichtrechnung läuft. Ein wanderndes
+   Licht ist eine Zeile. Was fehlt, ist, dass es das **Spielziel** ist.
+
+Daraus zehn Phasen mit 35 Schritten, jeder mit **einem**
+Fertig-Kriterium: Modus-Begriff · Besitz · Götter und Segen ·
+Zufallseigenschaften · fallende Beute · Welt ohne Kreis · Biome ·
+Karawanen-Modus · Danmaku · Fortschritt.
+
+---
+
 ## 0.3.0 — Die Sprites sind zum ersten Mal gemessen (05.09.2026)
 
 Mit dem Skill `pixel-werkstatt`, der Sprites auf sieben Eigenschaften
