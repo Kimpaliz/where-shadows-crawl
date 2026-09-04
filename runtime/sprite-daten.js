@@ -261,17 +261,24 @@ export const DINGE = {
       ".kkkk."
     ]
   },
-  fackel: {
-    zeichen: { k: "kontur", f: "flamme", F: "flammeHell", g: "glut", l: "leder", L: "lederHell" },
+  /* Die eine Fackel in der Mitte des Bannkreises (Janniks Ansage vom
+     04.09.2026). Sie ist von oben eine Feuerschale: ein eiserner Ring
+     mit Glut darin. Größer als alles andere auf dem Boden — sie ist
+     das einzige Licht der Welt und muss auch so aussehen. */
+  feuerschale: {
+    zeichen: { k: "kontur", e: "eisenDunkel", s: "eisen", f: "glut", F: "flamme", G: "flammeHell" },
     bild: [
-      "..F..",
-      ".FfF.",
-      "FfgfF",
-      ".fgf.",
-      "..g..",
-      ".kLk.",
-      ".klk.",
-      ".klk."
+      "...kkkkk...",
+      ".kkeeeeekk.",
+      "kkesssssekk",
+      "kesfffffsek",
+      "kesfFFFfsek",
+      "kesfFGFfsek",
+      "kesfFFFfsek",
+      "kesfffffsek",
+      "kkesssssekk",
+      ".kkeeeeekk.",
+      "...kkkkk..."
     ]
   }
 };

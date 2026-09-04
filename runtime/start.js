@@ -71,7 +71,12 @@ function neuerLauf(spielerzahl) {
      an der Welt, ohne dass `spiel/` von ihnen weiß. Der Regelkern
      bliebe ohne sie unverändert lauffähig. */
   const r = arenaRadius(spielerzahl);
-  welt.fackeln = fackelOrte(r).map((f) => ({ ...f, reichweite: 155, reichweiteQ: 155 * 155 }));
+  /* Die eine Fackel leuchtet knapp ueber den Ring hinaus. Genau bis
+     zum Ring waere der Rand pechschwarz und die Gegner kaemen aus dem
+     Nichts; deutlich darueber hinaus waere der ganze Kreis gleich hell
+     und der Rand keine Drohung mehr. */
+  const reichweite = Math.round(r * 1.12);
+  welt.fackeln = fackelOrte(r).map((f) => ({ ...f, reichweite, reichweiteQ: reichweite * reichweite }));
   boden = baueBoden(r, saat, sprites);
   naechsteWelle(welt);
   zustand = "spiel";

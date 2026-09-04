@@ -42,20 +42,18 @@ const LICHT_ZELLE = 4;
 const LICHT_B = Math.ceil(BREITE / LICHT_ZELLE);
 const LICHT_H = Math.ceil(HOEHE / LICHT_ZELLE);
 
-/* Wie viele Fackeln auf dem Bannkreis stehen. Sie sind zugleich das
-   einzige Licht der Welt und die Markierung des Randes. */
-export function fackelZahl(radius) {
-  return Math.max(8, Math.round(radius / 22));
-}
+/* **Eine** Fackel, und sie steht in der Mitte (Janniks Ansage vom
+   04.09.2026: „in der mitte der arena steht eine einsame fackel die
+   den arena ring erleuchtet").
 
+   Das ist nicht nur ein anderer Ort, es ist eine andere Welt. Vorher
+   lag ein Kranz Fackeln auf dem Ring und die Mitte war schwarz — man
+   lief also am hellen Rand entlang und schaute in ein dunkles Loch.
+   Jetzt ist es umgekehrt: Man steht im Licht, und die Gegner kommen
+   aus dem Dunkeln herein. Der Kreis ist damit auch spielerisch ein
+   Kreis und nicht bloß eine Wand. */
 export function fackelOrte(radius) {
-  const n = fackelZahl(radius);
-  const orte = [];
-  for (let i = 0; i < n; i++) {
-    const w = (i / n) * Math.PI * 2;
-    orte.push({ x: Math.cos(w) * radius, y: Math.sin(w) * radius, phase: i * 1.7 });
-  }
-  return orte;
+  return [{ x: 0, y: 0, phase: 0 }];
 }
 
 /* ── Der Boden, einmal gemalt ────────────────────────────────────── */
@@ -122,10 +120,11 @@ export function baueBoden(radius, saat, sprites) {
       Math.round(m + Math.sin(w) * r) - stein.my);
   }
 
-  /* Die Fackelstiele — die Flammen kommen je Bild dazu. */
-  const fackel = sprites.dinge.fackel;
+  /* Die Feuerschale in der Mitte. Die Flammen darin kommen je Bild
+     dazu, weil sie flackern; die Schale selbst aendert sich nie. */
+  const schale = sprites.dinge.feuerschale;
   for (const f of fackelOrte(radius)) {
-    c.drawImage(fackel.l, Math.round(m + f.x) - fackel.mx, Math.round(m + f.y) - fackel.my + 2);
+    c.drawImage(schale.l, Math.round(m + f.x) - schale.mx, Math.round(m + f.y) - schale.my);
   }
 
   return { l, groesse, m, radius };
@@ -162,7 +161,16 @@ function zeichneLicht(licht, welt, kamera, zeit) {
            regelmäßig pulst. */
         const flacker = 1 + 0.07 * Math.sin(zeit * 6.3 + f.phase)
           + 0.05 * Math.sin(zeit * 11.1 + f.phase * 2.3);
-        hell += (1 - Math.sqrt(q) / f.reichweite) * flacker;
+        /* Und das Wabern: Die Grenze des Lichts ist kein Kreis,
+           sondern atmet je nach Richtung verschieden. Ohne diesen Teil
+           wäre der Rand ein sauberer Ring, der gleichmäßig heller und
+           dunkler wird — das sieht nach Regler aus und nicht nach
+           Feuer. Zwei Schwingungen über den Winkel, mit unpassenden
+           Perioden, damit sich das Muster nicht wiederholt. */
+        const winkel = Math.atan2(dy, dx);
+        const wabern = 1 + 0.13 * Math.sin(zeit * 1.6 + winkel * 3)
+          + 0.09 * Math.sin(zeit * 2.7 - winkel * 5);
+        hell += (1 - Math.sqrt(q) / (f.reichweite * wabern)) * flacker;
       }
       for (const s of welt.spieler) {
         if (s.zustand !== "lebt") continue;
@@ -305,12 +313,39 @@ export function zeichne(zeichner, welt, boden, sprites, zeit) {
 
   /* Flammen auf den Fackeln — sie flackern, deshalb gehören sie nicht
      in den einmal gemalten Boden. */
+  /* Die Flamme der einen Fackel. Sie wird von unten nach oben schmaler
+     und heller — ein Rechteck wäre ein oranger Klotz, und genau so sah
+     der erste Anlauf im Browser aus.
+
+     Sie sitzt **über** dem oberen Rand der Feuerschale, damit die
+     Schale selbst sichtbar bleibt: Man soll sehen, worin es brennt. */
   for (const f of welt.fackeln) {
-    const h = 2 + Math.round(Math.abs(Math.sin(zeit * 7 + f.phase)) * 2);
-    c.fillStyle = FARBEN.flamme;
-    c.fillRect(Math.round(f.x) - 1, Math.round(f.y) - 4 - h, 3, h);
-    c.fillStyle = FARBEN.flammeHell;
-    c.fillRect(Math.round(f.x), Math.round(f.y) - 3 - h, 1, h);
+    const fx = Math.round(f.x), fy = Math.round(f.y);
+    const zug = Math.abs(Math.sin(zeit * 6.1 + f.phase));
+    const zug2 = Math.abs(Math.sin(zeit * 4.3 + 1.7));
+    /* Je Zeile: Breite und Farbe. Unten breit und glutfarben, oben
+       schmal und fast weiß. Die zwei Schwingungen mit unpassenden
+       Perioden lassen die Flamme unregelmäßig zucken. */
+    const zeilen = [
+      [5, FARBEN.glut], [5, FARBEN.glut], [4, FARBEN.flamme],
+      [3, FARBEN.flamme], [3, FARBEN.flammeHell],
+      [2, FARBEN.flammeHell], [1, FARBEN.flammeHell]
+    ];
+    const hoch = 5 + Math.round(zug * 2 + zug2);
+    for (let i = 0; i < Math.min(zeilen.length, hoch); i++) {
+      const [b, farbe] = zeilen[i];
+      /* Die Spitze weht seitlich — sonst steht die Flamme wie gemalt. */
+      const wehen = i >= 4 ? Math.round(Math.sin(zeit * 3.1) * 1.4) : 0;
+      c.fillStyle = farbe;
+      c.fillRect(fx - Math.floor(b / 2) + wehen, fy - 2 - i, b, 1);
+    }
+    /* Glut auf dem Boden ringsum: ein paar warme Punkte, die zeigen,
+       dass hier wirklich etwas brennt. */
+    c.fillStyle = FARBEN.glut;
+    for (let i = 0; i < 5; i++) {
+      const w = zeit * 0.6 + i * 1.257;
+      c.fillRect(fx + Math.round(Math.cos(w) * 4), fy + 2 + Math.round(Math.sin(w) * 2), 1, 1);
+    }
   }
 
   for (const f of welt.funken) {

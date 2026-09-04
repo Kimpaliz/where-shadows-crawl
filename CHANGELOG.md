@@ -3,6 +3,44 @@
 Oben das Neueste. Jeder Eintrag sagt **was**, **warum** und **womit
 gemessen** — nicht nur, dass etwas anders ist.
 
+## 0.2.0 — Eine Fackel in der Mitte (04.09.2026)
+
+Janniks Ansage, wörtlich: *„und tatsächlich möchte ich das nicht in der
+mitte der arena der wabernde schatten ist sondern am rand der arena..
+und in der mitte der arena steht eine einsame fackel die den arena ring
+erleuchtet"*.
+
+**Das ist nicht nur ein anderer Ort für das Licht, es ist eine andere
+Welt.** Vorher lag ein Kranz aus acht bis siebzehn Fackeln auf dem Ring
+und die Mitte war schwarz: Man lief am hellen Rand entlang und schaute
+in ein dunkles Loch. Jetzt ist es umgekehrt — man steht im Licht, und
+die Gegner kommen aus dem Dunkeln herein. Damit ist der Bannkreis auch
+spielerisch ein Kreis und nicht bloß eine Wand.
+
+### Was geändert wurde
+
+| | vorher | jetzt |
+| --- | --- | --- |
+| Lichtquellen | `max(8, radius/22)` Fackeln auf dem Ring | **eine**, in der Mitte |
+| Reichweite | fest 155 Bildpunkte | `radius × 1,12` — knapp über den Ring hinaus |
+| Rand des Lichts | ein sauberer Ring, der gleichmäßig pulst | **wabert**: zwei Schwingungen über den Winkel mit unpassenden Perioden |
+| in der Mitte | nichts | eine **Feuerschale** (neues Sprite, 11 × 11) mit gezeichneter Flamme |
+
+Die Reichweite ist mit Absicht `× 1,12` und nicht `× 1,0`: Genau bis
+zum Ring wäre der Rand pechschwarz und die Gegner kämen aus dem Nichts;
+deutlich darüber hinaus wäre der ganze Kreis gleich hell und der Rand
+keine Drohung mehr.
+
+### Ein Fehler, den erst der Browser zeigte
+
+Die Flamme war ein **oranger Klotz**: ein Rechteck, das die
+Feuerschale darunter vollständig verdeckte. Sie wird jetzt Zeile für
+Zeile gezeichnet — unten breit und glutfarben, oben schmal und fast
+weiß, mit einer Spitze, die seitlich weht — und sitzt über dem oberen
+Rand der Schale, damit man sieht, worin es brennt.
+
+---
+
 ## 0.1.0 — Das Spiel steht und ist spielbar (04.09.2026)
 
 Janniks Auftrag, wörtlich: *„Meine freunde und ich brauchen ein
