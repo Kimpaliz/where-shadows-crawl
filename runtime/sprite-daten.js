@@ -44,12 +44,13 @@ export const JAEGER = {
   bild: [
     "....kkk....",
     "..kkHHHkk..",
-    ".kHHHDHHHk.",
-    ".kHHDhDHHk.",
-    ".kHHHDHHHk.",
+    ".kHHHHHHHk.",
+    ".kHHDDDHHk.",
+    ".kHHDDDHHk.",
     "kkHHHHHHHkk",
     "kMMHHHHHMMk",
     "kMMMHHHMMMk",
+    "kMMMMMMMMMk",
     ".kMMMMMMMk.",
     ".kMMMMMMMk.",
     "..kMMMMMk..",
@@ -91,6 +92,7 @@ export const GEGNER_BILDER = {
       "kLLLfllk.",
       ".kLLlllk.",
       "..kLllk..",
+      "..kLlk...",
       "...kkk..."
     ]
   },
@@ -99,12 +101,13 @@ export const GEGNER_BILDER = {
   balg: {
     zeichen: { k: "kontur", f: "fleisch", F: "fleischHell", l: "lumpen" },
     bild: [
-      "..kk..",
-      ".kFFk.",
-      "kfFFfk",
-      "kffffk",
-      ".klfk.",
-      "..kk.."
+      "..kkk..",
+      ".kFFFk.",
+      "kfFFFfk",
+      "kfffffk",
+      "kfffffk",
+      ".klffk.",
+      "..kkk.."
     ]
   },
 
@@ -120,6 +123,7 @@ export const GEGNER_BILDER = {
       "klffflk",
       ".klflk.",
       ".kl.lk.",
+      "..k.k..",
       "..k.k..",
       "..k.k.."
     ]
@@ -212,8 +216,8 @@ export const GEGNER_BILDER = {
       ".kEEkkEEEEEkk.kEEk.",
       "..kEEEEEEEEEEEEEk..",
       "...kEEErrrEEEEk....",
-      "...kEErRRRrEEk.....",
-      "..kkEErRRRrEEkk....",
+      "...kEErrRrrEEk.....",
+      "..kkEErrRrrEEkk....",
       ".kEEEEErrrEEEEEk...",
       "kEEEEEEEEEEEEEEEk..",
       "kTTEEEEEEEEEEETTk..",

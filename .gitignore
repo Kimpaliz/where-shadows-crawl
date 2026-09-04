@@ -1,0 +1,5 @@
+# [Aufgabe: Prüfwesen] Was nicht ins Repository gehört.
+# Die Auftragsdateien für die Pixel-Werkstatt sind erzeugt — sie stehen
+# vollständig in runtime/sprite-daten.js und runtime/palette.js und
+# würden hier nur doppelt liegen und veralten.
+werkstatt-auftraege/

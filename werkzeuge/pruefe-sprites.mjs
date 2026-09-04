@@ -111,6 +111,23 @@ for (const [name, sprite] of ALLE) {
   melde(d % 2 === 1, `${name}: Drehfeld ${d} ist ungerade`);
 }
 
+/* Und das **Raster selbst** muss ungerade sein, wenn es gedreht wird.
+   Am 04.09.2026 gemessen: Bei gerader Kantenlänge ist der Quellmittelpunkt
+   `(breite - 1) / 2` ein halber Bildpunkt. Die Rückwärtsabtastung greift
+   dann je Richtung um einen halben Bildpunkt versetzt zu — die Figur
+   **wandert beim Drehen**, und zwar so wenig, dass man es nicht sieht,
+   sondern nur als Unruhe spürt. Vier von neun Sprites hatten das:
+   Jäger 11 × 12, Schlurfer 9 × 10, Hetzer 7 × 10, Balg 6 × 6.
+
+   Gefunden hat es nicht das Auge, sondern eine Messung — genau der Grund,
+   warum es diese Zeile jetzt gibt. */
+for (const [name, sprite] of GEDREHT) {
+  const b = sprite.bild[0].length, h = sprite.bild.length;
+  melde(b % 2 === 1 && h % 2 === 1,
+    `${name}: ungerade Kanten, damit die Mitte beim Drehen nicht wandert`,
+    `${b} × ${h}`);
+}
+
 /* ── Die Richtungsrechnung ───────────────────────────────────────── */
 
 melde(richtungsIndex(0, -1) === 0, "Richtung 0 zeigt nach oben");

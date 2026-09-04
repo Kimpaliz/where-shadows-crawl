@@ -58,7 +58,11 @@ export const FARBEN = {
   fleischHell: "#75876b",
   fleischTot: "#3f4a3a",
   knochen: "#c9c3ad",
-  knochenDunkel: "#8f8a78",
+  /* Gemessen 04.09.2026: bei #8f8a78 lag dieser Ton 2 von 255 von
+     `eisenHell` entfernt — Knochen und Rüstung des Knochenritters
+     hatten dieselbe Helligkeit und verschmolzen zu einem grauen
+     Klumpen. Jetzt 31 auseinander. */
+  knochenDunkel: "#6d695b",
   lumpen: "#403a33",
   lumpenHell: "#57503f",
 

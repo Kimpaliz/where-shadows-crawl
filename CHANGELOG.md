@@ -3,6 +3,47 @@
 Oben das Neueste. Jeder Eintrag sagt **was**, **warum** und **womit
 gemessen** — nicht nur, dass etwas anders ist.
 
+## 0.3.0 — Die Sprites sind zum ersten Mal gemessen (05.09.2026)
+
+Mit dem Skill `pixel-werkstatt`, der Sprites auf sieben Eigenschaften
+prüft, die das Auge nicht zuverlässig sieht. **Sechs von neun Sprites
+hatten Mängel** — und keinen davon hätte ich durch Hinsehen gefunden.
+
+### Die Befunde
+
+| Befund | gemessen | behoben |
+| --- | --- | --- |
+| **Vier Sprites mit gerader Kantenlänge** — Jäger 11 × 12, Schlurfer 9 × 10, Hetzer 7 × 10, Balg 6 × 6 | bei gerader Kante ist der Quellmittelpunkt ein **halber** Bildpunkt; die Figur wandert bei jeder der sechzehn Drehungen | alle vier auf ungerade Kanten |
+| **Die Kapuzenöffnung des Jägers** waren vier Einzelpunkte über Eck | schon bei 0° und voller Größe zählte sie als **ein** Fleck statt vier | ein zusammenhängender Block von 3 × 2 |
+| **Knochen und Rüstung des Knochenritters gleich hell** | `knochenDunkel` 137,8 gegen `eisenHell` 135,7 — **2 von 255** | Knochenton nachgedunkelt: **31 von 255** |
+| **Das Auge des Hauptmanns** war ein Ring aus Einzelpunkten | bei 11° und Größe 0,75 klebte er zusammen | ein gefüllter Block mit einem hellen Kern |
+| **Der helle Kopf des Balgs** zerfiel in zwei Teile | bei 45° klebten sie zusammen (1 statt 2) | ein zusammenhängender Block |
+
+Was **nicht** geändert wurde: der Stil. Von den vier Jäger- und drei
+Schlurfer-Fassungen im Entwurf ist jeweils die übernommen, die dem
+heutigen Aussehen entspricht — es sollen sich die Mängel ändern und
+nicht das Bild.
+
+### Neu
+
+- `werkzeuge/werkstatt-auftrag.mjs` übersetzt Nachtzehrers Sprites in
+  das Auftragsformat des Skills. Ohne diese Datei wäre die Messung eine
+  einmalige Sache gewesen; mit ihr ist sie ein Befehl.
+- `pruefe-sprites.mjs` bekommt einen Wächter dazu: **gedrehte Sprites
+  brauchen ungerade Kanten.** Rot bewiesen (Jäger auf 11 × 14 gesetzt →
+  „11 × 14"), Datei danach byteweise zurückgelegt. Die Kette steht bei
+  94 statt 85 Prüfungen.
+
+### Entwürfe zur Wahl
+
+Zehn Fassungen von Jäger, Knochenritter und Schlurfer liegen als
+Design-Canvas bereit — je Reihe eine Art, je Blatt das große Raster zum
+Antippen, daneben 1:1 auf drei Untergründen und die Silhouettenprobe.
+Alle zehn sind gemessen und grün. **Welche Silhouette es wird, ist
+Janniks Entscheidung.**
+
+---
+
 ## 0.2.1 — Die zweite Vorlage ist zerlegt und einsortiert (04.09.2026)
 
 Janniks Nachtrag, wörtlich: *„'Death Must Die' ist auch eine gute
