@@ -3,6 +3,21 @@
 Oben das Neueste. Jeder Eintrag sagt **was**, **warum** und **womit
 gemessen** — nicht nur, dass etwas anders ist.
 
+## 0.4.1 — Janniks Silhouetten (05.09.2026)
+
+Seine Wahl aus den zehn Fassungen (#47): **Jäger schmal**,
+**Knochenritter wie heute**, **Schlurfer gebeugt**.
+
+Der Jäger ist damit schlanker und trägt einen längeren Mantel; der
+Schlurfer hat den Kopf tief und einen breiten Rücken statt der
+seitlichen Schräge. Der Knochenritter bleibt, wie er ist — nur mit dem
+gestern nachgedunkelten Knochenton.
+
+Alle drei bestehen unverändert beide Prüfungen: die sieben der
+Pixel-Werkstatt und die 94 der eigenen Kette.
+
+---
+
 ## 0.4.0 — Auf GitHub, mit Vorgangs-Infrastruktur (05.09.2026)
 
 Janniks Ansage: *„fest in das github projekt intigrieren. Issue
