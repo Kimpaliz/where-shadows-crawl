@@ -1,0 +1,57 @@
+name: Wunsch
+description: Etwas, das im Spiel sein soll. Noch nicht zerlegt.
+title: "Wunsch: "
+labels: ["wunsch"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ein Wunsch ist **roh**. Er wird hier so aufgeschrieben, wie er
+        gemeint ist — nicht schon in Schritte zerlegt, nicht schon
+        bewertet.
+
+        Er verlässt diesen Zustand auf genau zwei Wegen: Er wird zu
+        einer **Phase** in `docs/ROADMAP.md` (dann wird er zerlegt), oder
+        er wird zu einer **Entscheidung** (dann fehlt eine Antwort, bevor
+        man ihn überhaupt einordnen kann). Ein Wunsch, der monatelang
+        Wunsch bleibt, ist ein Wunsch, den niemand angesehen hat.
+
+  - type: textarea
+    id: wortlaut
+    attributes:
+      label: Im eigenen Wortlaut
+      description: >
+        Bitte **nicht** umformulieren. Der Wortlaut ist die Quelle; alles
+        Weitere ist Auslegung und kann falsch sein.
+      placeholder: "z. B.: man soll die Kutsche verstärken können, mit Brettern und Eisen"
+    validations:
+      required: true
+
+  - type: textarea
+    id: warum
+    attributes:
+      label: Was soll dadurch besser werden?
+      description: >
+        Ein Satz genügt. Er entscheidet später, ob eine gebaute Fassung
+        den Wunsch überhaupt erfüllt.
+      placeholder: "Damit die Eskorte eine eigene Entscheidung wird und nicht nur ein Gegnerteppich."
+
+  - type: dropdown
+    id: dringlichkeit
+    attributes:
+      label: Wie eilig?
+      options:
+        - "Irgendwann — nur festhalten"
+        - "Als Nächstes, wenn Platz ist"
+        - "Blockiert etwas, das ich jetzt will"
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        Was danach passiert: Der Wunsch wird **analysiert** — welche
+        Fähigkeiten er braucht, was davon es schon gibt, was er kostet
+        und wo er in die Reihenfolge gehört. Erst dann wird gebaut. Das
+        Ergebnis kommt als Kommentar in genau diesen Vorgang.

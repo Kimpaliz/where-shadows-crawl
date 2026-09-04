@@ -4,5 +4,10 @@
   "endungen": [".js", ".mjs"],
   "ausnahmen": ["node_modules", ".git", "vendor", "dist", "build"],
   "altlasten": "docs/ALTLASTEN.md",
-  "zeilengrenze": 1000
+  "zeilengrenze": 1000,
+  "vorgaenge": {
+    "repo": "Kimpaliz/nachtzehrer",
+    "roadmap": "docs/ROADMAP.md",
+    "sammel_label": "track"
+  }
 }

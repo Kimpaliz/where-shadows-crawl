@@ -1,0 +1,51 @@
+name: Entscheidung
+description: Eine Frage, die beantwortet sein muss, bevor gebaut werden kann.
+title: "Entscheidung: "
+labels: ["entscheidung"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Eine Entscheidung hängt an keiner Phase** — und das ist
+        Absicht. Sie hat eine andere Lebensdauer als die Arbeit, die auf
+        sie wartet, und überlebt sie oft. Als Absatz in einem
+        Phasen-Vorgang wäre sie mit dessen Abschluss verschwunden, ohne
+        beantwortet zu sein.
+
+  - type: textarea
+    id: frage
+    attributes:
+      label: Die Frage
+      description: Eine Frage, nicht mehrere. Zwei Fragen sind zwei Vorgänge.
+      placeholder: "Soll Koop über das Internet gehen oder nur an einem Rechner?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: optionen
+    attributes:
+      label: Die Möglichkeiten, mit ihrem Preis
+      description: >
+        Je Möglichkeit, was sie kostet und was sie bringt. Eine
+        Möglichkeit ohne Preis ist keine Wahl, sondern eine Empfehlung
+        in Verkleidung.
+      placeholder: |
+        - **Handvermittlung** — kostet nichts, dafür einmal Kopieren je Abend
+        - **Vermittlungsdienst** — ein Klick, dafür eine fremde Abhängigkeit
+        - **Eigener Server** — am bequemsten, kostet Geld je Monat
+    validations:
+      required: true
+
+  - type: textarea
+    id: empfehlung
+    attributes:
+      label: Empfehlung
+      description: Mit Begründung. Eine Frage ohne Empfehlung schiebt die Arbeit nur weiter.
+    validations:
+      required: true
+
+  - type: textarea
+    id: blockiert
+    attributes:
+      label: Was darauf wartet
+      description: "Vorgangsnummern, falls es welche gibt — z. B. `#12`, `#31`."

@@ -1,0 +1,67 @@
+name: Fehler
+description: Etwas tut nicht, was es soll.
+title: "Fehler: "
+labels: ["fehler"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Das Vier-Felder-Muster aus `docs/FEHLERBUCH.md`. Es ist kurz, und
+        jedes Feld hat einen Grund: **Was ich sah** ist die Beobachtung,
+        **was ich erwartet hätte** ist die Regel dahinter, **wie ich
+        dahin komme** macht daraus etwas Nachstellbares, und **seit
+        wann** grenzt die Suche auf ein paar Commits ein.
+
+        Ein Vorgang ist ein **offener** Fehler. Nach der Behebung
+        wandert die *Lehre* ins Fehlerbuch — woran man ihn beim nächsten
+        Mal früher merkt. Beides, nacheinander.
+
+  - type: textarea
+    id: gesehen
+    attributes:
+      label: Was ich gesehen habe
+      placeholder: "Der Jäger bleibt am Bannkreis hängen und zittert."
+    validations:
+      required: true
+
+  - type: textarea
+    id: erwartet
+    attributes:
+      label: Was ich erwartet hätte
+      placeholder: "Er sollte am Rand entlangrutschen, nicht stehen bleiben."
+    validations:
+      required: true
+
+  - type: textarea
+    id: weg
+    attributes:
+      label: Wie ich dahin komme
+      description: >
+        So genau wie möglich. **Die Saat gehört dazu**, wenn sie
+        bekannt ist — der Regelkern ist gesät, dieselbe Saat ergibt
+        dieselbe Nacht, und damit ist ein Fehler nachstellbar statt
+        „manchmal".
+      placeholder: |
+        1. Spiel starten, ein Jäger
+        2. Nach rechts halten, bis der Rand kommt
+        3. Diagonal weiterdrücken
+    validations:
+      required: true
+
+  - type: input
+    id: seit
+    attributes:
+      label: Seit wann
+      description: Fassung, Datum oder „weiß ich nicht" — auch das hilft.
+      placeholder: "seit der Fackel in der Mitte, 04.09."
+
+  - type: dropdown
+    id: schwere
+    attributes:
+      label: Wie schlimm
+      options:
+        - "Schönheitsfehler — stört, aber man spielt weiter"
+        - "Stört im Spiel — man verliert dadurch"
+        - "Kaputt — man kann nicht spielen"
+    validations:
+      required: true
