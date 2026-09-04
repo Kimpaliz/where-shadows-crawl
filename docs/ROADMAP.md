@@ -520,3 +520,80 @@ Vorgang: #45
 und im Spielstand nachweisbar.
 
 ---
+
+---
+
+## Phase 11 — Koop über das Netz
+
+Vorgang: #53
+
+Janniks Entscheidung vom 05.09.2026: *„Koop über webbrowser zugleich."*
+Also nicht nur an einem Rechner, sondern gleichzeitig, im Browser,
+über das Internet.
+
+**Warum diese Phase billig ist — und nur, solange man nichts kaputt
+macht:** Der Regelkern rechnet gesät und in festen Schritten von 1/60
+Sekunde. Zwei Rechner, die dieselbe Saat und dieselben Tastendrücke
+bekommen, rechnen **dieselbe Welt** aus. Über die Leitung müssen
+deshalb nur zwei Achsen und ein Knopf je Spieler und Bild — ein paar
+Byte statt der ganzen Welt.
+
+⚠️ **Damit sind die Regeln aus `CLAUDE.md` ab jetzt tragend statt
+ordentlich.** Ein `Math.random` in `spiel/`, ein Blick auf die
+Wanduhr, ein Bildtakt statt des festen Schritts: Jedes davon lässt die
+beiden Rechner auseinanderlaufen, und zwar **langsam** — man merkt es
+erst nach Minuten, wenn die Welten sich schon widersprechen. Der
+Wächter `pruefe-kern.mjs` hält alle drei bereits fest; er ist ab dieser
+Entscheidung kein Ordnungsdienst mehr, sondern die Sicherung.
+
+**Der offene Punkt ist die Vermittlung** (Vorgang #46): Zwei Rechner
+hinter zwei Routern finden sich nicht von allein.
+
+**Fertig, wenn:** Zwei Browser auf zwei Rechnern spielen dieselbe
+Nacht, und ein Vergleich der Weltzustände nach fünf Minuten zeigt
+**keinen** Unterschied.
+
+### 11.1 · Der Gleichlauf ist beweisbar
+
+Vorgang: #54
+
+Bevor irgendetwas über die Leitung geht: Zwei Welten im selben Prozess,
+gefüttert mit denselben Eingaben, müssen nach zehn Minuten Spielzeit
+bitgleich sein.
+
+**Fertig, wenn:** Ein Werkzeug vergleicht beide Welten Feld für Feld
+und meldet null Unterschiede — und meldet welche, wenn man absichtlich
+ein `Math.random` einbaut.
+
+### 11.2 · Eingaben statt Weltzustand über die Leitung
+
+Vorgang: #55
+
+**Fertig, wenn:** Was gesendet wird, ist nachweislich nur die Eingabe
+— zwei Achsen und ein Knopf je Spieler und Bild.
+
+### 11.3 · Verzögerung aushalten
+
+Vorgang: #56
+
+Eine Leitung braucht Zeit. Beide Rechner müssen einen Moment warten
+oder vorausrechnen, sonst ruckelt es bei jedem Paket.
+
+**Fertig, wenn:** Bei 80 ms künstlicher Verzögerung läuft das Spiel
+sichtbar flüssig, und der Gleichlauf aus 11.1 hält weiter.
+
+### 11.4 · Die Vermittlung
+
+Vorgang: #57
+
+Der Weg, auf dem sich zwei Rechner finden — siehe Vorgang #46.
+
+**Fertig, wenn:** Zwei Leute an verschiedenen Orten spielen zusammen,
+ohne dass einer etwas installiert.
+
+### 11.5 · Wenn einer wegbricht
+
+Vorgang: #58
+
+**Fertig, wenn:** Ein abgebrochener Mitspieler beendet nicht den Lauf
+der anderen, und das Spiel sagt, was passiert ist.
