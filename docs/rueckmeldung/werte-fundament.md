@@ -212,3 +212,26 @@ mehr, zwei brächten 63,4 — die Grenze bei einer Sprungweite trennt
 beides sauber. Der erste Anlauf maß die Strecke selbst und war
 **fälschlich rot** (109,7 px gegen eine geratene Grenze von 92); die
 Messung war zu grob, nicht das Verhalten falsch.
+
+## Baustein 5 — `pruefe-kern.mjs` erweitert (05.09.2026)
+
+Der Sprung ist der **erste** Eingang in den Regelkern, der kein
+Zahlenpaar ist. Damit ist er auch der erste, der die Wiederholbarkeit
+brechen könnte — und die trägt später das Netz-Koop. `pruefe-kern.mjs`
+lässt jetzt zusätzlich zwei Läufe mit derselben Saat **und
+Sprungeingaben** gegeneinander laufen, plus die Gegenprobe, dass der
+Sprung überhaupt etwas ändert. 90 auf **93** Zusicherungen.
+
+### Rot-Beweis (05.09.2026)
+
+| eingebauter Fehler | Meldung |
+| --- | --- |
+| ein Zähler auf **Modulebene** in `ausweichen.mjs`, der `macheWelt()` überlebt und die Sprungrichtung verschiebt | „gleiche Saat mit Sprung: Spieler stehen gleich" |
+| der Sprung tut gar nichts mehr | „und der Sprung ändert wirklich etwas" |
+
+Der erste Fall ist der eigentliche Grund für diese Erweiterung: Er
+kommt **ohne** `Math.random` und **ohne** Wanduhr aus und ist damit für
+die beiden Scans weiter oben in derselben Datei unsichtbar. Ein erster
+Versuch mit einer *deterministischen* Störung blieb zu Recht grün — eine
+Funktion des Zustands ist wiederholbar, und die Prüfung prüft
+Wiederholbarkeit.

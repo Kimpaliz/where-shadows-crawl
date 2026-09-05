@@ -209,6 +209,43 @@ function laufeKurz(saat, spielerzahl, schritte) {
     draussen.map((s) => Math.hypot(s.x, s.y).toFixed(1)).join(","));
 }
 
+/* ── Auch mit Sprung bleibt die Welt wiederholbar ─────────────────────
+
+   Der Sprung ist der **erste** Eingang in den Kern, der kein
+   Zahlenpaar ist (`{ x, y, ausweichen }`). Damit ist er auch der erste,
+   der die Wiederholbarkeit brechen könnte — und genau die trägt später
+   das Netz-Koop. Ein `Math.random` im Sprung fiele der Prüfung oben
+   auf; eine Abhängigkeit von der Aufrufreihenfolge nicht. */
+
+{
+  const mitSprung = (saat) => {
+    const welt = macheWelt({ saat, spielerzahl: 2 });
+    starteWelle(welt, 3);
+    for (let i = 0; i < 900; i++) {
+      schritt(welt, welt.spieler.map((_, k) => ({
+        x: Math.sin(i / 37 + k), y: Math.cos(i / 29 + k),
+        ausweichen: (i + k * 13) % 40 === 0
+      })));
+    }
+    return welt;
+  };
+  const a = mitSprung(55), b = mitSprung(55);
+  const ort = (w) => w.spieler.map((s) => `${s.x.toFixed(6)},${s.y.toFixed(6)}`).join("|");
+  melde(ort(a) === ort(b), "gleiche Saat mit Sprung: Spieler stehen gleich");
+  melde(a.gegner.length === b.gegner.length, "gleiche Saat mit Sprung: gleich viele Gegner");
+
+  /* Gegenprobe: Ohne sie bestünde die Prüfung auch dann, wenn der
+     Sprung gar nicht ausgelöst würde. */
+  const ohneSprung = macheWelt({ saat: 55, spielerzahl: 2 });
+  starteWelle(ohneSprung, 3);
+  for (let i = 0; i < 900; i++) {
+    schritt(ohneSprung, ohneSprung.spieler.map((_, k) => ({
+      x: Math.sin(i / 37 + k), y: Math.cos(i / 29 + k)
+    })));
+  }
+  melde(ort(ohneSprung) !== ort(a), "und der Sprung ändert wirklich etwas");
+}
+
 /* ── Ein ganzer Lauf endet ───────────────────────────────────────── */
 
 {
