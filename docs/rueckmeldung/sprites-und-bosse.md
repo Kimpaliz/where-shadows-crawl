@@ -186,10 +186,18 @@ ja gerade **nicht** anschlagen).
 `../lauf-nach-sprites.txt` außerhalb des Projektordners abgelegt, wie
 gefordert).
 
-**Wirklich im Browser angesehen:** `node werkzeuge/vorschau.mjs`
-gestartet (Port 8144), das Hauptmenü und der Titelbildschirm laden
-ohne Konsolenfehler. Die neuen Sprites selbst erscheinen dort **nicht**
-sichtbar — Bosse brauchen einen Katalogeintrag (nicht meine Aufgabe),
+**Wirklich im Browser angesehen:** Port 8144 war durch eine andere
+Sitzung belegt; auf 8244 dieselbe Datei gegen genau diesen Worktree
+gestartet und mit dem Browser-Werkzeug geöffnet. Titelbildschirm lädt
+sichtbar korrekt (Screenshot geprüft), alle 22 Programmdateien
+einschließlich des geänderten `runtime/sprite-daten.js` mit HTTP 200,
+keine Konsolenfehler aus dem Spielcode selbst (der einzige geloggte
+Fehler war ein 403 aus einem eigenen Fehlversuch beim Aufsetzen des
+Diagnose-Servers, vor der Korrektur — nicht aus dem Spiel). Die
+Diagnose-Serverdatei liegt nur im Scratchpad, nicht im Projekt.
+
+Die neuen Sprites selbst erscheinen dort **nicht** sichtbar — Bosse
+brauchen einen Katalogeintrag (nicht meine Aufgabe),
 Trefferzeichen brauchen einen Aufruf in `runtime/zeichnen.js` statt der
 bisherigen Funken-Quadrate (ebenfalls nicht meine Aufgabe), Truhen
 brauchen einen Spawn-Punkt in der Spiellogik. Deshalb wie in der
