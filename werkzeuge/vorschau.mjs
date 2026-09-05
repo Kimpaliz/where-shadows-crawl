@@ -44,7 +44,17 @@ import { fileURLToPath } from "node:url";
 import { networkInterfaces } from "node:os";
 
 const WURZEL = join(fileURLToPath(new URL(".", import.meta.url)), "..");
-const HAFEN = 8144;
+
+/* 8144 ist der Hausnummer-Hafen. `--hafen=8154` gibt es, weil mehrere
+   Sitzungen gleichzeitig an eigenen Zweigen arbeiten: Der zweite Server
+   auf demselben Hafen stirbt mit `EADDRINUSE`, und wer das nicht liest,
+   prueft eine halbe Stunde lang die **fremde** Fassung im Browser. */
+const hafenWunsch = process.argv.find((a) => a.startsWith("--hafen="));
+const HAFEN = hafenWunsch ? Number(hafenWunsch.split("=")[1]) : 8144;
+if (!Number.isInteger(HAFEN) || HAFEN < 1 || HAFEN > 65535) {
+  console.error(`Kein gueltiger Hafen: ${hafenWunsch}`);
+  process.exit(1);
+}
 
 const TYPEN = {
   ".html": "text/html; charset=utf-8",

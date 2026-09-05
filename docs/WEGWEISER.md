@@ -80,11 +80,13 @@ Trennlinie von oben.
 | eine neue Waffen**wirkung** (Brand, Frost …) | `spiel/kampf.mjs`, Abschnitt `trefferAufGegner` |
 | was ein **Wert** bewirkt | `spiel/werte.mjs` — die Rechnung steht dort **einmal** |
 | Preise, Neuwürfeln, Verschmelzen | `spiel/laden.mjs` |
-| Aufstiegskarten | `spiel/stufen.mjs` |
+| Aufstiegskarten: **was auf ihnen steht** | `spiel/katalog/karten.mjs` |
+| Aufstiegskarten: **wie gezogen und angewendet wird** | `spiel/stufen.mjs` |
 | **Farben** und Stimmung | `runtime/palette.js` |
 | wie eine Figur **aussieht** | `runtime/sprite-daten.js` |
 | **Licht**, Boden, Kamera | `runtime/zeichnen.js` |
-| Anzeige, Laden-Bildschirm, Kartenwahl | `runtime/oberflaeche.js` |
+| Anzeige und Laden-Bildschirm | `runtime/oberflaeche.js` |
+| die **Kartenhand** beim Aufstieg | `runtime/karten-hand.js` |
 | Tastenbelegung, Gamepads | `runtime/eingabe.js` |
 | die **Schrift** | `runtime/schrift.js` |
 
