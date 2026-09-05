@@ -65,15 +65,17 @@ export const FROST_DAUER = 1.5;
 export const BRAND_ART = "feuer";
 export const GIFT_ART = "fluch";
 
-/* Der Winkel zwischen zwei Geschossen einer gefächerten Salve, im
-   Bogenmaß.
+/* ⚠️ Hier stand bis zum 06.09.2026 ein Re-Export
+   `export { STANDARD_WINKEL as FAECHER }` mit der Begründung,
+   `pruefe-werte.mjs` lese den Namen. **Das war frei erfunden** — die
+   Datei importiert `kampf.mjs` überhaupt nicht, und `git log -S FAECHER
+   -- werkzeuge/` ist leer, hat es also auch nie getan. Der Export hatte
+   null Leser und ist ersatzlos entfallen; der Winkel heißt
+   `STANDARD_WINKEL` und wohnt in `spiel/salven.mjs`, wo er hingehört.
 
-   ⚠️ Steht seit dem 05.09.2026 als `STANDARD_WINKEL` in
-   `spiel/salven.mjs` und wird von dort geholt — die Zahl gehört zu den
-   Salvenmustern, nicht zum Kampf. Hier bleibt nur der Name stehen,
-   weil `pruefe-werte.mjs` ihn liest; **eine** Wahrheit, zwei Namen ist
-   in Ordnung, zwei Zahlen wären es nicht. */
-export { STANDARD_WINKEL as FAECHER } from "./salven.mjs";
+   Die Lehre steht als Fehlerbuch-Fall dabei: Eine Begründung, die einen
+   Leser nennt, muss diesen Leser nachweisen — sonst schützt sie einen
+   toten Export dauerhaft vor dem Aufräumen. */
 
 export function feuereWaffen(welt, dt) {
   for (const s of welt.spieler) {
@@ -144,7 +146,8 @@ function wirfSalve(welt, s, ziel, schlag, v, waffe, reichweite) {
      verändert, bevor die Zeile so dastand. Ein Waffenmuster ist die
      Bauart der Waffe und darf nicht gratis Schaden geben; ein gekaufter
      Wert ist gekaufter Schaden. */
-  const anteil = anteilJeGeschoss(v.salve?.geschosse ?? 1, v.salve?.form);
+  const anteil = anteilJeGeschoss(v.salve?.geschosse ?? 1, v.salve?.form,
+    v.suchend === true);
 
   /* Der Zufall kommt aus der Welt, nie aus `Math.random` — zwei
      Rechner im Netz-Koop müssen dieselbe Streuung würfeln.

@@ -76,7 +76,7 @@ export const ANKER = {
 const VERSATZ = 0.055;
 /* Wie weit die Enden über die Anker hinausgehen — **nicht** fest,
    sondern gesucht. Ein fester Überstand ist bei hellen Tönen
-   wirkungslos: `flammeHell` liegt schon bei Leuchtdichte 221, dort
+   wirkungslos: `flammeHell` liegt schon bei Leuchtdichte 226,5, dort
    bringt „noch heller" fast nichts mehr, und die oberste Stufe klebt an
    ihrem Nachbarn (gemessen 10,2 statt 12). Bei `blut` ist es
    umgekehrt — dort ist nach unten viel Platz. Deshalb wächst der
@@ -157,7 +157,11 @@ export function rampenName(art, stufe) {
   return art + STUFENNAMEN[stufe];
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+/* `process.argv[1]` ist leer, wenn jemand dieses Modul aus einem
+   `node -e` heraus importiert — `pathToFileURL(undefined)` wirft dann,
+   und der Import stirbt, bevor eine einzige Zeile davon benutzt wurde.
+   Gemessen genau so passiert. */
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const alsJs = process.argv.includes("--js");
   if (!alsJs) console.log("Rampen aus den heutigen Ankern, fünf Stufen:\n");
 

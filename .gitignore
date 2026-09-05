@@ -9,3 +9,4 @@ werkstatt-auftraege/
 # Arbeitsweise-Waechter zaehlt sie sonst als offene Aenderung, was bei
 # jedem parallelen Bau die ganze Kette rot macht.
 .claude/worktrees/
+.vorschau/

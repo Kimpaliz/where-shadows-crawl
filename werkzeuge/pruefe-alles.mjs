@@ -39,6 +39,7 @@
    | `pruefe-netz.mjs` | jeder Pfad relativ; gleiche Eingaben ergeben dieselbe Welt, verschobene eine andere | der absolute Pfad, der die Seite im Netz weiß lässt — und der Gleichlauf, der erst nach Minuten sichtbar auseinanderläuft |
    | `pruefe-truhen.mjs` | Truhenfall hat einen eigenen Zufallsstrom, „truhen" endet immer von selbst, ein voller Gürtel schluckt keinen Fund, Glück wirkt auf den Inhalt | eine Truhen-Ziehung, die `welt.zufall` verschiebt und jeden späteren Wellenplan ändert — oder eine Phase, in der ein echter Lauf hängen bleibt |
    | `pruefe-app.mjs` | das Spiel ist als App installierbar: Manifest vollstaendig, jedes genannte Symbol liegt da und hat seine Groesse, alle Pfade relativ, der Dienst fragt das Netz zuerst, Vollbild haengt an der Nutzergeste | ein fehlendes Symbol verwirft das ganze Manifest — der Browser bietet die Installation dann einfach **nicht** an und sagt niemandem warum; und ein Vorrat vor dem Netz zeigt nach jeder Veroeffentlichung tagelang den alten Stand 
+   | `pruefe-angriffe.mjs` | jede Fernwaffe hat ihr eigenes Salvenmuster, die Muster tun was sie versprechen, ein Muster ist kein Schadensmultiplikator, die sechs Geschosse sind auseinanderzuhalten, die Rampen tragen feine Uebergaenge | fuenf Waffen, die alle gleich schiessen, und drei Geschosse, die sich nur in der Farbe unterscheiden — beides ist nicht kaputt, es ist nur alles dasselbe, und genau das sieht man beim Spielen |
 
    **Nicht in der Kette:** `pruefe-freigabe.mjs` — die Freigabeliste
    vor einer Veröffentlichung. Während der Entwicklung ist ein

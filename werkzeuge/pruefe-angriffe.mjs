@@ -11,10 +11,10 @@
    nur alles dasselbe.
 
    **2 · Drei von sechs Geschossen hatten exakt dieselbe Form**
-   (`.#.|###|.#.`), und nur die Farbe trennte sie. In den vier
-   diagonalen Flugrichtungen **zerfiel dieses Kreuz in fünf
-   Einzelpunkte** — ein schräg fliegendes Geschoss war kein Ding mehr,
-   sondern ein Sprenkel.
+   (`.#.|###|.#.`), und nur die Farbe trennte sie — bei **fünf**
+   gesetzten Bildpunkten, gegen 11 bis 21 heute. Diagonal wird aus dem
+   Kreuz ein X, das nur noch über Eck zusammenhängt: dieselbe Anzahl,
+   eine andere Gestalt.
 
    **3 · Zwei Sprites hatten gerade Kantenlängen** (1×6 und 4×4). Bei
    gerader Kante liegt die Quellmitte auf einem halben Bildpunkt, und
@@ -41,7 +41,8 @@
 import { macheMelder } from "./helfer.mjs";
 import { WAFFEN } from "../spiel/katalog/waffen.mjs";
 import {
-  FORMEN, richtungenDerSalve, geschosseDerSalve, anteilJeGeschoss, SALVEN_AUFSCHLAG
+  FORMEN, richtungenDerSalve, geschosseDerSalve, anteilJeGeschoss,
+  SALVEN_AUFSCHLAG, AUFSCHLAG_JE_FORM
 } from "../spiel/salven.mjs";
 import { GESCHOSSE } from "../runtime/sprite-daten.js";
 import { dreheRaster, RICHTUNGEN } from "../runtime/sprites.js";
@@ -133,11 +134,44 @@ for (const w of WAFFEN.filter((x) => x.art === "nahkampf")) {
     "aber die beiden starten nebeneinander, symmetrisch zur Mitte",
     parallel.map((r) => r.quer).join(", "));
 
-  const ring = richtungenDerSalve(nx, ny, 4, { form: "ring" }, strom);
   {
-    const winkel = ring.map((r) => Math.round(Math.atan2(r.rx, -r.ry) * 1000));
-    melde(new Set(winkel).size === 4,
-      "der Ring hat vier verschiedene Richtungen", `${new Set(winkel).size}`);
+    /* ⚠️ Hier stand nur „vier verschiedene Richtungen". Das besteht auch
+       ein Viertelkreis — vier Richtungen, alle in dieselbe Ecke. Was
+       einen Ring ausmacht, ist die **gleichmäßige Verteilung rundum**,
+       und die hat zwei nachprüfbare Kennzeichen: gleiche Winkelabstände,
+       und eine Vektorsumme von null (was rundum zeigt, hebt sich auf).
+       Ohne beides wäre die einzige Ring-Waffe des Spiels von keiner
+       Zusicherung berührt. */
+    for (const n of [3, 4, 6]) {
+      const ring = richtungenDerSalve(nx, ny, n, { form: "ring" }, strom);
+      melde(ring.length === n, `Ring mit ${n}: so viele Geschosse wie bestellt`);
+
+      const winkel = ring.map((r) => Math.atan2(r.rx, -r.ry));
+      const einzig = new Set(winkel.map((w) => Math.round(w * 1e6)));
+      melde(einzig.size === n, `Ring mit ${n}: alle Richtungen verschieden`, `${einzig.size}`);
+
+      /* Vektorsumme: rundum verteilt hebt sich auf. Ein Viertelkreis
+         käme hier auf rund 3,4 statt auf 0. */
+      const sx = ring.reduce((s, r) => s + r.rx, 0);
+      const sy = ring.reduce((s, r) => s + r.ry, 0);
+      const summe = Math.hypot(sx, sy);
+      melde(summe < 1e-9, `Ring mit ${n}: zeigt wirklich rundum`,
+        `Vektorsumme ${summe.toFixed(6)}, erlaubt 0`);
+
+      /* Gleiche Abstände: jeder Nachbarwinkel ist 2π/n. */
+      const sortiert = [...winkel].sort((a, b) => a - b);
+      const luecken = sortiert.map((w, i) =>
+        i === 0 ? w - sortiert[n - 1] + Math.PI * 2 : w - sortiert[i - 1]);
+      const soll = (Math.PI * 2) / n;
+      melde(luecken.every((l) => Math.abs(l - soll) < 1e-9),
+        `Ring mit ${n}: gleiche Abstände zwischen den Geschossen`,
+        luecken.map((l) => l.toFixed(3)).join(" "));
+
+      /* Alle Richtungen sind Einheitsvektoren — sonst wäre das Tempo
+         je Geschoss verschieden, und der Ring liefe auseinander. */
+      melde(ring.every((r) => Math.abs(Math.hypot(r.rx, r.ry) - 1) < 1e-9),
+        `Ring mit ${n}: alle Richtungen sind auf Länge eins`);
+    }
   }
 }
 
@@ -181,23 +215,55 @@ for (const w of WAFFEN.filter((x) => x.art === "nahkampf")) {
 {
   melde(anteilJeGeschoss(1) === 1, "ein einzelnes Geschoss trägt vollen Schaden");
 
-  for (const n of [2, 3, 4, 6]) {
-    const a = anteilJeGeschoss(n);
-    melde(a < 1, `${n} Geschosse: jedes trägt weniger als voll`, a.toFixed(3));
-    melde(a * n >= 1, `${n} Geschosse: zusammen nicht weniger als ein Einzelschuss`,
-      (a * n).toFixed(3));
+  /* ⚠️ **Jede Form einzeln**, nicht nur die voreingestellte. Hier stand
+     `[1,2,3,4,5,6].map(anteilJeGeschoss)` — `map` reicht den **Index**
+     als zweites Argument durch, also lief die Prüfung mit den
+     „Formnamen" 0, 1, 2 … Keiner davon steht in `AUFSCHLAG_JE_FORM`,
+     der Rückfall griff jedes Mal, und gemessen kam exakt `1/n` heraus.
+     Die Zeile prüfte damit eine mathematische Selbstverständlichkeit
+     und war durch **keinen** Wert der Aufschlagtabelle rot zu bekommen —
+     fünf von sechs Formen waren von gar keiner Zusicherung berührt. */
+  for (const form of FORMEN) {
+    const auf = AUFSCHLAG_JE_FORM[form];
+    melde(typeof auf === "number" && auf >= 0 && auf <= 0.5,
+      `${form}: Aufschlag zwischen 0 und 0,5`, `${auf}`);
+
+    for (const n of [2, 3, 4, 6]) {
+      const a = anteilJeGeschoss(n, form);
+      melde(a < 1, `${form}, ${n} Geschosse: jedes trägt weniger als voll`, a.toFixed(3));
+      melde(a * n >= 1 - 1e-12,
+        `${form}, ${n} Geschosse: zusammen nicht weniger als ein Einzelschuss`,
+        (a * n).toFixed(3));
+    }
+
+    /* Je mehr Geschosse, desto weniger trägt jedes einzelne. */
+    const reihe = [1, 2, 3, 4, 5, 6].map((n) => anteilJeGeschoss(n, form));
+    melde(reihe.every((a, i) => i === 0 || a <= reihe[i - 1] + 1e-12),
+      `${form}: der Anteil je Geschoss fällt mit der Geschosszahl`,
+      reihe.map((a) => a.toFixed(2)).join(" "));
+
+    /* Und die Tabelle wirkt wirklich: Ein Aufschlag von x muss den
+       Gesamtschaden einer n-Salve auf 1 + x·(n−1) heben. Ohne diese
+       Zeile könnte jeder Eintrag der Tabelle beliebig sein, solange er
+       nur zwischen 0 und 0,5 liegt. */
+    const gesamt = anteilJeGeschoss(3, form) * 3;
+    melde(Math.abs(gesamt - (1 + auf * 2)) < 1e-12,
+      `${form}: der Aufschlag wirkt genau wie angeschrieben`,
+      `${gesamt.toFixed(3)} statt ${(1 + auf * 2).toFixed(3)}`);
   }
 
-  /* Der Aufschlag ist der Preis dafür, dass eine Salve auch danebengeht.
-     Negativ wäre jede Salve immer schlechter als ein Einzelschuss; zu
-     groß, und Geschosszahl allein gewinnt. */
   melde(SALVEN_AUFSCHLAG >= 0 && SALVEN_AUFSCHLAG <= 0.5,
-    "der Salvenaufschlag liegt zwischen 0 und 0,5", `${SALVEN_AUFSCHLAG}`);
+    "der Rückfall für unbekannte Formen liegt zwischen 0 und 0,5", `${SALVEN_AUFSCHLAG}`);
 
-  const reihe = [1, 2, 3, 4, 5, 6].map(anteilJeGeschoss);
-  melde(reihe.every((a, i) => i === 0 || a <= reihe[i - 1] + 1e-12),
-    "der Anteil je Geschoss fällt mit der Geschosszahl",
-    reihe.map((a) => a.toFixed(2)).join(" "));
+  /* Eine suchende Waffe verfehlt nicht und bekommt deshalb nie einen
+     Aufschlag — sonst schenkt ein rein optischer Umweg echten Schaden.
+     Gemessen an genau dem Fall, der es ausgelöst hat: der Bannstein,
+     drei Steine im Ring, `suchend: true`. */
+  for (const form of FORMEN) {
+    melde(Math.abs(anteilJeGeschoss(3, form, true) - 1 / 3) < 1e-12,
+      `${form}: suchend bekommt keinen Aufschlag`,
+      anteilJeGeschoss(3, form, true).toFixed(3));
+  }
 }
 
 {
@@ -265,8 +331,12 @@ const rasterVon = (g) => (Array.isArray(g.bild[0]) ? g.bild[0] : g.bild);
     melde(fehlend.length === 0, `${id}: jedes Zeichen zeigt auf eine echte Farbe`,
       fehlend.join(" "));
 
-    /* Über alle Drehungen ein Stück. Genau hier wären die alten Sprites
-       durchgefallen: Ihr Kreuz zerfiel diagonal in fünf Teile. */
+    /* Über alle Drehungen ein Stück — nach der 8er-Nachbarschaft
+       unten. Gemessen bestehen das die **alten** Sprites ebenfalls
+       (6 von 6); unter der strengen 4er-Regel wären es 1 von 6. Die
+       Prüfung fängt hier also nicht den alten Zustand, sondern hält
+       den neuen: Ein künftiges Sprite, das wirklich auseinanderfällt,
+       kommt nicht durch. */
     let schlimmste = 0;
     const wo = [];
     for (let r = 0; r < RICHTUNGEN; r++) {
@@ -276,6 +346,26 @@ const rasterVon = (g) => (Array.isArray(g.bild[0]) ? g.bild[0] : g.bild);
     }
     melde(schlimmste === 1, `${id}: bleibt in allen 16 Drehungen ein Stück`,
       wo.length ? `zerfällt bei Richtung ${wo.join(", ")}` : "");
+
+    /* Die Fläche ist das, was den alten Zustand wirklich trennt — und
+       die Prüfung darüber ist der Grund, warum diese Datei existiert.
+
+       Gemessen: die alten Geschosse trugen **5 bis 12** gesetzte
+       Bildpunkte, **vier** davon genau fünf. Bei fünf Punkten ist jeder
+       einzelne ein Fünftel des Geschosses, und die Drehung baut daraus
+       reihum ein Kreuz, ein X und wieder ein Kreuz — man sieht einen
+       Sprenkel, keine Klinge und keinen Stein. Unter zehn Punkten
+       trägt keine Gestalt, die sechzehn Drehungen überstehen soll.
+
+       ⚠️ Genau hier lag ein eigener Fehler: Zuerst stand an dieser
+       Stelle „zerfällt in fünf Teile", gemessen mit der strengen
+       Vierer-Nachbarschaft. Nach der Achter-Regel — der, die das Auge
+       benutzt — bestehen die **alten** Sprites den Zerfallstest
+       ebenfalls (6 von 6). Die Zerfallsprüfung oben hält den neuen
+       Zustand, fängt aber den alten nicht. Diese hier fängt ihn. */
+    const flaeche = bild.join("").split("").filter((c) => c !== ".").length;
+    melde(flaeche >= 10, `${id}: trägt genug Fläche, um eine Gestalt zu haben`,
+      `${flaeche} Bildpunkte, nötig 10`);
 
     formen[id] = silhouette(bild);
   }
@@ -336,10 +426,19 @@ const rasterVon = (g) => (Array.isArray(g.bild[0]) ? g.bild[0] : g.bild);
 
 {
   /* Jedes Geschoss benutzt wirklich mehr als zwei Stufen — sonst wäre
-     die Rampe gebaut und niemand nähme sie. */
+     die Rampe gebaut und niemand nähme sie.
+
+     ⚠️ Gezählt werden die **Farben**, nicht die Ziffern im Raster. Hier
+     stand `filter((c) => /[1-5]/.test(c))`: Das zählt, wie viele
+     verschiedene Ziffern dastehen, und nicht, ob sie auf verschiedene
+     Farben zeigen. Ein Geschoss, dessen Zeichentabelle `1`, `2` und `3`
+     alle auf `frost` legt, hätte drei „Stufen" gemeldet und wäre
+     einfarbig gewesen — genau der Fall, den diese Prüfung fangen soll. */
   for (const [id, g] of Object.entries(GESCHOSSE)) {
-    const stufen = new Set([...rasterVon(g).join("")].filter((c) => /[1-5]/.test(c)));
-    melde(stufen.size >= 3, `${id}: nutzt mindestens drei Rampenstufen`, `${stufen.size}`);
+    const zeichen = new Set([...rasterVon(g).join("")].filter((c) => c !== "."));
+    const farben = new Set([...zeichen].map((c) => FARBEN[g.zeichen[c]]).filter(Boolean));
+    melde(farben.size >= 3, `${id}: malt mit mindestens drei verschiedenen Farben`,
+      `${farben.size} Farben aus ${zeichen.size} Zeichen`);
   }
 }
 

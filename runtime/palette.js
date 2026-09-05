@@ -42,9 +42,13 @@ export const FARBEN = {
 
   /* Feuer und Licht. */
   glut: "#ff8c2e",
-  flamme: "#ffb455",
-  flammeHell: "#ffe0a8",
   lichtWarm: "#ffae4d",
+  /* ⚠️ `flamme` und `flammeHell` standen bis zum 06.09.2026 **auch
+     hier** — die Rampe unten hat sie ein zweites Mal angelegt, und im
+     selben Objektliteral gewinnt der spätere Eintrag. Beide trugen
+     denselben Wert, es fiel also nichts auf; wer die Flammenfarbe aber
+     an dieser Stelle geändert hätte, hätte gar nichts bewirkt.
+     Sie stehen jetzt ausschließlich in der Rampe weiter unten. */
 
   /* Tuch und Leder der Jäger. */
   tuch: "#241d2e",

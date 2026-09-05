@@ -444,12 +444,25 @@ export const DINGE = {
 
    **Drei der sechs Geschosse hatten exakt dieselbe Form** — Frostrune,
    Bannstein und der Gegnerspeichel waren alle `.#.|###|.#.`, ein
-   Kreuz von drei mal drei Punkten; nur die Farbe trennte sie. Und
-   gedreht war es noch schlimmer: In den vier diagonalen Richtungen
-   (2, 6, 10, 14) **zerfiel das Kreuz in fünf Einzelpunkte**. Ein
-   Geschoss, das schräg fliegt, war kein Ding mehr, sondern ein
-   Sprenkel. Genau das steckt hinter Janniks Meldung, die Angriffe
-   seien nicht klar zu erkennen.
+   Kreuz von drei mal drei Punkten; nur die Farbe trennte sie.
+
+   Und sie waren **winzig**: fünf gesetzte Bildpunkte. In den vier
+   diagonalen Richtungen (2, 6, 10, 14) wird aus dem Kreuz ein **X**,
+   dessen fünf Punkte einander nur noch über Eck berühren — dieselbe
+   Anzahl, eine andere Gestalt, und beides bei einer Fläche, bei der
+   ein einziger Punkt ein Fünftel des Geschosses ist.
+
+   Gemessen über alle sechs: **5 bis 12** Bildpunkte, vier davon genau
+   fünf. Die neuen tragen **11 bis 21**. Die untere Zahl ist die
+   wichtige — `seuchenglas` liegt mit 11 nur einen Punkt über der
+   Schranke von zehn, die `pruefe-angriffe.mjs` zieht.
+
+   ⚠️ **Korrektur einer früheren Fassung dieses Kommentars:** Hier
+   stand „zerfiel in fünf Einzelpunkte". Das stimmt nur unter der
+   strengen Vierer-Nachbarschaft; zählt man Diagonalen mit — und so
+   sieht das Auge —, hängt das X zusammen. Der Befund ist nicht der
+   Zerfall, sondern die **Winzigkeit samt Formwechsel**. Die Zahl kam
+   aus der falschen der beiden Messungen.
 
    Zwei Sprites verletzten außerdem die Regel, dass gedrehte Bilder
    **ungerade** Kantenlängen brauchen (`armbrust` 1×6, `seuchenglas`

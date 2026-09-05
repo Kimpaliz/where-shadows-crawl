@@ -1,4 +1,4 @@
-/* [Aufgabe: Kampf] Wie eine Fernwaffe ihre Geschosse in die Welt legt.
+/* [Aufgabe: Regelkern] Wie eine Fernwaffe ihre Geschosse in die Welt legt.
 
    ── Janniks Ansage ─────────────────────────────────────────────────
 
@@ -77,6 +77,15 @@ export const STANDARD_WINKEL = 0.16;
    | `faecher`, `ring` | die äußeren gehen am Einzelziel vorbei | 0,20 |
    | `streu` | am meisten, der Kegel ist am breitesten | 0,30 |
 
+   ⚠️ **Eine suchende Waffe bekommt nie einen Aufschlag**, egal welche
+   Form. Ein Geschoss mit `suchend: true` dreht in `bewegeGeschosse()`
+   auf sein Ziel ein (`p.vx += ((dx/d) * p.tempo - p.vx) * …`) und
+   trifft; der Umweg ist dann reine Optik. Ohne diese Ausnahme bekäme
+   der Bannstein — drei suchende Steine im Ring — dauerhaft **1,40×**
+   statt 1,00× Grundschaden geschenkt, für ein Verfehlen, das bei ihm
+   nicht stattfindet. Genau die Regel, die diese Datei in ihrem Kopf
+   aufstellt, wäre damit an ihrer eigenen einzigen Ring-Waffe gebrochen.
+
    Der erste Anlauf hatte einen einzigen Wert von 0,34 für alle. Über
    40 Läufe je Spielerzahl gemessen: allein und zu zweit wurde das
    Spiel dadurch besser (10 → 5 und 15 → 10 Läufe ohne Ende), zu viert
@@ -101,9 +110,10 @@ export const AUFSCHLAG_JE_FORM = {
    bevor jemand sie gemessen hat. */
 export const SALVEN_AUFSCHLAG = 0;
 
-export function anteilJeGeschoss(anzahl, form = "faecher") {
+export function anteilJeGeschoss(anzahl, form = "faecher", suchend = false) {
   if (anzahl <= 1) return 1;
-  const auf = AUFSCHLAG_JE_FORM[form] ?? SALVEN_AUFSCHLAG;
+  /* Wer sein Ziel findet, verfehlt nicht — siehe oben. */
+  const auf = suchend ? 0 : (AUFSCHLAG_JE_FORM[form] ?? SALVEN_AUFSCHLAG);
   return (1 + auf * (anzahl - 1)) / anzahl;
 }
 
