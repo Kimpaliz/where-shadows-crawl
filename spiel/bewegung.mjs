@@ -15,13 +15,20 @@
    78 (die Aaskrähe mit 74 liegt knapp darunter, der Hetzer mit 62
    deutlich) — schnelle Gegner sind Ausnahmen, keine Regel.
 
+   Ab Welle 15 überholen Hetzer und Aaskrähe den Spieler trotzdem —
+   das ist die Stelle, an der der Sprung (`spiel/ausweichen.mjs`)
+   einspringt. Er hebt die Regel nicht auf, er macht sie in kurzen
+   Augenblicken wieder wahr.
+
    ── Arbeitet zusammen mit ───────────────────────────────────────────
 
    `spiel/welt.mjs` (ruft je Schritt), `spiel/werte.mjs` (Tempo),
-   `spiel/gitter.mjs` (Nachbarn fürs Drängen),
+   `spiel/ausweichen.mjs` (der Sprung liefert den Versatz, geklemmt
+   wird er hier), `spiel/gitter.mjs` (Nachbarn fürs Drängen),
    `spiel/katalog/gegner.mjs` (Verhalten, Tempo, Wucht). */
 
 import { laufTempo } from "./werte.mjs";
+import { ausweichSchritt } from "./ausweichen.mjs";
 
 /* Wie stark sich zwei Gegner auseinanderschieben, wenn sie sich
    überlappen. 90 statt „ganz auseinander" ist gemessen: Bei voller
@@ -35,6 +42,21 @@ const RUECKSTOSS_ABFALL = 8.5;
 
 export function bewegeSpieler(spieler, eingabe, dt, arenaRadius) {
   if (spieler.zustand !== "lebt") { spieler.vx = 0; spieler.vy = 0; return; }
+
+  /* Der Sprung hat Vorrang vor dem Laufen — sonst könnte man ihn
+     mitten heraus abbremsen, und die Weite auf dem Papier wäre eine
+     andere als die im Spiel. Die Blickrichtung bleibt dabei stehen:
+     Sie ist die Richtung, in die man *steuert*, und die ändert ein
+     Sprung nicht. */
+  const sprung = ausweichSchritt(spieler, eingabe, dt);
+  if (sprung) {
+    spieler.vx = sprung.vx;
+    spieler.vy = sprung.vy;
+    spieler.x += sprung.dx;
+    spieler.y += sprung.dy;
+    haltImKreis(spieler, arenaRadius - spieler.radius);
+    return;
+  }
 
   let ex = eingabe?.x ?? 0;
   let ey = eingabe?.y ?? 0;

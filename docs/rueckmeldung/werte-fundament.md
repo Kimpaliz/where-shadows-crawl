@@ -114,3 +114,51 @@ weiter wie bisher normiert; gedreht wird nur ab dem zweiten.
 Chance über null besteht. Ein Wurf ohne Chance würde den gesäten Strom
 verschieben und jede bisherige Messung entwerten, obwohl sich am Spiel
 nichts geändert hat.
+
+## Baustein 3 — Ausweichen (05.09.2026)
+
+Neu `spiel/ausweichen.mjs`. Ein Sprung in die gedrückte Richtung, sonst
+in die zuletzt gelaufene. Er läuft über elf Schritte statt in einem —
+ein Sprung, der in einem Schritt fertig ist, ist ein Teleport, man
+sieht nichts, und es liest sich als Fehler. Während des Sprungs ist der
+Spieler unverwundbar; ohne das wäre er nur schnelles Laufen und würde
+in einer dichten Front gar nichts ändern.
+
+Angeschlossen in `spiel/bewegung.mjs` (der Sprung hat Vorrang vor dem
+Laufen und wird dort im Bannkreis gehalten) und `spiel/welt.mjs`
+(rüstet einen neuen Spieler aus, ruft die Regeneration).
+
+**Die Eingabe je Spieler und Schritt ist ab jetzt
+`{ x, y, ausweichen }`.** Das Feld darf fehlen; dann wird nicht
+gesprungen. Genau deshalb läuft der Kunstspieler in
+`werkzeuge/balance.mjs` unverändert weiter.
+
+### Die vier Zahlen sind gerechnet, nicht geraten (05.09.2026)
+
+| Zahl | Wert | woher |
+| --- | --- | --- |
+| Weite | 46 px | Hauptmann berührt bei 13 + 5 = 18 px, dahinter zwei Schlurfer à 10 px, plus Luft |
+| Dauer | 0,18 s | elf Schritte bei 1/60 s, damit die Bewegung sichtbar ist |
+| Sprungtempo | 256 px/s | 46 / 0,18 — **1,8-mal** so schnell wie der schnellste Gegner am Tempodeckel (Aaskrähe 74 x 1,9 = 140,6) |
+| Abklingzeit | 1,6 s | dauernde Unverwundbarkeit begänne bei 0,18 s; 1,6 ist davon das Neunfache entfernt. Unverwundbar ist man 11,25 % der Zeit |
+
+### Gemessen im laufenden Spiel (05.09.2026)
+
+| Probe | Ergebnis |
+| --- | --- |
+| Laufen in 11 Schritten | 14,30 px |
+| Springen in 11 Schritten | **46,00 px** — genau die versprochene Weite |
+| Schritte mit sichtbarer Bewegung | 11 von 11, größter Einzelschritt 4,26 px |
+| unverwundbar nach dem ersten Sprungschritt | 0,243 s (beim Laufen 0) |
+| Dauerdruck über 200 Schritte | gesperrt, kein zweiter Sprung |
+| +30 Ausweichweite | Reichweite 76, gesprungen 76,00 |
+| +100 Ausweichhast | Abklingzeit 1,600 auf 0,800 s |
+| Sprung gegen den Bannkreis | 185,00 bei erlaubten 185,00 |
+| ohne das Feld `ausweichen` | kein einziger Sprung |
+
+**Ein Befund, den Jannik kennen sollte:** Ausweichen ist auch ein
+Fortbewegungsmittel. Über einen Abklingzyklus kommt man springend
+156,5 px weit gegen 124,8 px im Laufen — **25,4 % schneller**. Das ist
+Absicht: Wäre es nicht so, wäre der Sprung nur ein anderes Wort für
+Laufen. Wer es nicht will, senkt die Weite oder hebt die Abklingzeit;
+beide Zahlen stehen an einer Stelle.
