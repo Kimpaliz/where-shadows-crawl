@@ -456,6 +456,49 @@ Hauptcheckout nicht an, solange welche laufen.
 
 ---
 
+### F4 · Zwei Messskripte, die dieselbe Quelldatei verstellen
+
+Um `SALVEN_AUFSCHLAG` zu bestimmen, schrieben zwei Messskripte
+nacheinander verschiedene Werte in `spiel/salven.mjs`, ließen je einen
+eigenen Node-Prozess laufen (wegen des Modulcaches, Fall B2) und
+stellten die Datei im `finally` wieder her. Jedes für sich richtig
+gebaut.
+
+**Beide liefen gleichzeitig.** Das zweite hatte sich beim Start das
+„Original" gemerkt — den Stand von *vor* meiner Arbeit. Als es Minuten
+später fertig wurde, schrieb es genau diesen Stand zurück und
+**löschte damit eine fertige, geprüfte Änderung** (die Aufschlagtabelle
+je Salvenform), die inzwischen entstanden war.
+
+Aufgefallen ist es an einer Fehlermeldung, die zuerst wie ein Tippfehler
+aussah: `does not provide an export named 'AUFSCHLAG_JE_FORM'` — obwohl
+die Prüfung wenige Minuten zuvor genau damit grün gelaufen war. Der
+Blick in die Datei zeigte den alten Inhalt.
+
+Verschärfend: Ich hatte den zweiten Job für tot gehalten, weil seine
+Ausgabedatei nur die Kopfzeile enthielt und `Get-CimInstance` ihn nicht
+zeigte — ich hatte nach dem falschen Muster gefiltert. **Ein Job, den
+man nicht findet, ist nicht beendet.**
+
+**Woran ich es früher merke:** Ein Messskript, das die Quelle ändert,
+ist ein Schreiber wie jeder andere und gehört unter dieselbe Regel wie
+zwei Agenten in einer Datei (F1). Drei Konsequenzen:
+
+1. **Nie zwei davon gleichzeitig**, und nie eines nebenher, während an
+   derselben Datei gearbeitet wird.
+2. Besser: auf einer **Kopie** in einem eigenen Ordner messen, statt am
+   Arbeitsstand. Dann kann kein `finally` etwas kaputt machen.
+3. Vor dem Weiterarbeiten prüfen, ob der Job wirklich weg ist — und
+   zwar am Prozess, nicht an seiner Ausgabedatei. Ein Hintergrundjob,
+   dessen Wrapper beendet ist, läuft weiter.
+
+Der Rettungsanker war, dass die Änderung klein und ihr Wortlaut noch im
+Sitzungsverlauf stand. Wäre sie eine Stunde Arbeit gewesen, wäre sie
+weg gewesen — es gab keinen Commit. **Committen, bevor ein Messlauf
+startet, der schreibt.**
+
+---
+
 ## Was daraus folgt
 
 Die drei wirksamsten Gewohnheiten aus diesen Fällen:

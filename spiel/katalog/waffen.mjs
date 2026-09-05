@@ -93,14 +93,23 @@ export const WAFFEN = [
     art: "fern", reichweite: 88, abklingzeit: 0.5,
     schaden: 6, mitschaden: 0.7, ziele: 1, wirkung: {},
     preis: 18, geschosstempo: 190,
-    text: "Wenig Schaden, aber es kommt an."
+    /* Ein Messerwerfer wirft nach — zwei Klingen hintereinander, beide
+       geradeaus. Die schnellste Waffe im Spiel bekommt das Muster, bei
+       dem man am wenigsten zielen muss. */
+    salve: { form: "folge", geschosse: 2, abstand: 7 },
+    text: "Zwei Klingen, kurz hintereinander."
   },
   {
     id: "armbrust", name: "Armbrust", merkmale: ["Wucht"], schadensart: "wucht",
     art: "fern", reichweite: 140, abklingzeit: 1.6,
     schaden: 26, mitschaden: 1.4, ziele: 1, wirkung: { durchschlag: 2 },
     preis: 45, geschosstempo: 260,
-    text: "Durchschlägt zwei. Lädt dafür eine Ewigkeit."
+    /* Zwei Läufe nebeneinander, beide Bolzen parallel. Nicht gefächert:
+       Eine Armbrust streut nicht, sie trifft, wohin sie zeigt — und
+       zusammen mit `durchschlag: 2` ist das die Waffe für eine Reihe,
+       die auf einen zuläuft. */
+    salve: { form: "parallel", geschosse: 2, abstand: 5 },
+    text: "Zwei Bolzen nebeneinander. Lädt dafür eine Ewigkeit."
   },
   {
     id: "pechfackel", name: "Pechfackel", merkmale: ["Feuer"], schadensart: "feuer",
@@ -114,14 +123,24 @@ export const WAFFEN = [
     art: "fern", reichweite: 96, abklingzeit: 1.2,
     schaden: 9, mitschaden: 0.6, ziele: 1, wirkung: { frost: 0.45 },
     preis: 32, geschosstempo: 150,
-    text: "Was steht, beißt nicht."
+    /* Drei Splitter, gefächert. Frost wirkt über `frost: 0.45` auf
+       jeden Getroffenen einzeln — in der Breite zu treffen ist hier
+       mehr wert als hart zu treffen. */
+    salve: { form: "faecher", geschosse: 3, winkel: 0.2 },
+    text: "Drei Splitter. Was steht, beißt nicht."
   },
   {
     id: "seuchenglas", name: "Seuchenglas", merkmale: ["Seuche"], schadensart: "fluch",
     art: "fern", reichweite: 80, abklingzeit: 1.5,
     schaden: 4, mitschaden: 0.3, ziele: 4, wirkung: { gift: 16 },
     preis: 36, geschosstempo: 130,
-    text: "Zerspringt. Was danach kommt, fragt nicht nach Rüstung."
+    /* Vier Scherben, ungleichmäßig gestreut. Der Text sagt seit jeher
+       „zerspringt" — bis heute flog trotzdem ein einzelnes Glas
+       geradeaus. Streuung statt Fächer, weil Scherben keine gleichen
+       Abstände haben; das ist die einzige Waffe, die dafür aus
+       `welt.zufall` zieht. */
+    salve: { form: "streu", geschosse: 4, streuung: 0.38 },
+    text: "Zerspringt in vier. Was danach kommt, fragt nicht nach Rüstung."
   },
   {
     id: "blutdorn", name: "Blutdorn", merkmale: ["Blut", "Schnitt"], schadensart: "schnitt",
@@ -142,7 +161,11 @@ export const WAFFEN = [
     art: "fern", reichweite: 120, abklingzeit: 0.95,
     schaden: 12, mitschaden: 1.0, ziele: 1, wirkung: {},
     preis: 34, geschosstempo: 210, suchend: true,
-    text: "Er findet sein Ziel allein."
+    /* Drei Steine, rundum entlassen. Ein Ring wäre bei jeder anderen
+       Waffe Unsinn — hier nicht: `suchend: true` holt jeden Stein zum
+       Ziel zurück, und der Umweg ist genau das, was man sieht. */
+    salve: { form: "ring", geschosse: 3 },
+    text: "Drei Steine, und jeder findet sein Ziel allein."
   }
 ];
 

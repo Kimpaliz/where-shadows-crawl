@@ -45,6 +45,7 @@ import {
 import { STANDARD_ART } from "./schadensarten.mjs";
 import { schadenDerWaffe } from "./katalog/waffen.mjs";
 import { stosse } from "./bewegung.mjs";
+import { richtungenDerSalve, geschosseDerSalve, anteilJeGeschoss } from "./salven.mjs";
 import { lassBeuteFallen } from "./beute.mjs";
 
 /* Wie lange ein Spieler nach einem Treffer unverwundbar ist. Ohne
@@ -65,10 +66,14 @@ export const BRAND_ART = "feuer";
 export const GIFT_ART = "fluch";
 
 /* Der Winkel zwischen zwei Geschossen einer gefächerten Salve, im
-   Bogenmaß. Gefächert und nicht gestreut: Ein Fächer ist vorhersehbar,
-   Streuung wäre ein zweiter Zufall im Kern — und damit eine Ziehung
-   mehr aus dem gesäten Strom, die jede bisherige Messung verschiebt. */
-export const FAECHER = 0.16;
+   Bogenmaß.
+
+   ⚠️ Steht seit dem 05.09.2026 als `STANDARD_WINKEL` in
+   `spiel/salven.mjs` und wird von dort geholt — die Zahl gehört zu den
+   Salvenmustern, nicht zum Kampf. Hier bleibt nur der Name stehen,
+   weil `pruefe-werte.mjs` ihn liest; **eine** Wahrheit, zwei Namen ist
+   in Ordnung, zwei Zahlen wären es nicht. */
+export { STANDARD_WINKEL as FAECHER } from "./salven.mjs";
 
 export function feuereWaffen(welt, dt) {
   for (const s of welt.spieler) {
@@ -117,28 +122,43 @@ export function feuereWaffen(welt, dt) {
   }
 }
 
-/* Eine Salve: ein Geschoss, oder mehrere gefächert um dieselbe
-   Richtung. Bei genau einem Geschoss wird die Richtung **wie bisher**
-   gerechnet und nicht über den Winkel — `cos(atan2(y, x))` ist nicht
-   bitgleich zu `x / hypot(x, y)`, und der Unterschied im letzten Bit
-   verschiebt über tausend Schritte die ganze Nacht. */
+/* Eine Salve. **Wie** die Geschosse liegen, entscheidet das Muster der
+   Waffe (`spiel/salven.mjs`); hier wird nur noch daraus gebaut.
+
+   Der Schaden wird auf die Geschosse **verteilt**, nicht vervielfacht —
+   sonst wäre ein Vierfach-Muster schlicht vierfacher Schaden und jede
+   andere Waffe unbrauchbar. Die Begründung samt Aufschlag steht bei
+   `anteilJeGeschoss()`. */
 function wirfSalve(welt, s, ziel, schlag, v, waffe, reichweite) {
   const dx = ziel.x - s.x, dy = ziel.y - s.y;
   const d = Math.hypot(dx, dy) || 1;
   const nx = dx / d, ny = dy / d;
-  const anzahl = geschosseJeAngriff(s.werte);
 
-  for (let i = 0; i < anzahl; i++) {
-    let rx = nx, ry = ny;
-    if (anzahl > 1) {
-      const w = (i - (anzahl - 1) / 2) * FAECHER;
-      const c = Math.cos(w), sn = Math.sin(w);
-      rx = nx * c - ny * sn;
-      ry = nx * sn + ny * c;
-    }
+  /* Was die Waffe vorsieht plus was der Spieler sich erkauft hat. */
+  const anzahl = geschosseDerSalve(v.salve, geschosseJeAngriff(s.werte) - 1);
+
+  /* ⚠️ Der Anteil kommt aus der **Waffe**, nicht aus der Gesamtzahl.
+     Sonst würde `zusatzgeschosse` sich selbst entwerten: Wer sich ein
+     drittes Geschoss erkauft, bekäme drei Geschosse zu je einem Drittel
+     — also gar nichts. Gemessen hat genau das 5 von 24 Läufen
+     verändert, bevor die Zeile so dastand. Ein Waffenmuster ist die
+     Bauart der Waffe und darf nicht gratis Schaden geben; ein gekaufter
+     Wert ist gekaufter Schaden. */
+  const anteil = anteilJeGeschoss(v.salve?.geschosse ?? 1, v.salve?.form);
+
+  /* Der Zufall kommt aus der Welt, nie aus `Math.random` — zwei
+     Rechner im Netz-Koop müssen dieselbe Streuung würfeln.
+     `welt.zufall` ist ein Objekt mit `zahl()`, keine Funktion. */
+  const richtungen = richtungenDerSalve(nx, ny, anzahl, v.salve, welt.zufall);
+
+  for (const r of richtungen) {
+    /* `laengs` zeigt in Flugrichtung, `quer` senkrecht dazu. */
+    const startX = s.x + nx * r.laengs - ny * r.quer;
+    const startY = s.y + ny * r.laengs + nx * r.quer;
+
     welt.geschosse.push({
-      x: s.x, y: s.y, vx: rx * v.geschosstempo, vy: ry * v.geschosstempo,
-      schlag, wirkung: v.wirkung, waffe: waffe.id, radius: 3,
+      x: startX, y: startY, vx: r.rx * v.geschosstempo, vy: r.ry * v.geschosstempo,
+      schlag, anteil, wirkung: v.wirkung, waffe: waffe.id, radius: 3,
       rest: durchschlaege(s.werte, v), getroffen: new Set(),
       lebenszeit: reichweite / v.geschosstempo + 0.35,
       suchend: v.suchend === true, ziel: v.suchend ? ziel : null,
@@ -163,9 +183,13 @@ export function zieleInReichweite(welt, x, y, reichweite, anzahl) {
 /* Ein Einschlag: hier fällt die Kritentscheidung und hier greift der
    Widerstand des Ziels. Beides gehört zum **Ziel** und darf deshalb
    nicht schon beim Abschuss feststehen. */
-export function schlageZu(welt, spieler, g, schlag, wirkung, waffenId) {
+export function schlageZu(welt, spieler, g, schlag, wirkung, waffenId, anteil = 1) {
   const treffer = berechneSchaden({
     ...schlag,
+    /* Ein Geschoss aus einer Salve trägt nur seinen Anteil. Der
+       Nahkampf ruft ohne `anteil` und bekommt darum die 1 — er hat
+       keine Salve, sondern trifft alle Ziele in Reichweite. */
+    grund: schlag.grund * anteil,
     werte: spieler.werte,
     widerstaende: g.art.widerstaende,
     zufall: welt.zufall
@@ -250,7 +274,10 @@ export function bewegeGeschosse(welt, dt) {
       const r = g.radius + p.radius;
       if ((g.x - p.x) ** 2 + (g.y - p.y) ** 2 > r * r) return;
       p.getroffen.add(g);
-      schlageZu(welt, p.besitzer, g, p.schlag, p.wirkung, p.waffe);
+      /* `anteil` verteilt den Schlag auf die Geschosse der Salve. Ohne
+         ihn wäre ein Vierfach-Muster vierfacher Schaden — siehe
+         `anteilJeGeschoss()` in `spiel/salven.mjs`. */
+      schlageZu(welt, p.besitzer, g, p.schlag, p.wirkung, p.waffe, p.anteil);
       if (--p.rest <= 0) p.weg = true;
     });
   }

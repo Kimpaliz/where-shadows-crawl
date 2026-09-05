@@ -66,19 +66,66 @@ export const FARBEN = {
   lumpen: "#403a33",
   lumpenHell: "#57503f",
 
-  /* Blut und Seuche. */
+  /* Blut. Ohne Rampe — gemessen liegen die beiden Töne nur **19,5**
+     von 255 auseinander, für drei trennbare Stufen bräuchte es 24.
+     Warum das so bleibt, steht in `werkzeuge/rampen.mjs`. */
   blut: "#7d1c22",
   blutHell: "#a52a2f",
-  seuche: "#6fa03a",
-  seucheHell: "#9ccc55",
-  frost: "#6fa8c9",
-  frostHell: "#a8d6ec",
-  bann: "#8f6fd0",
-  bannHell: "#bfa4f0",
 
-  /* Metall. */
+  /* ── Die Rampen der Schadensarten ────────────────────────────────
+
+     Fünf Stufen statt zwei, auf Janniks Ansage zu den Angriffen:
+     *„aber feine farbliche übergänge."* Mit zwei Tönen gibt es keinen
+     Übergang, nur einen Sprung — ein Geschoss kann damit nicht glühen,
+     nicht abkühlen und nicht auslaufen.
+
+     **Die alten Namen tragen die alten Werte**, byteweise: `frost` und
+     `frostHell` sind unverändert, damit kein bestehender Sprite anders
+     aussieht als vorher. Neu sind nur `…Tief`, `…Mitte` und `…Glanz`.
+
+     Gebaut und gemessen von `werkzeuge/rampen.mjs`; die engste
+     Helligkeitstrennung liegt bei 12,7 (flamme) bis 17,1 (bann) von
+     255 — unter 12 verschwimmen zwei Stufen bei 1:1. Dunkle Stufen
+     ziehen ins Kühle, helle ins Warme, nach derselben Regel wie oben.
+     Wer hier von Hand ändert, muss `node werkzeuge/rampen.mjs` neu
+     laufen lassen — `pruefe-angriffe.mjs` misst gegen. */
+
+/* Frostrune — Kälte, die den Schritt bremst */
+  frostTief: "#5c95bc",
+  frost: "#6fa8c9",
+  frostMitte: "#8cbfdb",
+  frostHell: "#a8d6ec",
+  frostGlanz: "#bfe3f0",
+
+  /* Seuchenglas — Fäulnis, die nachwirkt */
+  seucheTief: "#608e37",
+  seuche: "#6fa03a",
+  seucheMitte: "#86b648",
+  seucheHell: "#9ccc55",
+  seucheGlanz: "#b0d95f",
+
+  /* Bannstein — die einzige suchende Waffe */
+  bannTief: "#7d5dc4",
+  bann: "#8f6fd0",
+  bannMitte: "#a78ae0",
+  bannHell: "#bfa4f0",
+  bannGlanz: "#d2b6f3",
+
+  /* Pechfackel und Glut */
+  flammeTief: "#f69e3a",
+  flamme: "#ffb455",
+  flammeMitte: "#ffca7f",
+  flammeHell: "#ffe0a8",
+  flammeGlanz: "#ffefc4",
+
+  /* Wurfmesser und Armbrustbolzen */
+  eisenTief: "#4d5161",
   eisen: "#5a5f6b",
+  eisenMitte: "#6e7481",
   eisenHell: "#828896",
+  eisenGlanz: "#9698a2",
+
+  /* Metall ohne Rampe — die Stufe unter `eisenTief`, für Konturen. */
   eisenDunkel: "#3a3e47",
 
   /* Gold. */

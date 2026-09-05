@@ -436,33 +436,93 @@ export const DINGE = {
   }
 };
 
-/* Geschosse. Sie werden gedreht, damit ein Wurfmesser in Flugrichtung
-   zeigt — bei einem Bolzen sieht man dann sofort, ob er kommt oder
-   geht. */
+/* Geschosse. Sie werden über 16 Richtungen gedreht, damit ein
+   Wurfmesser in Flugrichtung zeigt — bei einem Bolzen sieht man dann
+   sofort, ob er kommt oder geht.
+
+   ── Was vorher war, gemessen am 05.09.2026 ─────────────────────────
+
+   **Drei der sechs Geschosse hatten exakt dieselbe Form** — Frostrune,
+   Bannstein und der Gegnerspeichel waren alle `.#.|###|.#.`, ein
+   Kreuz von drei mal drei Punkten; nur die Farbe trennte sie. Und
+   gedreht war es noch schlimmer: In den vier diagonalen Richtungen
+   (2, 6, 10, 14) **zerfiel das Kreuz in fünf Einzelpunkte**. Ein
+   Geschoss, das schräg fliegt, war kein Ding mehr, sondern ein
+   Sprenkel. Genau das steckt hinter Janniks Meldung, die Angriffe
+   seien nicht klar zu erkennen.
+
+   Zwei Sprites verletzten außerdem die Regel, dass gedrehte Bilder
+   **ungerade** Kantenlängen brauchen (`armbrust` 1×6, `seuchenglas`
+   4×4): Bei gerader Kante liegt die Quellmitte auf einem halben
+   Bildpunkt, und die Figur wandert bei jeder Drehung.
+
+   ── Wie die neuen entworfen sind ───────────────────────────────────
+
+   **Die Ziffer ist die Stufe der Rampe** (`1` tief … `5` glanz, siehe
+   `runtime/palette.js`). Damit steht der Farbverlauf im Bild selbst
+   statt in einer Tabelle daneben — Janniks Ansage: *„feine farbliche
+   übergänge."*
+
+   Jedes Geschoss hat ein **eigenes Merkmal**, das jede Drehung
+   übersteht, weil bei fünf mal sieben Bildpunkten kein Detail
+   überlebt — nur die grobe Gestalt:
+
+   | | Merkmal | wogegen es abgrenzt |
+   | --- | --- | --- |
+   | `wurfmesser` | schlanke Klinge, **reines Eisen** | die Armbrust, die Braun trägt |
+   | `armbrust` | **braune Befiederung** hinten | das Messer, das kein Braun hat |
+   | `frostrune` | kompakte Raute, hell im Kern | den Ring des Bannsteins |
+   | `seuchenglas` | **ausgefranster Stern** | den vollen Klecks des Speichels |
+   | `bannstein` | **ein Loch in der Mitte** — das einzige | alles andere |
+   | `speichel` | voller runder Klecks | das Seuchenglas, das ebenfalls grün ist |
+
+   Die Zeile `seuchenglas` gegen `speichel` ist keine Zierde: Das eine
+   wirft der Spieler, das andere spuckt ein Gegner. Wer beide für
+   dasselbe hält, weicht dem Falschen aus. */
 export const GESCHOSSE = {
   wurfmesser: {
-    zeichen: { k: "kontur", e: "eisenHell", l: "leder" },
-    bild: ["k", "e", "e", "k", "l"]
+    zeichen: {
+      k: "kontur",
+      1: "eisenTief", 2: "eisen", 3: "eisenMitte", 4: "eisenHell", 5: "eisenGlanz"
+    },
+    bild: ["..5..", ".45..", ".343.", ".343.", ".232.", ".1k1.", "..k.."]
   },
   armbrust: {
-    zeichen: { k: "kontur", e: "eisenHell", l: "lederHell" },
-    bild: ["e", "e", "k", "k", "l", "l"]
+    zeichen: {
+      k: "kontur", l: "lederHell",
+      1: "eisenTief", 2: "eisen", 3: "eisenMitte", 4: "eisenHell", 5: "eisenGlanz"
+    },
+    bild: ["..5..", "..4..", ".232.", ".232.", "l232l", "ll2ll", ".lkl."]
   },
   frostrune: {
-    zeichen: { f: "frost", F: "frostHell" },
-    bild: [".F.", "FfF", ".F."]
+    zeichen: {
+      1: "frostTief", 2: "frost", 3: "frostMitte", 4: "frostHell", 5: "frostGlanz"
+    },
+    bild: ["..3..", ".454.", "35453", ".454.", "..3.."]
   },
   seuchenglas: {
-    zeichen: { g: "seuche", G: "seucheHell" },
-    bild: [".gg.", "gGGg", "gGGg", ".gg."]
+    zeichen: {
+      1: "seucheTief", 2: "seuche", 3: "seucheMitte", 4: "seucheHell", 5: "seucheGlanz"
+    },
+    bild: ["..4..", "2.5.2", ".454.", "2.3.2", "..2.."]
   },
   bannstein: {
-    zeichen: { b: "bann", B: "bannHell" },
-    bild: [".B.", "BbB", ".B."]
+    zeichen: {
+      1: "bannTief", 2: "bann", 3: "bannMitte", 4: "bannHell", 5: "bannGlanz"
+    },
+    /* Das Loch ist das Merkmal — kein anderes Geschoss hat eines.
+       Der erste Entwurf war ein größerer Ring; er zerfiel in den vier
+       diagonalen Richtungen in vier Stücke (vom Wächter gefangen, im
+       Bild hatte ich es übersehen). Von sechs geprüften Fassungen ist
+       dies die mit den wenigsten Bildpunkten, die ihr Loch in **allen
+       sechzehn** Drehungen behält. */
+    bild: ["..3..", ".454.", "35.53", ".454.", "..3.."]
   },
   speichel: {
-    zeichen: { g: "seuche", G: "seucheHell" },
-    bild: [".g.", "gGg", ".g."]
+    zeichen: {
+      1: "seucheTief", 2: "seuche", 3: "seucheMitte", 4: "seucheHell", 5: "seucheGlanz"
+    },
+    bild: [".343.", "34543", "34543", ".343.", "..2.."]
   }
 };
 
