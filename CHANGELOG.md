@@ -3,6 +3,117 @@
 Oben das Neueste. Jeder Eintrag sagt **was**, **warum** und **womit
 gemessen** — nicht nur, dass etwas anders ist.
 
+## 0.9.4 — Mit dem Finger bedienbar (05.09.2026)
+
+Janniks Ansage: *„ich will das auf handy ui mit finger druck benutzt
+werden kann."*
+
+**Gemessen war der Krämer der einzige Bildschirm, an dem ein Finger
+nichts ausrichtet.** Die Lobby besteht aus HTML-Knöpfen (220 × 48, über
+der Bedienung — nachgemessen mit `elementFromPoint`); die Kartenwahl hat
+seit #69 ihren Tippweg; Endbildschirm und Truhen brauchen nur den einen
+Knopf unten rechts. Der Krämer kannte **ausschließlich** Achse und
+Knopf — auf dem Telefon hieße das: mit dem Daumen durch sechs Felder
+wandern, um das vierte zu kaufen.
+
+### Der Fehler, der die halbe Handy-Bedienung lahmgelegt hat
+
+Er saß **nicht** im neuen Code, sondern seit der Kartenhand in
+`runtime/eingabe.js`:
+
+```js
+const knopf = !!(e?.ausweichen ?? e?.knopf);
+```
+
+`??` geht nur bei `null`/`undefined` weiter, und `false` ist ein
+gültiger Wert. `liesEigene()` liefert **immer** ein `ausweichen`-Feld.
+Wer wie die Kartenhand oder der neue Krämerweg ein `{ knopf: true }` in
+diese Eingabe mischt, bekommt `false ?? true` — also `false`. **Der
+Knopf verschwand genau auf dem Weg, der ihn tragen sollte.**
+
+Im Browser gemessen: Der Tipp bewegte den Zeiger, der zweite Tipp
+kaufte nichts. Gemeint war immer „einer von beiden", also `||`.
+
+**Das betraf auch die Kartenhand** — eine Karte ließ sich antippen, aber
+nicht nehmen. Beide Prüfungen waren dabei grün: `pruefe-kartenhand`
+prüft die Kette, `pruefe-anzeige` die Bedienung, **und niemand ging den
+Weg als Ganzes.** Genau dafür steht jetzt Abschnitt 4 der neuen Prüfung.
+
+Dieselbe Falle wie beim Ton in Scotophobia, wo `Number(null)` eine
+gültige Lautstärke von 0 war und der Standardwert nie griff.
+
+### Was gebaut ist
+
+**`ladenFelder()` in `runtime/oberflaeche.js`** — die Geometrie des
+Krämers an **einer** Stelle. `zeichneLaden()` malt danach,
+`runtime/laden-tippen.js` trifft danach. Vorher waren es zwei getrennte
+Rechnungen für dieselben Kästen; wer eine ändert, verschiebt entweder
+das Bild oder die Trefferfläche, und ein Finger, der sechs Bildpunkte
+danebenlandet, sieht aus wie ein Aussetzer des Telefons.
+
+**`runtime/laden-tippen.js`** übersetzt einen Tipp in **dieselben
+Eingaben**, die Tastatur und Daumen erzeugen: Achsenschritte bis zum
+Feld, dann der Knopf. Über die Leitung geht nichts Neues — ein Tipp,
+der `menue.ladenZeiger` örtlich verschöbe, ließe die Welten im
+Netzspiel auseinanderlaufen.
+
+**Trefferflächen für den Finger:** „NEU" und „LOS" sind **12
+Bildpunkte** hoch; auf einem Telefon quer (812 px) sind das nach der
+Skalierung von 1,69 rund **20 physische Bildpunkte** gegen die 44, die
+eine Fingerkuppe braucht. Die Kästen bleiben so groß, wie sie aussehen;
+nur ihre Trefferfläche wächst auf **26** in die Lücke darunter — nicht
+weiter, sonst überlappte „NEU" das „LOS", und ein Tipp auf „LOS" würfelte
+neu und kostete Gold.
+
+**Ein eigener Fehler dabei, von der eigenen Prüfung gefangen:** Der
+erste Anlauf nahm für das **unterste** Feld die eigene Höhe als
+verfügbaren Platz — ausgerechnet „LOS", der Knopf zum Weiterschicken,
+blieb dadurch bei 12 Bildpunkten. Die Prüfung war rot, bevor jemand es
+am Telefon gemerkt hätte.
+
+### Am laufenden Spiel belegt, nicht behauptet
+
+Auf 812 × 375 mit echten Berührungsereignissen durch die echten Handler:
+
+| | gemessen |
+| --- | --- |
+| Tipp auf eine Karte, **im Stickfeld** (x 337, Feld reicht bis 406) | Grundrauschen 1.205 → **19.943** veränderte Bildpunkte |
+| Karte per Finger genommen | Welle läuft weiter, Krämer erscheint |
+| Tipp auf ein Krämerangebot | Grundrauschen **0** → 8.616, Hervorhebung wandert |
+| zweiter Tipp | **„GEKAUFT", Gold 39 → 13** |
+| Tipp auf „LOS" | „NACHT 2" läuft |
+
+Die 1.205 gegen 19.943 sind der Punkt: Beim ersten Anlauf hatte ich
+„19.857 Bildpunkte verändert" als Beweis genommen — **das war keiner**,
+weil sich die Welt unter der Kartenhand ohnehin bewegt. Erst das
+Grundrauschen daneben macht die Zahl zu einer Aussage.
+
+### Zwei Befunde am Rande
+
+**Das Werkzeug, nicht das Spiel:** Ein Klick des Browserwerkzeugs läuft
+im Handy-Modus immer in einen Zeitablauf — auch auf eine leere Stelle.
+Der Kartenhand-Agent hatte das vermutet, ich habe es mit der Gegenprobe
+belegt. Gemessen wird deshalb über synthetische Berührungen durch die
+echten Handler.
+
+**Zeilenenden:** Die neuen Dateien lagen als LF im sonst durchgehend
+CRLF geschriebenen Projekt (Fehlerbuch C3). Angeglichen; die Prüfung
+lief davor und danach mit demselben Ergebnis.
+
+### Geprüft
+
+`werkzeuge/pruefe-tippen.mjs`, **29 Prüfungen**: Geometrie gegen die
+Zahlen von vor dem Umbau, Überlappung bei ein bis vier Spielern,
+Achsenschritte, genau ein Knopf bei drei Tipps, nichts außerhalb des
+Krämers, nichts für Bereite, nichts ohne eigenen Platz, nichts in der
+Spalte des Nachbarn — und der ganze Weg bis zur `knopfFlanke`, für
+beide Tippwege.
+
+**Vier Rot-Beweise**, jeder einzeln: Geometrie um einen Bildpunkt
+verschoben (5 Meldungen), Trefferfläche über den Nachbarn (Abstand
+−12), fremde Spalte tippbar, und der alte `??` zurück (3 Meldungen,
+darunter die Kartenhand).
+
 ## 0.9.3 — Vier Fälle ins Fehlerbuch (05.09.2026)
 
 Vom Tag der vier Agenten. **F3** stand auf einem eigenen Zweig und ist

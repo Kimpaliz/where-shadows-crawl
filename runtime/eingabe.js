@@ -285,7 +285,22 @@ export function macheFlanken() {
   return function leite(rohe) {
     return rohe.map((e, i) => {
       const x = e?.x ?? 0, y = e?.y ?? 0;
-      const knopf = !!(e?.ausweichen ?? e?.knopf);
+      /* ⚠️ Hier stand `e?.ausweichen ?? e?.knopf`, und das war **still
+         falsch**: `??` geht nur bei `null`/`undefined` weiter, und
+         `false` ist ein gültiger Wert. Wer wie `runtime/karten-hand.js`
+         oder `runtime/laden-tippen.js` einen `{ knopf: true }` in eine
+         Eingabe mischt, die von `liesEigene()` kommt, hat darin immer
+         schon ein `ausweichen: false` — und `false ?? true` ist
+         `false`. Der Knopf verschwand also genau auf dem Weg, der ihn
+         tragen sollte.
+
+         Gemessen am 05.09.2026: Ein Tipp auf ein Krämerangebot bewegte
+         den Zeiger, aber der zweite Tipp kaufte nichts. Dieselbe Falle
+         wie beim Ton in Scotophobia — dort war `Number(null)` eine
+         gültige Lautstärke von 0, und der Standard griff nie.
+
+         Gemeint war immer „einer von beiden", also `||`. */
+      const knopf = !!(e?.ausweichen || e?.knopf);
       const stufeX = Math.abs(x) > 0.6 ? Math.sign(x) : 0;
       const stufeY = Math.abs(y) > 0.6 ? Math.sign(y) : 0;
       const alt = vorher[i] ?? { knopf: false, x: 0, y: 0 };

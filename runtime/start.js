@@ -34,6 +34,7 @@ import {
   bedieneWahl, bedieneLaden, SPERRE_SEKUNDEN
 } from "./oberflaeche.js";
 import { macheKartenhand } from "./karten-hand.js";
+import { macheLadenhand } from "./laden-tippen.js";
 import { macheLobby } from "./lobby.js";
 import { ruhendeEingabe, packeEingabe, entpackeEingabe } from "../netz/nachrichten.mjs";
 import { macheLockstep, VERZUG, NACHHALL } from "../netz/lockstep.mjs";
@@ -57,6 +58,10 @@ const menue = macheMenue();
    gewoehnliche Achsen- und Knopfeingaben uebersetzt — siehe die
    Kopfnotiz von `runtime/karten-hand.js`. */
 const kartenhand = macheKartenhand(leinwand);
+/* Derselbe Weg fuer den Kraemer: ein Fingertipp wird zu Achse und
+   Knopf. Ohne ihn ist der Kraemer der einzige Bildschirm, an dem ein
+   Finger nichts ausrichtet (`runtime/laden-tippen.js`). */
+const ladenhand = macheLadenhand(leinwand);
 
 const flanken = macheFlanken();
 
@@ -179,6 +184,10 @@ function wendeAn(eingabenDesTicks) {
       oeffneKraemer(welt);
       for (const s of welt.spieler) menue.ladenZeiger[s.id] = 0;
     }
+    /* Erst **hier** rückt die Tippkette nach — dieselbe Regel wie bei
+       der Kartenhand: Ein Eingabebild, das keine Bedienung abholt, wäre
+       verloren. */
+    ladenhand.quittiere();
     if (bedieneLaden(welt, menue, eingabenDesTicks)) { naechsteWelle(welt); sammler = 0; }
   }
 }
@@ -294,7 +303,7 @@ function bild(jetzt) {
   /* Der Zeigefinger auf einer Karte wird zu Achse und Knopf — damit er
      denselben Weg nimmt wie Tastatur und Daumen und im Netzspiel bei
      allen ankommt (`runtime/karten-hand.js`). */
-  const eigene = kartenhand.mische(eingabe.liesEigene(), welt);
+  const eigene = ladenhand.mische(kartenhand.mische(eingabe.liesEigene(), welt), welt);
   letzteEigene = eigene;
 
   /* Allein: die eigene Eingabe wirkt sofort. In einer Runde füllt der
@@ -329,7 +338,12 @@ function bild(jetzt) {
        der Endbildschirm mitten im Lauf, und zwar sichtbar falsch. */
     zeichneAnzeige(zeichner.c, welt);
     zeichneTruhen(zeichner.c, welt);
-  } else if (welt.phase === "laden") zeichneLaden(zeichner.c, welt, menue);
+  } else if (welt.phase === "laden") {
+    zeichneLaden(zeichner.c, welt, menue);
+    /* Erst **nach** dem Malen merken, was dasteht — ein Tipp trifft nur,
+       was auch zu sehen ist. */
+    ladenhand.merke(welt, menue, eigenerPlatz);
+  }
   else zeichneEnde(zeichner.c, welt);
 }
 

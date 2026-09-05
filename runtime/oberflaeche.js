@@ -254,25 +254,95 @@ export function zeichneTruhen(c, welt) {
 
 /* ── Der Krämer ──────────────────────────────────────────────────── */
 
-export function zeichneLaden(c, welt, menue) {
-  c.fillStyle = "#07060c";
-  c.fillRect(0, 0, BREITE, HOEHE);
-  zeichneTextMittig(c, `DER KRÄMER — VOR NACHT ${welt.welle + 1}`, BREITE / 2, 5, FARBEN.flammeHell, FARBEN.kontur);
+/* ── Wo die Felder des Krämers liegen ────────────────────────────────
 
+   **Eine** Quelle für Malen und Treffen. `zeichneLaden()` malt danach,
+   `runtime/laden-tippen.js` trifft danach.
+
+   Der Grund steht im Fehlerbuch: Setzer und Bewegung der Wesen stellten
+   in Scotophobia **verschiedene Fragen** (ein Bildpunkt gegen einen
+   Radius von 1,4), und ein Wesen konnte an der Wand entstehen und kam
+   nie los. Zwei Rechnungen für dieselbe Sache laufen auseinander, ohne
+   dass etwas rot wird — hier hieße das: Der Finger trifft daneben, und
+   niemand kann sagen warum.
+
+   Zurück kommt je Feld `{ i, x, y, b, h, tippB, tippH }`. Gemalt wird
+   `b`/`h`, getroffen wird `tippB`/`tippH` — siehe `TIPP_MINDESTHOEHE`. */
+
+/* Wie hoch ein Feld für den Finger mindestens ist. Gemessen, nicht
+   geraten: „NEU" und „LOS" sind **12 Bildpunkte** hoch. Auf einem
+   Telefon quer (812 px breit) wird die Leinwand um 1,69 hochskaliert —
+   das sind 20 physische Bildpunkte gegen die 44, die eine Fingerkuppe
+   braucht. Der Kasten bleibt so groß, wie er aussieht; nur seine
+   Trefferfläche wächst nach unten in die Lücke darunter.
+
+   26 statt 44: Mehr passt zwischen „NEU" und „LOS" nicht, ohne dass
+   sich die beiden Flächen überlappen — und eine Überlappung wäre
+   schlimmer als eine knappe Fläche, weil dann der falsche Kasten
+   gedrückt würde. Bei 1,69 ergibt das 44 physische Bildpunkte. */
+export const TIPP_MINDESTHOEHE = 26;
+
+export function ladenFelder(welt) {
   const n = welt.spieler.length;
   /* Bei einem Spieler waere eine bildschirmbreite Spalte lauter Luft.
      Die Breite wird gedeckelt und der Block mittig gesetzt. */
   const sb = Math.min(150, Math.floor((BREITE - 6) / n) - 3);
   const links = Math.round((BREITE - (sb + 3) * n + 3) / 2);
+  const spalten = new Map();
+
   welt.spieler.forEach((s, i) => {
     const x = links + i * (sb + 3);
+    const felder = [];
+    let y = 26;
+    (s.angebote ?? []).forEach((a, k) => {
+      felder.push({ i: k, x, y, b: sb, h: 30 });
+      y += 32;
+    });
+    felder.push({ i: NEU_WUERFELN, x, y, b: sb, h: 12 });
+    y += 14;
+    felder.push({ i: BEREIT, x, y, b: sb, h: 12 });
+
+    /* Die Trefferfläche wächst nach unten, aber nie in das nächste Feld
+       hinein: Sie endet spätestens dort, wo der nächste Kasten beginnt.
+       Ohne diese Grenze läge „NEU" über „LOS", und ein Tipp auf „LOS"
+       würfelte neu — der teuerste Fehlgriff, den dieser Bildschirm zu
+       bieten hat. */
+    felder.forEach((f, k) => {
+      const naechstes = felder[k + 1];
+      /* Ohne Nachbarn darf voll gewachsen werden: Unter „LOS" steht nur
+         noch Text (Leben, Waffen), nichts Tippbares. Der erste Anlauf
+         nahm hier `f.h` als Platz — dann blieb ausgerechnet das
+         **unterste** Feld bei 12 Bildpunkten, und das ist der Knopf,
+         mit dem man die Runde weiterschickt. Von der eigenen Prüfung
+         gefangen, bevor es jemand am Telefon gemerkt hätte. */
+      const platz = naechstes ? naechstes.y - f.y : TIPP_MINDESTHOEHE;
+      f.tippB = f.b;
+      f.tippH = Math.max(f.h, Math.min(TIPP_MINDESTHOEHE, platz));
+    });
+    spalten.set(s.id, { x, breite: sb, felder });
+  });
+  return spalten;
+}
+
+export function zeichneLaden(c, welt, menue) {
+  c.fillStyle = "#07060c";
+  c.fillRect(0, 0, BREITE, HOEHE);
+  zeichneTextMittig(c, `DER KRÄMER — VOR NACHT ${welt.welle + 1}`, BREITE / 2, 5, FARBEN.flammeHell, FARBEN.kontur);
+
+  const spalten = ladenFelder(welt);
+  const sb = spalten.get(welt.spieler[0].id).breite;
+  welt.spieler.forEach((s) => {
+    const x = spalten.get(s.id).x;
     const farbe = JAEGER_FARBEN[s.id % JAEGER_FARBEN.length];
     zeichneText(c, `J${s.id + 1}`, x, 16, farbe.hell);
     zeichneText(c, `${Math.floor(s.gold)} GOLD`, x + 14, 16, FARBEN.goldHell);
 
     const zeiger = menue.ladenZeiger[s.id];
+    const felder = spalten.get(s.id).felder;
+    const feldVon = (nr) => felder.find((f) => f.i === nr);
     let y = 26;
     (s.angebote ?? []).forEach((a, k) => {
+      y = feldVon(k).y;
       const gewaehlt = zeiger === k && !s.bereit;
       const bezahlbar = !a.gekauft && a.preis <= s.gold;
       kasten(c, x, y, sb, 30, gewaehlt ? farbe.hell : FARBEN.rahmen,
@@ -287,15 +357,15 @@ export function zeichneLaden(c, welt, menue) {
           : Object.entries(a.werte).map(([w, v]) => `${v > 0 ? "+" : ""}${v} ${w.slice(0, 3).toUpperCase()}`).join(" ");
         zeichneText(c, kuerze(zusatz, Math.floor((sb - 8) / VORSCHUB)), x + 3, y + 22, FARBEN.schriftMatt);
       }
-      y += 32;
     });
 
     const wp = neuwuerfelnPreis(welt.welle + 1, s.malGewuerfelt);
     const wGewaehlt = zeiger === NEU_WUERFELN && !s.bereit;
+    y = feldVon(NEU_WUERFELN).y;
     kasten(c, x, y, sb, 12, wGewaehlt ? farbe.hell : FARBEN.rahmen, wGewaehlt ? "#1a1426" : "#0d0a14");
     zeichneText(c, kuerze(`NEU ${wp}`, Math.floor((sb - 6) / VORSCHUB)), x + 3, y + 4,
       s.gold >= wp ? FARBEN.schrift : FARBEN.schriftMatt);
-    y += 14;
+    y = feldVon(BEREIT).y;
 
     const bGewaehlt = zeiger === BEREIT && !s.bereit;
     kasten(c, x, y, sb, 12, s.bereit ? FARBEN.seucheHell : (bGewaehlt ? farbe.hell : FARBEN.rahmen),
@@ -319,7 +389,12 @@ export function zeichneLaden(c, welt, menue) {
     umbrich(c, waffen.toUpperCase(), x, y, sb, farbe.mittel);
   });
 
-  zeichneTextMittig(c, "ACHSE WÄHLEN · KNOPF NEHMEN", BREITE / 2, HOEHE - 9, FARBEN.schriftMatt, FARBEN.kontur);
+  /* Die Zeile nennt beide Wege. „Nochmal tippen" steht dabei zuerst,
+     weil es der einzige ist, den man auf dem Telefon hat — dieselbe
+     Formulierung wie auf der Kartenhand, damit man sie einmal lernt
+     und nicht zweimal. */
+  zeichneTextMittig(c, "TIPPEN ODER ACHSE · NOCHMAL NIMMT", BREITE / 2, HOEHE - 9,
+    FARBEN.schriftMatt, FARBEN.kontur);
 }
 
 /* ── Vorspiel und Ende ───────────────────────────────────────────── */
