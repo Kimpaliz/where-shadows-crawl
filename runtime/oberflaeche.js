@@ -181,36 +181,74 @@ export function zeichneAnzeige(c, welt) {
 import { schwelle } from "../spiel/stufen.mjs";
 function schwelleFuer(s) { return schwelle(s.stufe); }
 
-/* ── Kartenwahl beim Aufstieg ────────────────────────────────────── */
+/* ── Der Truhen-Moment am Wellenende ─────────────────────────────── */
 
-export function zeichneWahl(c, welt, menue) {
-  c.fillStyle = "rgba(6,5,12,0.82)";
+/* Hier stand bis zum 05.09.2026 `zeichneWahl()` — die alte Kartenwahl
+   als Kastenreihe. Sie ist seit der Kartenhand (#69) durch
+   `runtime/karten-hand.js` ersetzt und wurde von **keiner Zeile** mehr
+   gerufen; ihre Felder `k.name`/`k.menge` gibt es an einer gezogenen
+   Karte gar nicht mehr. Wer sie wieder aufgerufen hätte, bekäme
+   „undefined" auf die Karte — deshalb entfernt statt liegen gelassen.
+
+   An ihre Stelle tritt der Moment, für den die Phase „truhen" gebaut
+   ist: Am Wellenende springen alle getragenen Truhen auf einmal auf,
+   und die Welt hält dafür 1,4 Sekunden an. Ohne diese Anzeige liefe
+   der Moment unsichtbar durch — die Funde wären im Gürtel, ohne dass
+   irgendjemand sie gesehen hätte. */
+
+/* Ein Fund je Zeile, nach Sorte eingefärbt. Die Farbe trägt hier
+   Bedeutung und ist nicht Schmuck: Gold und Wissen sind die beiden
+   Ströme, die es ohnehin gibt, und ein Fundstück leuchtet in der Farbe
+   seiner Seltenheit — dieselbe Sprache wie beim Krämer. */
+const TRUHEN_FARBE = {
+  gold: FARBEN.gold,
+  wissen: FARBEN.seucheHell,
+  gegenstand: FARBEN.flammeHell,
+  waffe: FARBEN.eisenHell
+};
+
+export function zeichneTruhen(c, welt) {
+  const funde = welt.truhenErgebnis ?? [];
+  if (funde.length === 0) return;
+
+  c.fillStyle = "rgba(6,5,12,0.72)";
   c.fillRect(0, 0, BREITE, HOEHE);
-  zeichneTextMittig(c, "DIE NACHT LEHRT DICH ETWAS", BREITE / 2, 10, FARBEN.flammeHell, FARBEN.kontur);
+  zeichneTextMittig(c, funde.length === 1 ? "EINE TRUHE SPRINGT AUF" : `${funde.length} TRUHEN SPRINGEN AUF`,
+    BREITE / 2, 10, FARBEN.flammeHell, FARBEN.kontur);
 
-  const offene = welt.spieler.filter((s) => s.offeneWahlen > 0);
-  const hoehe = Math.min(58, Math.floor((HOEHE - 30) / Math.max(1, offene.length)));
-  offene.forEach((s, reihe) => {
-    const y = 24 + reihe * (hoehe + 2);
-    const farbe = JAEGER_FARBEN[s.id % JAEGER_FARBEN.length];
-    zeichneText(c, `J${s.id + 1}`, 3, y + hoehe / 2 - 3, farbe.hell);
-    const karten = s.karten ?? [];
-    const kb = Math.floor((BREITE - 22) / karten.length) - 3;
-    karten.forEach((k, i) => {
-      const x = 18 + i * (kb + 3);
-      const gewaehlt = menue.wahlZeiger[s.id] === i;
-      kasten(c, x, y, kb, hoehe, gewaehlt ? farbe.hell : FARBEN.rahmen,
-        gewaehlt ? "#1a1426" : "#0d0a14");
-      zeichneText(c, k.name, x + 4, y + 5, farbe.hell);
-      zeichneText(c, `+${k.menge}`, x + 4, y + 14, FARBEN.flammeHell);
-      umbrich(c, k.text, x + 4, y + 24, kb - 8, FARBEN.schriftMatt);
-    });
+  /* Höchstens so viele Zeilen, wie zwischen Titel und Unterkante
+     passen. Mehr Truhen als Platz ist selten (gemessen 4,18 je **Lauf**),
+     aber „selten" ist kein Grund, den Rest über den Bildrand zu
+     schieben — die übrigen werden gezählt statt gemalt. */
+  const oben = 26;
+  const zeileHoch = 11;
+  const passen = Math.max(1, Math.floor((HOEHE - oben - 14) / zeileHoch));
+  const gezeigt = funde.slice(0, passen);
+
+  gezeigt.forEach((f, i) => {
+    const y = oben + i * zeileHoch;
+    const farbe = TRUHEN_FARBE[f.sorte] ?? TRUHEN_FARBE.gegenstand;
+    const s = welt.spieler.find((p) => p.id === f.spielerId);
+    const jaeger = JAEGER_FARBEN[(s?.id ?? 0) % JAEGER_FARBEN.length];
+    zeichneText(c, `J${(f.spielerId ?? 0) + 1}`, 6, y, jaeger.hell);
+
+    /* Bei Gold und Wissen ist die Menge die Nachricht, bei Fundstück
+       und Waffe der Name — deshalb zwei Formen statt einer, die für
+       beides halb passt. */
+    const text = (f.sorte === "gold" || f.sorte === "wissen")
+      ? `${f.name} · ${f.menge}`
+      : f.name;
+    zeichneText(c, text, 24, y, farbe);
+
+    /* `voll` heißt: Eine Waffe fand keinen Platz im Gürtel und wurde zu
+       Gold. Das muss dastehen — sonst sieht der Spieler Gold und hält
+       die Truhe für mager, obwohl sie eine Waffe hergegeben hat. */
+    if (f.voll) zeichneText(c, "(GÜRTEL VOLL)", 24 + textBreite(text) + 6, y, FARBEN.schriftMatt);
   });
 
-  const warten = welt.spieler.filter((s) => s.offeneWahlen === 0);
-  if (warten.length > 0 && offene.length > 0) {
-    zeichneTextMittig(c, `${warten.map((s) => "J" + (s.id + 1)).join(" ")} WARTET`,
-      BREITE / 2, HOEHE - 10, FARBEN.schriftMatt, FARBEN.kontur);
+  if (funde.length > gezeigt.length) {
+    zeichneTextMittig(c, `UND ${funde.length - gezeigt.length} WEITERE`,
+      BREITE / 2, oben + gezeigt.length * zeileHoch + 2, FARBEN.schriftMatt, FARBEN.kontur);
   }
 }
 

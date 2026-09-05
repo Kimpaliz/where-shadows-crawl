@@ -3,6 +3,49 @@
 Oben das Neueste. Jeder Eintrag sagt **was**, **warum** und **womit
 gemessen** — nicht nur, dass etwas anders ist.
 
+## 0.9.1 — Die Truhen waren im Browser eine Sackgasse (05.09.2026)
+
+Der Truhen-Regelkern (#74–#76) war fertig und geprüft, aber
+`runtime/*` gehörte einem anderen Agenten und blieb unberührt. Auf dem
+zusammengeführten Stand hieß das:
+
+**`runtime/start.js` `wendeAn()` kannte die Phase `"truhen"` nicht.**
+Die Phase ist zeitgesteuert — `welt.truhenZeit` zählt in `schritt()`
+herunter, und `schritt()` ruft in dieser Phase sonst niemand. Die erste
+Welle, in der jemand eine Truhe trug, hätte das Spiel **für immer
+angehalten**. `werkzeuge/pruefe-truhen.mjs` stellt genau diesen Fall als
+Rot-Beweis (72.000 Schritte hängengeblieben); im Browser wäre er nur
+nicht als Absturz aufgefallen, sondern als Bild, das stehen bleibt.
+
+Zweitens fiel `"truhen"` in `bild()` auf `zeichneEnde()` durch — der
+Endbildschirm mitten im Lauf.
+
+### Was jetzt zu sehen ist
+
+**In der Welle:** Liegende Truhen werden im selben Pass wie die Beute
+gemalt (`DINGE.truheZu`), aber mit doppelter Hüpfhöhe und einem
+pulsierenden Lichtsaum. Das ist kein Schmuck: Die Fackel steht in der
+Mitte der Arena, eine Truhe fällt dort, wo gekämpft wurde — also meist
+im Dunkeln. Ohne eigenes Licht wäre „selten, aber auffindbar" (#75) an
+der Beleuchtung gescheitert statt am Zufall.
+
+**Am Wellenende:** `zeichneTruhen()` zeigt eine Zeile je Fund, nach
+Sorte eingefärbt (Gold, Wissen, Fundstück, Waffe). Bei Gold und Wissen
+steht die Menge, bei Fundstück und Waffe der Name — zwei Formen statt
+einer, die für beides halb passt. Eine Waffe, die wegen vollem Gürtel zu
+Gold wurde, trägt „(GÜRTEL VOLL)": Sonst sähe der Spieler Gold und
+hielte die Truhe für mager, obwohl sie eine Waffe hergegeben hat. Mehr
+Funde als Platz werden gezählt statt über den Bildrand geschoben.
+
+### Und `zeichneWahl()` ist weg
+
+Die alte Kartenwahl als Kastenreihe wurde seit der Kartenhand (#69) von
+**keiner Zeile** mehr gerufen — und griff auf `k.name`/`k.menge` zu,
+Felder, die eine gezogene Karte gar nicht mehr trägt. Wer sie wieder
+aufgerufen hätte, bekäme „undefined" auf die Karte. Der Kartenhand-Agent
+hat sie gemeldet und nicht angefasst, weil es nicht seine Datei war;
+jetzt ist sie entfernt.
+
 ## 0.9.0 — Vier Baustellen zusammengeführt, und eine Sperrklinke ist gestiegen (05.09.2026)
 
 Kartenhand (#69), Angriffe und Anzeige (#80, #93), Truhen (#74–#76) und

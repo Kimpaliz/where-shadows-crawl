@@ -30,7 +30,7 @@ import { ladeSprites } from "./sprites.js";
 import { macheZeichner, zeichne, baueBoden, fackelOrte, BREITE, HOEHE } from "./zeichnen.js";
 import { macheEingabe, macheFlanken } from "./eingabe.js";
 import {
-  macheMenue, zeichneAnzeige, zeichneLaden, zeichneEnde,
+  macheMenue, zeichneAnzeige, zeichneLaden, zeichneEnde, zeichneTruhen,
   bedieneWahl, bedieneLaden, SPERRE_SEKUNDEN
 } from "./oberflaeche.js";
 import { macheKartenhand } from "./karten-hand.js";
@@ -164,6 +164,15 @@ function wendeAn(eingabenDesTicks) {
        kein Weltschritt abholt, waere verloren — auf einem Bildschirm
        mit 144 Hz gilt das fuer zwei von drei Bildern. */
     kartenhand.quittiere();
+    schrittImLauf(welt, eingabenDesTicks);
+  } else if (welt.phase === "truhen") {
+    /* ⚠️ Ohne diesen Zweig bleibt die Welt **für immer** stehen: „truhen"
+       ist zeitgesteuert, `welt.truhenZeit` zählt in `schritt()` herunter
+       — und `schritt()` ruft in dieser Phase sonst niemand. Kein
+       Spielerknopf, nur der Aufruf. `werkzeuge/pruefe-truhen.mjs` stellt
+       genau diesen Fall als Rot-Beweis (72.000 Schritte in „truhen"
+       hängengeblieben); im Browser hätte ihn erst die erste Welle
+       gezeigt, in der jemand eine Truhe trägt. */
     schrittImLauf(welt, eingabenDesTicks);
   } else if (welt.phase === "laden") {
     if (!welt.spieler[0].angebote) {
@@ -315,6 +324,11 @@ function bild(jetzt) {
   else if (welt.phase === "wahl") {
     zeichneAnzeige(zeichner.c, welt);
     kartenhand.zeichne(zeichner.c, welt, menue, eigenerPlatz);
+  } else if (welt.phase === "truhen") {
+    /* Ohne eigenen Zweig fiele „truhen" auf `zeichneEnde()` durch —
+       der Endbildschirm mitten im Lauf, und zwar sichtbar falsch. */
+    zeichneAnzeige(zeichner.c, welt);
+    zeichneTruhen(zeichner.c, welt);
   } else if (welt.phase === "laden") zeichneLaden(zeichner.c, welt, menue);
   else zeichneEnde(zeichner.c, welt);
 }

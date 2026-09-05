@@ -513,6 +513,24 @@ export function zeichne(zeichner, welt, boden, sprites, zeit) {
     male(c, bild, b.x, b.y + Math.round(Math.sin(b.hupf) * 1.5));
   }
 
+  /* Truhen liegen im selben Pass wie die Beute — sie sind Beute, nur
+     eine, die man erst am Wellenende öffnet.
+
+     Sie hüpfen **doppelt so hoch** wie eine Münze (3 statt 1,5) und
+     tragen einen Lichtsaum. Beides ist kein Schmuck: Die Fackel steht
+     in der Mitte der Arena, eine Truhe fällt dort, wo gekämpft wurde —
+     also meist im Dunkeln. Ohne eigenes Licht wäre „selten, aber
+     auffindbar" (#75) an der Beleuchtung gescheitert, nicht am
+     Zufall. */
+  for (const t of welt.truhen ?? []) {
+    const y = t.y + Math.round(Math.sin(t.hupf) * 3);
+    c.fillStyle = FARBEN.gold;
+    c.globalAlpha = 0.22 + 0.10 * Math.sin(t.hupf * 1.7);
+    c.fillRect(Math.round(t.x) - 7, Math.round(y) - 6, 14, 12);
+    c.globalAlpha = 1;
+    male(c, sprites.dinge.truheZu, t.x, y);
+  }
+
   /* Der Schlagbogen liegt unter den Figuren, damit er nicht das
      Gesicht verdeckt. */
   for (const s of welt.spieler) {
