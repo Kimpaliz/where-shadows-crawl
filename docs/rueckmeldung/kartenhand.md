@@ -203,3 +203,20 @@ Flächenschaden). Dazu Seltenheiten mit Faktor bis 4,0. Der Kunstspieler
 wird dadurch messbar stärker — das ist eine **Auslegungsfrage**, keine
 Reparatur, und sie hängt an derselben Entscheidung wie Vorgang #52
 („Was kostet ein Sturz im endlosen Modus?").
+
+## Die Prüfung riss die Zeilengrenze — geteilt, nicht geduldet
+
+`werkzeuge/pruefe-karten.mjs` stand nach Abschnitt 9 bei **1.078 von
+1.000** Zeilen, und `pruefe-altlasten.mjs` hat es gemeldet. Regel 7 ist
+eindeutig: teilen. Der Schnitt folgt dem Thema.
+
+| | Zeilen | Prüfungen |
+| --- | ---: | ---: |
+| `werkzeuge/pruefe-karten.mjs` — Katalog, Seltenheit, Meta-Regeln, Ziehstatistik | 553 | 74 |
+| `werkzeuge/pruefe-kartenhand.mjs` — Ort, Bild, Klickweg | 584 | 76 |
+
+Beide nennen einander im Dateikopf. `probeSpieler()` steht **doppelt**,
+mit Begründung: Eine Prüfdatei aus einer anderen zu importieren hiesse,
+deren Prüfungen mitlaufen zu lassen. Sieben Zeilen sind der kleinere
+Preis. In der Wegweiser-Tabelle von `pruefe-alles.mjs` teilen sich beide
+**eine** Zeile.
