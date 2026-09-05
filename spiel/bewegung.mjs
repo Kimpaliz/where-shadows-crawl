@@ -25,10 +25,14 @@
    `spiel/welt.mjs` (ruft je Schritt), `spiel/werte.mjs` (Tempo),
    `spiel/ausweichen.mjs` (der Sprung liefert den Versatz, geklemmt
    wird er hier), `spiel/gitter.mjs` (Nachbarn fürs Drängen),
-   `spiel/katalog/gegner.mjs` (Verhalten, Tempo, Wucht). */
+   `spiel/katalog/gegner.mjs` (Tempo, Wucht, welche Verhalten-Kennung
+   eine Art trägt), `spiel/gegner-verhalten.mjs` (seit 05.09.2026: was
+   diese Kennung tatsächlich bedeutet — diese Datei fragt nur noch
+   danach und kennt keine einzige Gegnerart mehr beim Namen). */
 
 import { laufTempo } from "./werte.mjs";
 import { ausweichSchritt } from "./ausweichen.mjs";
+import { richteVerhalten } from "./gegner-verhalten.mjs";
 
 /* Wie stark sich zwei Gegner auseinanderschieben, wenn sie sich
    überlappen. 90 statt „ganz auseinander" ist gemessen: Bei voller
@@ -111,37 +115,30 @@ export function bewegeGegner(welt, dt) {
     const art = g.art;
     const ziel = naechsterSpieler(spieler, g.x, g.y);
 
-    let wx = 0, wy = 0;
+    let wx = 0, wy = 0, tempoFaktor = 1;
     if (ziel) {
       const dx = ziel.x - g.x, dy = ziel.y - g.y;
       const d = Math.hypot(dx, dy) || 1;
-      wx = dx / d; wy = dy / d;
+      const basisWx = dx / d, basisWy = dy / d;
 
-      if (art.verhalten === "schwankt") {
-        /* Ein Bogen statt einer Geraden: quer zur Laufrichtung, mit
-           eigener Phase je Gegner. Trifft man schlechter, und es
-           bricht die Front auf. */
-        g.phase += dt * 3.4;
-        const s = Math.sin(g.phase) * 0.7;
-        const qx = -wy, qy = wx;
-        wx += qx * s; wy += qy * s;
-        const l = Math.hypot(wx, wy) || 1;
-        wx /= l; wy /= l;
-      } else if (art.verhalten === "speit") {
-        /* Bleibt auf Abstand: kommt heran, bis er schießen kann, und
-           weicht zurück, wenn man ihm zu nah kommt. */
-        const abstand = Math.hypot(dx, dy);
-        if (abstand < art.abstand * 0.75) { wx = -wx; wy = -wy; }
-        else if (abstand < art.abstand) { wx = 0; wy = 0; }
-      }
+      /* Was diese Kennung bedeutet, steht in
+         `spiel/gegner-verhalten.mjs` — hier wird nur noch gefragt, nicht
+         mehr unterschieden. `welt.zufall`, nicht `Math.random`: siehe
+         dort. */
+      const gerichtet = richteVerhalten(art.verhalten, {
+        g, art, dt, dx, dy, d, wx: basisWx, wy: basisWy, zufall: welt.zufall
+      });
+      wx = gerichtet.wx; wy = gerichtet.wy;
+      tempoFaktor = gerichtet.tempoFaktor ?? 1;
     }
 
-    /* Frost bremst, Rückstoß überlagert. */
+    /* Frost bremst, ein Verhalten (z. B. „sammelt") darf zusätzlich
+       stauchen oder strecken, Rückstoß überlagert. */
     /* `g.tempo` statt `art.tempo`: Der Wert wächst mit der Welle
        (`katalog/gegner.mjs`, `tempoInWelle`). Wer hier den Katalogwert
        liest, bekommt einen Gegner, der in Welle 50 so schnell läuft wie
        in Welle 1 — und genau daran war der endlose Modus unendlich. */
-    const tempo = g.tempo * (g.frost > 0 ? 1 - g.frostStaerke : 1);
+    const tempo = g.tempo * tempoFaktor * (g.frost > 0 ? 1 - g.frostStaerke : 1);
     let vx = wx * tempo + g.stossX;
     let vy = wy * tempo + g.stossY;
 
