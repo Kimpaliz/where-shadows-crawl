@@ -295,6 +295,53 @@ Agenten zählen lassen.
 
 ---
 
+### F3 · Zwei Agenten ohne Worktree im selben Checkout
+
+Vier Agenten wurden mit angeforderter Worktree-Isolation gestartet, in
+**zwei Doppelaufrufen**. Die zwei aus dem ersten Aufruf bekamen **keinen**
+Worktree und arbeiteten im Hauptcheckout — zusammen mit dem Leitstand,
+der dort gleichzeitig einen Doku-Zweig anlegte.
+
+Die Folge steht unzweideutig im Reflog:
+
+```
+HEAD@{4} checkout: moving from regeln/kartenhand to katalog/monster-und-hauptleute
+HEAD@{3} checkout: moving from katalog/monster-und-hauptleute to regeln/truhen
+HEAD@{2} checkout: moving from regeln/truhen to doku/workclaim-runde2
+HEAD@{1} commit: Karten: eine Karte ist ein Katalogeintrag (#66)
+```
+
+Drei Beteiligte zogen einander den Zweig unter den Füßen weg. Der
+Kartenhand-Agent committete seine 1.215 Zeilen auf den **Doku-Zweig des
+Leitstands**, ohne es zu merken.
+
+**Wahrscheinliche Ursache:** Kurz zuvor wurde `.claude/worktrees/` per
+`rm -rf` geräumt, während ein Worktree noch `locked` war. Danach legten
+zwei gleichzeitige Anforderungen im selben Moment an — und zwei davon
+gingen leer aus, ohne Fehlermeldung.
+
+**Was dabei zusätzlich schiefging:** Ein Agent maß in diesem vermischten
+Baum `pruefe-balance.mjs` und meldete vier Fehler als *vorbestehenden
+Zustand*. Sie waren ein Artefakt der halbfertigen Dateien dreier
+Sitzungen; im sauberen Worktree war die Kette grün. **Eine Messung in
+einem Baum, den mehrere gleichzeitig beschreiben, misst nichts.**
+
+**Woran ich es früher merke:** Ein Agent, der isoliert arbeiten soll,
+prüft das **selbst und als Erstes**:
+
+```
+git rev-parse --git-dir
+```
+
+Im Hauptcheckout gibt das `.git`, in einem Worktree einen Pfad unter
+`.git/worktrees/<name>`. Steht dort `.git`, hält er an, statt zu
+arbeiten — genau das hat der Monster-Agent von sich aus getan und damit
+den Schaden begrenzt. Dazu: Agenten mit Worktree-Isolation **nicht
+mehrere im selben Aufruf** starten, und der Leitstand fasst den
+Hauptcheckout nicht an, solange welche laufen.
+
+---
+
 ## Was daraus folgt
 
 Die drei wirksamsten Gewohnheiten aus diesen Fällen:
