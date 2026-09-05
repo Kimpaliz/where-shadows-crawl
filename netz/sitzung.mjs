@@ -163,11 +163,12 @@ export async function tritteBei({ code, name, beiAenderung, beiEingaben, beiStar
     /* Nach dem Aufbau ist der Vermittler belanglos — dann läuft alles
        direkt. **Vorher** ist er alles.
 
-       Am 05.09.2026 gemessen: Der öffentliche Vermittler schließt die
-       Verbindung des Absenders, sobald der ein Angebot weiterreichen
-       will. Ohne diese Unterscheidung stand der Gast danach für immer
-       vor „Suche die Lobby …" — die Trennung galt als belanglos, und
-       niemand sagte ihm etwas. */
+       Der Vermittler legt ohne Fehlermeldung auf, wenn ihm eine
+       Nachricht nicht passt (`netz/broker.mjs`). Ohne diese
+       Unterscheidung stand der Gast danach für immer vor „Suche die
+       Lobby …" — die Trennung galt als belanglos, und niemand sagte
+       ihm etwas. Die Meldung bleibt, auch nachdem die Ursache behoben
+       ist: Sie fängt jeden künftigen Abbruch des fremden Dienstes. */
     beiTrennung: () => {
       if (steht) return;
       beiMeldung?.(

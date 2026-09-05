@@ -30,10 +30,25 @@
    sagt danach ehrlich, dass es am Netz liegt — statt einen Ladebalken
    zu zeigen, der nie zu Ende geht.
 
+   ── Angebote reisen in einer Hülle ──────────────────────────────────
+
+   Was der Browser liefert (`localDescription.toJSON()`), reicht dem
+   Vermittler **nicht**: Er lässt es nicht durch und trennt statt zu
+   antworten. Deshalb geht hier nichts roh hinaus — `verpackeSignal`
+   legt die gemessene Hülle darum, `entpackeSignal` nimmt sie wieder
+   ab. Die Begründung samt Messwerten steht in
+   `netz/vermittler-format.mjs`; hier steht sie nicht noch einmal,
+   damit es nur **eine** Stelle gibt, die sie erklärt.
+
    ── Arbeitet zusammen mit ───────────────────────────────────────────
 
    `netz/broker.mjs` (Zustellung der Angebote), `netz/sitzung.mjs`
-   (Wirt und Gast), `netz/nachrichten.mjs` (was gesendet wird). */
+   (Wirt und Gast), `netz/nachrichten.mjs` (was gesendet wird),
+   `netz/vermittler-format.mjs` (die Hülle). */
+
+import {
+  verpackeSignal, entpackeSignal, kennungAusSignal, neueVerbindungsKennung
+} from "./vermittler-format.mjs";
 
 export const EISDIENSTE = [
   { urls: "stun:stun.l.google.com:19302" },
@@ -57,6 +72,27 @@ export function macheVerbindung({ wirt, sendeSignal, beiNachricht, beiOffen, bei
   const gegen = new RTCPeerConnection({ iceServers: EISDIENSTE });
   let kanal = null;
   let fertig = false;
+
+  /* Die Kennung dieser einen Leitung. Wer anruft, vergibt sie sofort —
+     die ersten Wegbeschreibungen entstehen schon während des Angebots,
+     und ohne Kennung ließe der Vermittler sie fallen. Wer antwortet,
+     hat noch keine: Er übernimmt sie aus dem Angebot (siehe unten). */
+  let verbindungsKennung = wirt ? neueVerbindungsKennung() : null;
+
+  /* Wegbeschreibungen, die fertig sind, bevor die Kennung da ist. Beim
+     Antwortenden ist das der Normalfall in den ersten Millisekunden.
+     Ohne diesen Halt gingen sie ungültig hinaus, der Vermittler
+     trennte — und die Leitung käme nie zustande. */
+  const wartendeSignale = [];
+
+  function schickeSignal(art, inhalt) {
+    if (!verbindungsKennung) { wartendeSignale.push([art, inhalt]); return; }
+    sendeSignal(art, verpackeSignal(art, inhalt, verbindungsKennung));
+  }
+
+  function holeAufgestaute() {
+    for (const [art, inhalt] of wartendeSignale.splice(0)) schickeSignal(art, inhalt);
+  }
 
   /* Angebote, die eintreffen, bevor die Gegenseite beschrieben ist,
      müssen warten — sonst wirft `addIceCandidate`. Das passiert
@@ -88,7 +124,7 @@ export function macheVerbindung({ wirt, sendeSignal, beiNachricht, beiOffen, bei
   gegen.addEventListener("icecandidate", (e) => {
     /* Der letzte Ruf hat kein Ziel mehr — er sagt nur „ich bin fertig
        mit Suchen" und wird nicht weitergereicht. */
-    if (e.candidate) sendeSignal("CANDIDATE", e.candidate.toJSON());
+    if (e.candidate) schickeSignal("CANDIDATE", e.candidate.toJSON());
   });
 
   gegen.addEventListener("connectionstatechange", () => {
@@ -119,19 +155,30 @@ export function macheVerbindung({ wirt, sendeSignal, beiNachricht, beiOffen, bei
     if (!wirt) return;
     const angebot = await gegen.createOffer();
     await gegen.setLocalDescription(angebot);
-    sendeSignal("OFFER", gegen.localDescription.toJSON());
+    schickeSignal("OFFER", gegen.localDescription.toJSON());
   }
 
   /* Ein Angebot vom Gegenüber. Alles hier kann werfen — ein Angebot,
      das zur falschen Zeit kommt, ist normal und darf den Aufbau nicht
      abbrechen. */
-  async function nimmSignal(art, inhalt) {
+  async function nimmSignal(art, nutzlast) {
+    /* Die Kennung des Anrufers gilt. Wer antwortet, hat keine eigene —
+       er spiegelt sie zurück, sonst gehörten Angebot und Antwort beim
+       Vermittler zu zwei verschiedenen Leitungen. */
+    if (!wirt && !verbindungsKennung) {
+      const fremde = kennungAusSignal(nutzlast);
+      if (fremde) { verbindungsKennung = fremde; holeAufgestaute(); }
+    }
+
+    const inhalt = entpackeSignal(art, nutzlast);
+    if (!inhalt) return;
+
     try {
       if (art === "OFFER") {
         await gegen.setRemoteDescription(new RTCSessionDescription(inhalt));
         const antwort = await gegen.createAnswer();
         await gegen.setLocalDescription(antwort);
-        sendeSignal("ANSWER", gegen.localDescription.toJSON());
+        schickeSignal("ANSWER", gegen.localDescription.toJSON());
         for (const weg of wartendeWege.splice(0)) await gegen.addIceCandidate(weg);
       } else if (art === "ANSWER") {
         await gegen.setRemoteDescription(new RTCSessionDescription(inhalt));
@@ -149,6 +196,9 @@ export function macheVerbindung({ wirt, sendeSignal, beiNachricht, beiOffen, bei
   return {
     beginne,
     nimmSignal,
+    /* Nach außen nur zum Nachsehen — beim Suchen eines Fehlers ist die
+       erste Frage, ob beide Seiten dieselbe Leitung meinen. */
+    kennung: () => verbindungsKennung,
     sende(text) {
       if (kanal?.readyState !== "open") return false;
       try { kanal.send(text); return true; } catch { return false; }

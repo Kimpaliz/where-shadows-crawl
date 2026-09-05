@@ -317,4 +317,107 @@ const macheProbe = () => macheLockstep({ eigenerPlatz: 0, plaetze: [0, 1], verzu
     "sonst liefe sie als leere Nachricht durch die Verteilung");
 }
 
+/* ── Teil 5 · Die Hülle für den Vermittler ───────────────────────── */
+
+/* Am 05.09.2026 am echten Dienst gemessen (vier Runden, jeder Fall
+   mindestens zweimal, die Arten verzahnt): Der öffentliche Vermittler
+   verwirft ein Angebot, dessen Hülle nicht stimmt — und zwar
+   **stillschweigend**, mit einem Auflegen, das wie ein normales Ende
+   aussieht. Ein OFFER ohne `label`, ohne `serialization` oder ohne
+   `connectionId` kam in keinem einzigen Lauf an.
+
+   Die Zahlen kann diese Prüfung nicht nachstellen; dafür bräuchte sie
+   den fremden Dienst, und eine Prüfkette, die von einem fremden Dienst
+   abhängt, ist ab dessen nächster Störung rot. Was sie prüfen kann und
+   muss: dass die Hülle die gemessenen Pflichtfelder **trägt**. Fällt
+   eines wieder heraus, ist die Verbindung wieder tot — und das würde
+   man sonst erst im Browser merken, an einem Wartebild ohne Grund. */
+{
+  const { verpackeSignal, entpackeSignal, kennungAusSignal, neueVerbindungsKennung } =
+    await import("../netz/vermittler-format.mjs");
+
+  /* Gemessen am 05.09.2026, je Art. OFFER ist die strengste. */
+  const PFLICHT = {
+    OFFER: ["sdp", "type", "connectionId", "label", "serialization"],
+    ANSWER: ["sdp", "type", "connectionId"],
+    CANDIDATE: ["candidate", "type", "connectionId"]
+  };
+
+  const kennung = neueVerbindungsKennung();
+  const sdp = { type: "offer", sdp: "v=0\r\no=- 1 1 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\n" };
+  const weg = { candidate: "candidate:1 1 udp 2113937151 127.0.0.1 50000 typ host",
+                sdpMid: "0", sdpMLineIndex: 0 };
+
+  for (const art of ["OFFER", "ANSWER", "CANDIDATE"]) {
+    const huelle = verpackeSignal(art, art === "CANDIDATE" ? weg : sdp, kennung);
+    const fehlend = PFLICHT[art].filter((f) => huelle[f] === undefined);
+    melde(fehlend.length === 0,
+      `die Hülle für ${art} trägt alle gemessenen Pflichtfelder (${PFLICHT[art].join(", ")})`,
+      `es fehlt: ${fehlend.join(", ")} — der Vermittler verwirft die Nachricht wortlos`);
+  }
+
+  /* `type` meint die Verbindungsart, nicht die Nachrichtenart. Wer dort
+     den Wert `offer` hineinschreibt, baut genau den Fehler nach, der
+     die Leitung tot gemacht hat: Das SDP-Objekt trägt selbst ein
+     `type`, und die beiden sind leicht zu verwechseln. */
+  melde(verpackeSignal("OFFER", sdp, kennung).type === "data",
+    "`type` in der Hülle ist die Verbindungsart data, nicht die Nachrichtenart offer",
+    "die Hülle trägt die Nachrichtenart — genau die Verwechslung, an der es lag");
+
+  melde(verpackeSignal("OFFER", sdp, kennung).sdp === sdp,
+    "die Beschreibung steht unter `sdp` und nicht in der Hülle selbst",
+    "der Vermittler fände kein SDP");
+  melde(verpackeSignal("CANDIDATE", weg, kennung).candidate === weg,
+    "eine Wegbeschreibung steht unter `candidate`");
+  melde(verpackeSignal("CANDIDATE", weg, kennung).sdp === undefined,
+    "eine Wegbeschreibung trägt kein `sdp`");
+
+  /* Der Umlauf. Was hineingeht, muss unverändert wieder herauskommen —
+     sonst bekäme `setRemoteDescription` etwas anderes, als der Browser
+     der Gegenseite gebaut hat. */
+  for (const art of ["OFFER", "ANSWER"]) {
+    const zurueck = entpackeSignal(art, verpackeSignal(art, sdp, kennung));
+    melde(zurueck?.sdp === sdp.sdp && zurueck?.type === sdp.type,
+      `eine ${art}-Beschreibung übersteht Ein- und Auspacken unverändert`,
+      "die Gegenseite bekäme eine andere Beschreibung als die gebaute");
+  }
+  {
+    const zurueck = entpackeSignal("CANDIDATE", verpackeSignal("CANDIDATE", weg, kennung));
+    melde(zurueck?.candidate === weg.candidate && zurueck?.sdpMid === weg.sdpMid,
+      "eine Wegbeschreibung übersteht Ein- und Auspacken unverändert");
+  }
+
+  /* Streng beim Senden, nachsichtig beim Empfangen: Die nackte Form
+     ist genau das, was der alte Code verschickt hat. Sie abzulehnen
+     wäre nur eine zweite Art zu scheitern. */
+  melde(entpackeSignal("OFFER", { type: "offer", sdp: "v=0\r\n" })?.sdp === "v=0\r\n",
+    "auch die nackte Form `{type,sdp}` wird noch angenommen",
+    "eine Gegenstelle in der alten Form käme gar nicht mehr durch");
+  melde(entpackeSignal("CANDIDATE", weg)?.candidate === weg.candidate,
+    "auch eine nackte Wegbeschreibung wird angenommen");
+
+  /* Und was gar nichts Brauchbares ist, gibt `null` statt zu werfen. */
+  melde(entpackeSignal("OFFER", null) === null && entpackeSignal("OFFER", {}) === null &&
+        entpackeSignal("CANDIDATE", {}) === null,
+    "eine leere oder kaputte Nutzlast gibt null, statt zu werfen",
+    "ein verhagelter Umschlag risse den Verbindungsaufbau ab");
+
+  /* Die Kennung. Beide Seiten müssen dieselbe meinen — sonst sieht der
+     Vermittler zwei Leitungen, und die Antwort gehört zu keinem
+     Angebot. */
+  melde(kennungAusSignal(verpackeSignal("OFFER", sdp, kennung)) === kennung,
+    "der Antwortende liest die Kennung des Anrufers aus dem Angebot",
+    "er erfände eine eigene — Angebot und Antwort gehörten dann nicht zusammen");
+  melde(kennungAusSignal({}) === null && kennungAusSignal(null) === null,
+    "ohne Kennung im Angebot gibt es keine erfundene zurück");
+
+  /* Je Leitung eine eigene. Der Wirt hält bis zu drei Gäste
+     gleichzeitig; zwei gleiche Kennungen wären für den Vermittler
+     dieselbe Leitung. */
+  const viele = new Set();
+  for (let i = 0; i < 500; i++) viele.add(neueVerbindungsKennung());
+  melde(viele.size === 500, "500 frische Verbindungskennungen sind alle verschieden",
+    `nur ${viele.size} verschiedene — zwei Gäste teilten sich eine Leitung`);
+}
+
 ende();

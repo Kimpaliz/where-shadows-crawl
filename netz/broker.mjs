@@ -28,33 +28,31 @@
    hier alles mit einer Frist versehen, und jeder Fehler hat einen Text
    in normaler Sprache.
 
-   ⚠️⚠️ **Am 05.09.2026 gemessen, und der Befund ist unangenehm:** Der
-   öffentliche Vermittler nimmt die Anmeldung an und beantwortet
-   Lebenszeichen — aber sobald ein Teilnehmer ein Angebot
-   **weiterreichen** will, schließt er dessen Verbindung mit Code 1000,
-   und beim Empfänger kommt **nichts** an. Vier Fälle mit nackten
-   Sockets, ohne eine Zeile Spielcode:
+   ⚠️ **Ein Ablehnen sieht hier aus wie ein Auflegen.** Passt eine
+   Nachricht dem Vermittler nicht, schickt er keine Fehlermeldung — er
+   schließt die Verbindung des Absenders mit Code **1000**, und 1000
+   heißt in WebSocket-Sprache „normal geschlossen". Wer das für ein
+   ordentliches Ende hält, sucht den Fehler überall, nur nicht in der
+   Nachricht, die er gerade abgeschickt hat.
 
-   | Fall | Absender danach | Empfänger |
-   | --- | --- | --- |
-   | nur dasitzen | offen | — |
-   | nur Lebenszeichen | offen | — |
-   | Angebot an eine Kennung, die es nicht gibt | **zu (1000)** | — |
-   | Angebot an eine Kennung, die es gibt | **zu (1000)** | **nichts** |
+   **Genau das ist am 05.09.2026 passiert, und die erste Diagnose war
+   falsch.** Notiert stand hier, der Dienst reiche Angebote überhaupt
+   nicht weiter. Nachgemessen war es die **Form** der Nachricht: Der
+   Vermittler verlangt die Hülle einer echten PeerJS-Gegenstelle und
+   verwirft alles andere. Mit der richtigen Hülle kommen OFFER, ANSWER
+   und CANDIDATE zuverlässig an, und der Absender bleibt verbunden.
+   Was verlangt wird und wie es gemessen wurde, steht in
+   `netz/vermittler-format.mjs`.
 
-   Das Protokoll hier folgt der Beschreibung; der Dienst hält sie
-   gerade nicht ein. Deshalb ist der Weg **gebaut und lesbar**, aber
-   die Runde über diesen Vermittler kam in dieser Umgebung nicht
-   zustande. Was daraus folgt, steht in
-   `docs/rueckmeldung/lobby-und-netz.md` — es ist eine Entscheidung
-   über einen fremden Dienst und keine, die man im Vorbeigehen trifft.
-   Wichtig ist nur, dass es **auffällt**: Der Abbruch wird gemeldet,
-   statt in einem Wartebild zu verschwinden.
+   **Merksatz:** Ein fremder Dienst, der ohne Fehlermeldung auflegt,
+   ist zuerst ein Verdacht gegen die eigene Nachricht — nicht gegen ihn.
 
    ── Arbeitet zusammen mit ───────────────────────────────────────────
 
    `netz/lobbycode.mjs` (die Kennung), `netz/verbindung.mjs` (bekommt
-   die Angebote zugestellt), `netz/sitzung.mjs` (steuert beides). */
+   die Angebote zugestellt und packt sie aus),
+   `netz/vermittler-format.mjs` (die Hülle), `netz/sitzung.mjs`
+   (steuert beides). */
 
 export const VERMITTLER = "wss://0.peerjs.com/peerjs";
 
