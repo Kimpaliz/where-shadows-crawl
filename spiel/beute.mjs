@@ -23,9 +23,12 @@
 
    `spiel/kampf.mjs` (lässt fallen), `spiel/welt.mjs` (ruft je Schritt
    und räumt am Wellenende), `spiel/werte.mjs` (Gier),
-   `spiel/stufen.mjs` (Wissen führt zum Aufstieg). */
+   `spiel/stufen.mjs` (Wissen führt zum Aufstieg), `spiel/truhen.mjs`
+   (bei jedem Kill gefragt, ob zusätzlich eine Truhe fällt — eigener
+   Fund, eigener Zufallsstrom, siehe dort). */
 
 import { aufsammelReichweite, goldFaktor } from "./werte.mjs";
+import { pruefeTruhenfall } from "./truhen.mjs";
 
 /* Wie schnell aufgesammelte Beute zum Spieler fliegt, sobald sie in
    Reichweite ist. Schnell genug, dass es sich nach Sog anfühlt, und
@@ -56,6 +59,11 @@ export function lassBeuteFallen(welt, g, toeter) {
     });
   }
   if (toeter) toeter.getoetet = (toeter.getoetet ?? 0) + 1;
+
+  /* Unabhängig vom Grabgold: eine eigene, seltene Chance auf eine Truhe
+     (spiel/truhen.mjs). Eigener Zufallsstrom — verschiebt die Streuung
+     hier oben nicht. */
+  pruefeTruhenfall(welt, g);
 }
 
 export function bewegeBeute(welt, dt) {

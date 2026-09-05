@@ -18,10 +18,12 @@
 
    `spiel/katalog/waffen.mjs` und `…/gegenstaende.mjs` (die Ware),
    `spiel/werte.mjs` (Glück, und die Werte, die Fundstücke ändern),
-   `spiel/lauf.mjs` (ruft ihn zwischen den Wellen auf). */
+   `spiel/lauf.mjs` (ruft ihn zwischen den Wellen auf),
+   `spiel/truhen.mjs` (wendet ein Fundstück genauso an wie ein Kauf,
+   über `wendeGegenstandAn`). */
 
 import { WAFFEN, macheWaffe, preisDerWaffe } from "./katalog/waffen.mjs";
-import { GEGENSTAENDE, SELTEN_AB_WELLE } from "./katalog/gegenstaende.mjs";
+import { GEGENSTAENDE, GEGENSTAND_NACH_ID, SELTEN_AB_WELLE } from "./katalog/gegenstaende.mjs";
 import { lebenMax } from "./werte.mjs";
 
 export const WAFFEN_PLAETZE = 6;
@@ -108,15 +110,27 @@ export function kaufe(spieler, index) {
   if (a.sorte === "waffe") {
     if (!nimmWaffe(spieler, a.id, a.stufe)) return false;
   } else {
-    spieler.gegenstaende.push(a.id);
-    for (const [k, v] of Object.entries(a.werte)) spieler.werte[k] += v;
-    spieler.lebenMax = lebenMax(spieler.werte);
-    spieler.leben = Math.min(spieler.leben, spieler.lebenMax);
-    if (a.werte.leben > 0) spieler.leben += a.werte.leben;
+    wendeGegenstandAn(spieler, a.id);
   }
 
   spieler.gold -= a.preis;
   a.gekauft = true;
+  return true;
+}
+
+/* Ein Fundstück auf einen Spieler anwenden — herausgelöst aus `kaufe()`,
+   damit eine Truhe (spiel/truhen.mjs) sich genauso anfühlt wie ein
+   Kauf: dieselbe Wertänderung, dieselbe Sonderregel für Leben (sofort
+   heilen, nicht nur die Obergrenze anheben). Kennt selbst keinen Preis
+   — das Bezahlen bleibt Sache des Aufrufers. */
+export function wendeGegenstandAn(spieler, gegenstandId) {
+  const g = GEGENSTAND_NACH_ID.get(gegenstandId);
+  if (!g) return false;
+  spieler.gegenstaende.push(g.id);
+  for (const [k, v] of Object.entries(g.werte)) spieler.werte[k] += v;
+  spieler.lebenMax = lebenMax(spieler.werte);
+  spieler.leben = Math.min(spieler.leben, spieler.lebenMax);
+  if (g.werte.leben > 0) spieler.leben += g.werte.leben;
   return true;
 }
 
