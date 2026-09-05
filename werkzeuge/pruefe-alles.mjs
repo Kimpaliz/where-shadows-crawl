@@ -30,6 +30,7 @@
    | `pruefe-katalog.mjs` | Waffen, Gegner, Fundstücke und Wellen sind in sich stimmig | ein verschriebener Merkmalsname: der Gruppenbonus dieser Fraktion ist unerreichbar, und niemand merkt es |
    | `pruefe-sprites.mjs` | Bildpunktraster heil, Farben gültig, Figuren drehbar erkennbar | eine Zeile einen Bildpunkt zu kurz — man sieht es und findet es nicht |
    | `pruefe-schrift.mjs` | jeder Anzeigetext lässt sich malen | ein Zeichen ohne Glyph wird still zu `?` und sieht aus wie ein Fehler im Text |
+   | `pruefe-werte.mjs` | Werte-Tabelle, Schadensarten, die eine Schadensrechnung und der Sprung | ein Umlaut in einer Wertkennung, eine vertauschte Rechenreihenfolge (20 % Schaden daneben) oder ein Kritwurf ohne Chance, der den gesäten Strom verschiebt — alles drei ohne eine einzige Fehlermeldung |
    | `pruefe-balance.mjs` | man kann gewinnen, man kann verlieren, es gibt keine Wand | „ich habe eine Waffe stärker gemacht, und jetzt gewinnt man immer" |
 
    **Nicht in der Kette:** `pruefe-freigabe.mjs` — die Freigabeliste

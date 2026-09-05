@@ -17,7 +17,19 @@
    `wirkung`      was der Treffer zusätzlich tut, siehe unten
    `merkmale`     die Fraktionen aus docs/SPIEL.md 3; vier gleiche
                   geben den Gruppenbonus
+   `schadensart`  eine der fünf aus `spiel/schadensarten.mjs`
    `preis`        Grundpreis beim Krämer, Stufe 1
+
+   ── Merkmal und Schadensart sind zweierlei ─────────────────────────
+
+   Ein `merkmal` ist eine **Fraktion** und dient dem Gruppenbonus; die
+   `schadensart` sagt, *wie* ein Treffer wehtut, und daran hängen
+   Modifier, Kritwerte und Widerstände. Die Zuordnung ist trotzdem
+   nicht frei: Sie folgt dem **ersten** Merkmal, nach der Tabelle
+   `MERKMAL_ART` in `spiel/schadensarten.mjs`. Nachgerechnet wird das in
+   `werkzeuge/pruefe-werte.mjs` — sonst wäre eine Feuerwaffe mit der Art
+   `frost` ein stiller Fehler: Der Bau des Spielers ginge ins Leere, und
+   niemand fände heraus, warum.
 
    ── Die Wirkungen ──────────────────────────────────────────────────
 
@@ -49,84 +61,84 @@ export const MERKMALE = [
 
 export const WAFFEN = [
   {
-    id: "sichel", name: "Sichel", merkmale: ["Schnitt"],
+    id: "sichel", name: "Sichel", merkmale: ["Schnitt"], schadensart: "schnitt",
     art: "nahkampf", reichweite: 34, abklingzeit: 0.42,
     schaden: 5, mitschaden: 0.8, ziele: 1, wirkung: {},
     preis: 12,
     text: "Kurz und schnell. Wer nichts anderes hat, hat das."
   },
   {
-    id: "sense", name: "Sense", merkmale: ["Schnitt", "Wucht"],
+    id: "sense", name: "Sense", merkmale: ["Schnitt", "Wucht"], schadensart: "schnitt",
     art: "nahkampf", reichweite: 46, abklingzeit: 1.0,
     schaden: 11, mitschaden: 1.0, ziele: 3, wirkung: { wucht: 8 },
     preis: 28,
     text: "Trifft drei auf einmal. Dafür muss man sie erst schwingen."
   },
   {
-    id: "richtschwert", name: "Richtschwert", merkmale: ["Schnitt"],
+    id: "richtschwert", name: "Richtschwert", merkmale: ["Schnitt"], schadensart: "schnitt",
     art: "nahkampf", reichweite: 40, abklingzeit: 1.35,
     schaden: 22, mitschaden: 1.3, ziele: 1, wirkung: {},
     preis: 40,
     text: "Ein Schlag, ein Toter. Wenn er sitzt."
   },
   {
-    id: "morgenstern", name: "Morgenstern", merkmale: ["Wucht"],
+    id: "morgenstern", name: "Morgenstern", merkmale: ["Wucht"], schadensart: "wucht",
     art: "nahkampf", reichweite: 32, abklingzeit: 1.1,
     schaden: 16, mitschaden: 1.1, ziele: 2, wirkung: { wucht: 24 },
     preis: 34,
     text: "Schlägt zurück, was zu nah kommt."
   },
   {
-    id: "wurfmesser", name: "Wurfmesser", merkmale: ["Schnitt"],
+    id: "wurfmesser", name: "Wurfmesser", merkmale: ["Schnitt"], schadensart: "schnitt",
     art: "fern", reichweite: 88, abklingzeit: 0.5,
     schaden: 6, mitschaden: 0.7, ziele: 1, wirkung: {},
     preis: 18, geschosstempo: 190,
     text: "Wenig Schaden, aber es kommt an."
   },
   {
-    id: "armbrust", name: "Armbrust", merkmale: ["Wucht"],
+    id: "armbrust", name: "Armbrust", merkmale: ["Wucht"], schadensart: "wucht",
     art: "fern", reichweite: 140, abklingzeit: 1.6,
     schaden: 26, mitschaden: 1.4, ziele: 1, wirkung: { durchschlag: 2 },
     preis: 45, geschosstempo: 260,
     text: "Durchschlägt zwei. Lädt dafür eine Ewigkeit."
   },
   {
-    id: "pechfackel", name: "Pechfackel", merkmale: ["Feuer"],
+    id: "pechfackel", name: "Pechfackel", merkmale: ["Feuer"], schadensart: "feuer",
     art: "nahkampf", reichweite: 40, abklingzeit: 0.8,
     schaden: 6, mitschaden: 0.5, ziele: 3, wirkung: { brand: 9 },
     preis: 30,
     text: "Der Schlag ist schwach. Das Feuer danach nicht."
   },
   {
-    id: "frostrune", name: "Frostrune", merkmale: ["Frost", "Bann"],
+    id: "frostrune", name: "Frostrune", merkmale: ["Frost", "Bann"], schadensart: "frost",
     art: "fern", reichweite: 96, abklingzeit: 1.2,
     schaden: 9, mitschaden: 0.6, ziele: 1, wirkung: { frost: 0.45 },
     preis: 32, geschosstempo: 150,
     text: "Was steht, beißt nicht."
   },
   {
-    id: "seuchenglas", name: "Seuchenglas", merkmale: ["Seuche"],
+    id: "seuchenglas", name: "Seuchenglas", merkmale: ["Seuche"], schadensart: "fluch",
     art: "fern", reichweite: 80, abklingzeit: 1.5,
     schaden: 4, mitschaden: 0.3, ziele: 4, wirkung: { gift: 16 },
     preis: 36, geschosstempo: 130,
     text: "Zerspringt. Was danach kommt, fragt nicht nach Rüstung."
   },
   {
-    id: "blutdorn", name: "Blutdorn", merkmale: ["Blut", "Schnitt"],
+    id: "blutdorn", name: "Blutdorn", merkmale: ["Blut", "Schnitt"], schadensart: "schnitt",
     art: "nahkampf", reichweite: 30, abklingzeit: 0.55,
     schaden: 7, mitschaden: 0.9, ziele: 1, wirkung: { lebensraub: 1 },
     preis: 38,
     text: "Nimmt sich, was es braucht."
   },
   {
-    id: "weihkessel", name: "Weihwasserkessel", merkmale: ["Segen", "Bann"],
+    id: "weihkessel", name: "Weihwasserkessel", merkmale: ["Segen", "Bann"], schadensart: "fluch",
     art: "nahkampf", reichweite: 52, abklingzeit: 1.8,
     schaden: 13, mitschaden: 0.9, ziele: 8, wirkung: { wucht: 14 },
     preis: 42,
     text: "Trifft alles im Umkreis. Auch das hinter dir."
   },
   {
-    id: "bannstein", name: "Bannstein", merkmale: ["Bann"],
+    id: "bannstein", name: "Bannstein", merkmale: ["Bann"], schadensart: "fluch",
     art: "fern", reichweite: 120, abklingzeit: 0.95,
     schaden: 12, mitschaden: 1.0, ziele: 1, wirkung: {},
     preis: 34, geschosstempo: 210, suchend: true,

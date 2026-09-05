@@ -30,7 +30,11 @@ import { GEGNER_NACH_ID, lebenInWelle, schadenInWelle, tempoInWelle } from "./ka
 import { baueWelle, dauerDerWelle, WELLEN_JE_LAUF } from "./katalog/wellen.mjs";
 import { modus as holeModus, STANDARD_MODUS } from "./katalog/modi.mjs";
 import { bewegeSpieler, bewegeGegner } from "./bewegung.mjs";
-import { feuereWaffen, feuereGegner, bewegeGeschosse, wirkeZeitschaden, beruehrung, heile } from "./kampf.mjs";
+import { ruesteAusweichen } from "./ausweichen.mjs";
+import {
+  feuereWaffen, feuereGegner, bewegeGeschosse, wirkeZeitschaden,
+  beruehrung, heile, regeneriere
+} from "./kampf.mjs";
 import { bewegeBeute, raeumeBeute } from "./beute.mjs";
 import { pruefeAufstieg, alleGewaehlt } from "./stufen.mjs";
 
@@ -64,6 +68,10 @@ export function macheSpieler(id, spielerzahl) {
     trefferZeit: 0, schlagZeit: 0, schlagWaffe: null,
     getoetet: 0, angebote: null, malGewuerfelt: 0, bereit: false
   };
+  /* Die Felder des Sprungs setzt `spiel/ausweichen.mjs` selbst.
+     Stünden sie hier noch einmal, wären es zwei Listen, von denen
+     eine irgendwann eine weniger hat. */
+  ruesteAusweichen(s);
   return s;
 }
 
@@ -162,9 +170,16 @@ function altereListen(welt, dt) {
   }
 }
 
-/* Ein Schritt. `eingaben` ist ein Feld je Spieler: `{ x, y }` von -1
-   bis 1. Mehr braucht das Spiel nicht — es gibt keine Angriffstaste
-   (docs/SPIEL.md 6). Genau deshalb wäre Netz-Koop billig. */
+/* Ein Schritt. `eingaben` ist ein Feld je Spieler:
+   `{ x, y, ausweichen }` — die beiden Achsen von -1 bis 1 und ein
+   Knopf. Mehr braucht das Spiel nicht: Es gibt keine Angriffstaste
+   (docs/SPIEL.md 6), Waffen suchen ihr Ziel selbst. Genau deshalb wäre
+   Netz-Koop billig — zwei Achsen und ein Knopf je Spieler und Schritt
+   sind alles, was über die Leitung müsste.
+
+   `ausweichen` darf fehlen; dann wird nicht gesprungen. Das ist der
+   Grund, warum der Kunstspieler in `werkzeuge/balance.mjs` unverändert
+   weiterläuft. */
 export function schritt(welt, eingaben = []) {
   if (welt.phase !== "welle") return welt.phase;
   const dt = SCHRITT;
@@ -188,6 +203,7 @@ export function schritt(welt, eingaben = []) {
   bewegeGeschosse(welt, dt);
   wirkeZeitschaden(welt, dt);
   beruehrung(welt, dt);
+  regeneriere(welt, dt);
   bewegeBeute(welt, dt);
   hebeAuf(welt, dt);
   altereListen(welt, dt);

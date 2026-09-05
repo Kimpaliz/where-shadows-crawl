@@ -32,7 +32,16 @@ const eindeutig = (liste) => new Set(liste.map((x) => x.id)).size === liste.leng
 
 /* ── Die Werte ───────────────────────────────────────────────────── */
 
-melde(WERTE.length === 8, "es gibt acht Werte", `${WERTE.length}`);
+/* Bis zum 05.09.2026 stand hier `WERTE.length === 8`. Seit die Werte
+   eine Tabelle sind (`spiel/werte.mjs`) sind es 55, und 32 davon werden
+   erzeugt — eine feste Zahl wäre ab jetzt nur noch eine Bremse. Was
+   bleibt, ist der eigentliche Regressionsschutz: Keiner der acht
+   ursprünglichen Werte darf still verschwinden, und keine Kennung darf
+   doppelt vorkommen. Alles Weitere prüft `pruefe-werte.mjs`. */
+const ERSTE_ACHT = ["leben", "schaden", "hast", "tempo", "ruestung", "glueck", "gier", "genesung"];
+const fehlend = ERSTE_ACHT.filter((w) => !WERTE.includes(w));
+melde(fehlend.length === 0, "die acht ursprünglichen Werte gibt es noch", fehlend.join(" "));
+melde(new Set(WERTE).size === WERTE.length, "keine Wertkennung doppelt", `${WERTE.length} Werte`);
 for (const w of WERTE) {
   melde(WERT_TEXT[w] !== undefined && Array.isArray(WERT_TEXT[w]) && WERT_TEXT[w].length === 2,
     `Wert "${w}" hat Name und Beschreibung`);
