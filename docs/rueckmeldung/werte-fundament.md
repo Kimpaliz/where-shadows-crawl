@@ -235,3 +235,92 @@ die beiden Scans weiter oben in derselben Datei unsichtbar. Ein erster
 Versuch mit einer *deterministischen* Störung blieb zu Recht grün — eine
 Funktion des Zustands ist wiederholbar, und die Prüfung prüft
 Wiederholbarkeit.
+
+---
+
+# Was andere Agenten von hier übernehmen müssen
+
+## 1 · `spiel/katalog/gegner.mjs` braucht zwei Felder
+
+Diese Datei gehört einem anderen Agenten und wurde **nicht angefasst**.
+Zwei Felder je Gegnerart fehlen dort, und die Rechnung wartet auf sie:
+
+| Feld | Form | was ohne es geschieht |
+| --- | --- | --- |
+| `widerstaende` | `{ schnitt: 0, wucht: 0, feuer: 0, frost: 0, fluch: 0 }`, Prozentwerte, auch negativ | fehlt es, gilt „alles null" — der Gegner nimmt jede Art gleich hart. Das ist der heutige Zustand und bricht nichts |
+| `schadensart` | eine Kennung aus `spiel/schadensarten.mjs` | fehlt sie, gilt `schnitt`, und Rüstung hilft wie bisher. **Raten wäre hier schlimmer als nichts tun:** Wer dem Speier auf Verdacht `fluch` gäbe, machte Rüstung gegen ihn still wertlos |
+
+Beide werden über `spiel/werte.mjs` gelesen (`widerstandAus`,
+`gegnerArt` in `spiel/kampf.mjs`) und sind gegen fehlende oder
+unsinnige Werte abgesichert. Negative Widerstände sind zugelassen
+(Verwundbarkeit), gedeckelt bei -100 % und +90 %.
+
+Ein Vorschlag, wo Widerstände fachlich hingehören: Knochenritter und
+Wächter tragen Panzer (`schnitt` hoch, `wucht` niedrig), der Balg ist
+weich (überall niedrig), der Hauptmann sollte gegen genau **eine** Art
+verwundbar sein, damit der Bau des Spielers eine Rolle spielt.
+
+## 2 · Wer welche neue Funktion rufen muss
+
+Diese Werte sind gebaut und geprüft, aber ihre **Leser** liegen in
+fremden Dateien und rufen sie noch nicht:
+
+| Wert | Funktion in `spiel/werte.mjs` | wer sie rufen muss |
+| --- | --- | --- |
+| `erfahrung` | `erfahrungsFaktor(werte)` | `spiel/beute.mjs`, dort wo `zieher.wissen += b.wissen` steht |
+| `kartenwert` | `kartenWertFaktor(werte)` | `spiel/stufen.mjs`, bei `KARTEN_MENGE[w] * bonus` |
+| `kartenseltenheit` | `kartenSeltenheitChance(werte)` | `spiel/stufen.mjs` beziehungsweise `spiel/laden.mjs` |
+| `neigung_<gruppe>` | `kartenNeigung(werte, gruppe)` | `spiel/stufen.mjs`, beim Bau des Kartentopfs |
+
+`goldFaktor` und `gier` werden bereits gerufen und tragen `goldfund`
+seit heute mit — dort ist nichts zu tun.
+
+## 3 · Der Vertrag mit dem Eingabe-Agenten
+
+Die Eingabe je Spieler und Schritt ist
+**`{ x: -1..1, y: -1..1, ausweichen: boolean }`**. `schritt(welt, eingaben)`
+bleibt unverändert. Das Feld darf fehlen. Ausgelöst wird der Sprung
+allein durch `ausweichen: true`; alles Weitere entscheidet
+`spiel/ausweichen.mjs`.
+
+## 4 · Was der Zeichner mitbekommt
+
+- Eine schwebende Zahl trägt jetzt `krit: boolean` und `art: "<kennung>"`.
+  Die Farbe zur Art steht in `spiel/schadensarten.mjs` (`farbe`), sie
+  stammt aus `runtime/palette.js`.
+- Ein Spieler trägt `ausweichRest` (Sekunden Sprung, 0 heißt: springt
+  nicht), `ausweichBereitIn` (Sekunden bis wieder bereit) sowie
+  `ausweichX`/`ausweichY` (Richtung). Damit lassen sich Sprungspur und
+  Abklinganzeige zeichnen, ohne den Regelkern zu fragen.
+
+## 5 · Offene Grenzen, ehrlich vermerkt
+
+- **`zusatzangriffe` schlägt ohne Pause zu.** Die zusätzlichen Schläge
+  fallen im selben Bild wie der erste. Rechnerisch stimmt es, im Bild
+  sieht man einen Schlag statt zweier. Eine kleine Verzögerung dazwischen
+  gehört in `spiel/kampf.mjs`.
+- **Feuer und Frost haben je nur eine Waffe.** Eine Karte „+50 %
+  Feuerschaden" ist heute fast wertlos. Das ist eine Katalogfrage
+  (`spiel/katalog/waffen.mjs`), keine Rechnung.
+- **Die Aufstiegskarten kennen die 32 neuen Werte noch nicht.** Der
+  Kartentopf in `spiel/stufen.mjs` wird über `GEWICHT` gebildet, und
+  das hat weiterhin acht Einträge. Das ist Absicht: Die Karten sind die
+  Datei eines anderen Agenten, und der Umbau sollte nichts am Spiel
+  ändern.
+- **Nichts davon lief je im Browser.** Alles ist in Node gemessen. Was
+  den Browser braucht, ist erst geprüft, wenn es in einem sichtbaren
+  Browser lief (docs/FEHLERBUCH.md).
+
+## Zahlen zum Zweig (05.09.2026)
+
+| | |
+| --- | --- |
+| Werte in der Tabelle | **55**, davon **32 erzeugt** |
+| Schadensarten | 5, davon 1 an der Rüstung vorbei |
+| Gruppen / Formen | 7 / 3 |
+| geänderte und neue Dateien | 13, +1746 / -88 Zeilen |
+| Kette | 15 auf **16** Prüfläufe, alle grün |
+| `pruefe-werte.mjs` | 133 Zusicherungen, 16 Rot-Beweise |
+| `pruefe-kern.mjs` | 90 auf 93 Zusicherungen, 2 Rot-Beweise |
+| Balancezahlen | **unverändert** zu `c5713d9` |
+| größte Datei | `werkzeuge/pruefe-werte.mjs`, 525 Zeilen (Grenze 1000) |
