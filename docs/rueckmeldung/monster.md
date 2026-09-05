@@ -4,7 +4,7 @@ Laufender Fortschrittsbericht des Zweigs `katalog/monster-und-hauptleute`.
 Wird nach jedem Baustein ergänzt — Pflicht, damit bei einem Abbruch
 nichts verloren geht.
 
-## 0 · Vorgefunden (#71, bereits erledigt)
+## 0 · Vorgefunden (#71, 05.09.2026)
 
 `spiel/gegner-verhalten.mjs` (213 Zeilen) und der Anschluss in
 `spiel/bewegung.mjs` waren beim Start dieser Sitzung bereits fertig und
@@ -15,7 +15,7 @@ jedes mit einer eigenen Frage, Zustand liegt auf dem Gegner selbst
 `ctx.zufall`. Keine Änderung nötig — siehe Abschnitt 4 für den
 mechanischen Nachweis, dass alle sechs wirklich funktionieren.
 
-## 1 · Widerstände (#72, erledigt)
+## 1 · Widerstände (#72, 05.09.2026)
 
 Neues Feld `widerstaende: { schnitt, wucht, feuer, frost, fluch }` in
 `spiel/katalog/gegner.mjs`, Prozent, auch negativ (Verwundbarkeit).
@@ -48,7 +48,7 @@ Feld eine zweite, unabhängige Verwendung außerhalb der Hauptleute, und
 Gebeinfürst/Vielfraß bekommen ihre Widerstände als Teil ihrer eigenen
 Identität (Abschnitt 2) statt bloß größerer Zahlen.
 
-## 2 · Zwei Hauptleute mit eigenem Auftritt (#73, erledigt)
+## 2 · Zwei Hauptleute mit eigenem Auftritt (#73, 05.09.2026)
 
 **Katalog** (`spiel/katalog/gegner.mjs`): `gebeinfuerst` (Steigerung
 des Knochenritters, Nahkampf) und `vielfrass` (Steigerung des Speiers,
@@ -203,8 +203,8 @@ Abschnitt 4.2) einwandfrei funktionieren und thematisch gepasst hätten
 `sammelt`-Gebeinfürst mit Ladeausbruch wären naheliegend gewesen. Die
 Alternative — die drei Kennungen dort ergänzen — hätte eine Datei
 außerhalb des mir zugewiesenen Bereichs geändert; nach den Regeln
-dieser Aufgabe war das die falsche Wahl, auch wenn es fachlich der
-naheliegende nächste Schritt wäre.
+dieser Aufgabe war das die falsche Wahl, auch wenn es fachlich
+naheliegend wäre.
 
 **Das ist eine offene Übergabe, keine vergessene Zeile** — belegt statt
 nur behauptet: `pruefe-gegner.mjs` Abschnitt 6 prüft mechanisch, dass
@@ -237,5 +237,5 @@ mit sauberem Baum belegt.
 - **`kreist`/`sammelt`/`stur` bleiben ungenutzt** — siehe Abschnitt 5,
   keine Entscheidung, die in diesem Dateibereich zu treffen war.
 - **Kein Blick auf `docs/ROADMAP.md` oder `CHANGELOG.md`** — beide
-  stehen auf der Verboten-Liste; ob #72/#73 dort als erledigt markiert
-  gehören, ist Sache des Leitstands.
+  stehen auf der Verboten-Liste; ob #72/#73 dort vermerkt gehören,
+  ist Sache des Leitstands.
