@@ -269,3 +269,152 @@ Lobby aufmachen (dreimal, mit echtem Vermittler) · Code abgelesen · in
 einem **zweiten Tab** beigetreten, klein getippt · Wartebild und Meldung
 gelesen · `ABBRECHEN` · `ALLEIN SPIELEN` → die Arena erscheint, Jäger und
 Fackel stehen · mit `A` und `ArrowRight` gelaufen.
+
+---
+
+## Baustein 4 und 5 · Gleichlauf und wenn einer wegbricht (05.09.2026)
+
+### Über die Leitung gehen nur Eingaben
+
+Der Regelkern ist gesät und rechnet in festen Schritten — genau dafür
+wurde er so gebaut. Deshalb reisen **zwei Achsen und ein Knopf** je
+Spieler und Tick, gepackt in **drei Byte**. Eine Welle mit achtzig
+Gegnern sechzigmal je Sekunde zu verschicken wären ein paar hundert
+Kilobyte je Sekunde.
+
+### Die gemessene Verzögerung: 50,0 ms
+
+Der Gleichschritt schickt die Eingabe des Bildes N für Tick **N+3**.
+Gemessen mit demselben Takt, den `runtime/start.js` fährt:
+
+```
+VERZUG            : 3 Ticks
+SCHRITT           : 0.016666666666666666 s  (60 Ticks je Sekunde)
+gedrueckt in Bild : 5
+gewirkt in Tick   : 7
+Abstand           : 3 Ticks
+in Millisekunden  : 50.0 ms
+```
+
+Drei Ticks sind die Grenze, unterhalb derer man eine Verzögerung nicht
+mehr als Verzögerung empfindet, sondern höchstens als „etwas
+schwammig". **Allein gibt es sie gar nicht:** Ohne Mitspieler wird kein
+Gleichschritt angelegt, die eigene Eingabe wirkt sofort — 50 ms Preis
+ohne Gegenwert wären ein schlechter Handel.
+
+⚠️ **Nicht gemessen ist die Zeit auf der Leitung selbst.** Sie kommt zu
+den 50 ms hinzu, und weil keine Verbindung zustande kam (siehe
+Baustein 3), gibt es dafür keine Zahl.
+
+### Was `pruefe-netz.mjs` beweist — 22 Prüfungen, ohne Browser
+
+Zwei Welten, dieselbe Saat, **3600 Schritte** (eine volle Minute):
+
+1. Gleiche Eingabefolgen → derselbe Zustand, Zahl für Zahl.
+2. Eine um **einen Tick verschobene** Folge → ein *anderer* Zustand.
+3. Und der Abdruck muss drei Zeitpunkte desselben Laufs unterscheiden
+   können.
+
+Der dritte ist der wichtigste, und er hat sofort etwas gefangen —
+siehe unten.
+
+### Der Fehler, den die eigene Gegenprobe gefunden hat
+
+Die Welt **fror bei Tick 1391 ein.** Bei einem Aufstieg geht sie in die
+Phase `wahl` und bleibt dort stehen, bis jemand eine Karte nimmt; im
+Spiel tut das `runtime/oberflaeche.js`, das im Prüfstand nichts zu
+suchen hat. Die Marken bei 1799 und 3599 waren dadurch **zeichengleich**:
+
+```
+t=1000 phase=welle     welle=1 ticks=1001 gegner=  9
+t=1799 phase=wahl      welle=1 ticks=1391 gegner= 18
+t=3599 phase=wahl      welle=1 ticks=1391 gegner= 18
+```
+
+Die Gleichlauf-Prüfung hätte **zweimal dieselbe eingefrorene Welt**
+verglichen — grün, ganz gleich was der Gleichlauf tut. **61 % der 3600
+Schritte haben nichts gemessen.** Jetzt schaltet der Prüfstand die
+Phasen selbst weiter (immer die erste Karte, im Laden nichts kaufen —
+ohne Zufall, damit die Entscheidung nicht selbst eine Quelle von
+Unterschieden wird).
+
+### Rot-Beweise
+
+| gebrochen | was meldete | rot |
+| --- | --- | :-: |
+| Lockstep prüft die Vollständigkeit nicht mehr | 6 Fehler, u. a. „ohne die Eingabe des anderen läuft kein Tick" | ✓ |
+| das **letzte** statt des ersten Wortes gilt | „ein zweites Mal dieselbe Eingabe ändert nichts · bekam x=0.5 statt −1" | ✓ |
+| Eingaben wirken überhaupt nicht (`schrittImLauf(welt, [])`) | „eine um einen Tick verschobene Eingabefolge ergibt einen anderen Zustand" | ✓ |
+| die Saat reist nicht mit (zweiter Lauf andere Saat) | „gleiche Saat und gleiche Eingaben … · ab Marke 0 verschieden" | ✓ |
+| das Packen ist nicht stabil | „eine gepackte Eingabe bleibt beim zweiten Umlauf gleich" | ✓ |
+
+**Ein Rot-Beweis ging beim ersten Anlauf daneben**, und das ist der
+lehrreiche: Ich ersetzte `folge[t]` durch `folge[0]` — die Prüfung blieb
+**grün**, weil `folge[0]` bei beiden Folgen verschieden ist. Die
+Sabotage bildete den Fehler gar nicht ab. Erst `[]` (gar keine
+Eingaben) trifft den Fall, den die Prüfung fangen soll.
+
+**Und ein zweiter Fund im eigenen Prüfstand:** Mit abgeschaltetem
+Vollständigkeits-Wächter lief `while (l.holeTick())` **endlos**, weil
+`holeTick()` dann nie `null` gibt — der Rot-Beweis hing statt rot zu
+werden. Die Schleifen sind jetzt begrenzt.
+
+### Wenn einer wegbricht
+
+Wer **2 Sekunden** nichts schickt, wird übersprungen. Seine Figur bleibt
+stehen und verschwindet **nicht** — ein Jäger, der sich auflöst, wäre für
+die anderen eine Falschaussage über die Welt, und die Plätze dürfen nicht
+verrutschen (sonst bekäme Spieler 2 die Figur von Spieler 3). Vier
+Prüfungen decken das ab, alle rot bewiesen.
+
+Zwei Sekunden sind lang genug, dass ein kurzer Aussetzer niemanden
+hinauswirft, und kurz genug, dass niemand glaubt, das Spiel sei
+abgestürzt.
+
+Gegen einzelne verlorene Pakete schleppt jede Nachricht die letzten
+**8** Eingaben mit — bei drei Byte je Stück ist das billiger, als etwas
+nachzufordern.
+
+### Solo ist nachweislich unberührt
+
+Der Umbau hätte das Alleinspielen kaputt machen können. Im Browser
+nachgemessen: `ALLEIN SPIELEN` → Arena erscheint, `D` über 100 Bilder →
+Figur **+80,66** nach rechts, und nach 1800 weiteren Ticks bewegt sich
+das Bild weiterhin (die Welle läuft durch).
+
+---
+
+## Was in `runtime/oberflaeche.js` noch auf die alte Spielerzahlwahl zeigt
+
+Das ist eine **fremde Datei** — ich habe sie nicht angefasst. Nach dem
+Umbau ist dort ungenutzt:
+
+| Stelle | was |
+| --- | --- |
+| `zeichneVorspiel()` (Zeile 198) | wird von **keiner** Zeile mehr gerufen — `runtime/start.js` zeigt jetzt die Lobby |
+| `menue.spielerzahl` (207, 219, 223) | nur noch innerhalb von `zeichneVorspiel` benutzt |
+| `macheMenue()` (Zeile 251) | gibt weiterhin `spielerzahl: 1` zurück; das Feld liest niemand mehr |
+| die Zeilen `J1 WASD · LEERTASTE` … `J4 ZIFFERNBLOCK` (211–216) | beschreiben die vier Belegungen, die es nicht mehr gibt |
+
+`macheMenue()` selbst wird weiter gebraucht (`sperre`, `ladenZeiger`,
+`wahlZeiger`) — es geht **nur** um `spielerzahl` und `zeichneVorspiel`.
+
+---
+
+## Was ich nicht prüfen konnte
+
+1. **Eine echte Runde zu zweit.** Der Vermittler stellt nichts zu
+   (Baustein 3, mit nackten WebSockets gemessen). Gleichlauf und
+   Lockstep sind deshalb **ohne Browser** bewiesen, aber nie über eine
+   echte Leitung gelaufen.
+2. **Die Zeit auf der Leitung.** Ohne Verbindung keine Zahl.
+3. **Ein echtes Telefon.** Alles am Telefon ist im nachgebildeten
+   Gerät gemessen (375 x 812 und 736 x 414, `pointer: coarse`,
+   5 Berührungspunkte) — nicht auf Glas.
+4. **Der Pages-Ablauf.** Er lässt sich hier nicht ausführen; geprüft
+   sind die Datei gegen das Schema und die Pfade.
+5. **Echte Fingerdrücke.** Die Browser-Ansicht rendert nicht, während
+   sie verborgen ist; Stick und Knopf wurden mit echten
+   `PointerEvent`s angesteuert, die dieselben Behandler durchlaufen —
+   aber nicht mit einem Finger.
+6. **Gamepad.** Kein Gerät zum Anstecken.

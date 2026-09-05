@@ -13,13 +13,37 @@
    daheim läuft und im Netz weiß bleibt, und er lässt sich nur hier
    fangen: Im Browser sieht man eine leere Seite und keinen Grund.
 
-   Weitere Teile (Gleichlauf, Lockstep, Nachrichten) kommen mit den
-   Netz-Bausteinen dazu.
+   ── Teil 2 · Gleichlauf ─────────────────────────────────────────────
+
+   Über die Leitung gehen **nur Eingaben**, nie Weltzustand
+   (docs/SPIEL.md 8). Das trägt genau so lange, wie zwei Rechner aus
+   derselben Saat und denselben Eingaben dieselbe Welt rechnen. Diese
+   Prüfung belegt das in **beide** Richtungen:
+
+   1. Gleiche Saat, gleiche Eingabefolgen → nach 3600 Schritten
+      derselbe Zustand, Zahl für Zahl.
+   2. Eine **um einen Tick verschobene** Eingabefolge → ein *anderer*
+      Zustand.
+
+   Ohne die zweite Hälfte beweist die erste nichts. Ein Vergleich, der
+   die Eingaben gar nicht durchreicht, wäre in Richtung 1 immer grün —
+   und genau dann grün, wenn der Gleichlauf kaputt ist. Eine Prüfung,
+   die auch beim Fehler bestanden meldet, ist schlimmer als keine.
+
+   ── Teil 3 · Der Lockstep-Puffer ────────────────────────────────────
+
+   `netz/lockstep.mjs` entscheidet, wann ein Tick gerechnet werden
+   darf. Er ist reine Rechnung ohne Netz und ohne Uhr, also hier
+   prüfbar: dass ein Tick ohne alle Eingaben **nicht** losläuft, dass
+   er mit ihnen losläuft, und dass ein weggebrochener Spieler
+   übersprungen wird, statt alle anzuhalten.
 
    ── Arbeitet zusammen mit ───────────────────────────────────────────
 
-   `helfer.mjs` und `.github/workflows/pages.yml`, das Teil 1 vor jeder
-   Veröffentlichung mit `--nur-pfade` aufruft. */
+   `helfer.mjs`, `spiel/lauf.mjs` (der Ablauf, den beide Welten
+   rechnen), `netz/lockstep.mjs`, `netz/nachrichten.mjs`, und
+   `.github/workflows/pages.yml`, das Teil 1 vor jeder Veröffentlichung
+   mit `--nur-pfade` aufruft. */
 
 import { readdirSync, statSync, existsSync } from "node:fs";
 import { join } from "node:path";
@@ -67,7 +91,230 @@ melde(existsSync(join(WURZEL, ".nojekyll")),
   "ohne sie schiebt Pages die Auslieferung durch Jekyll");
 
 if (NUR_PFADE) {
-  console.log("\n  (--nur-pfade: nur Teil 1)");
+  console.log("\n  (--nur-pfade: Gleichlauf und Lockstep übersprungen)");
+  ende();
+}
+
+const { starteLauf, naechsteWelle, oeffneKraemer, schrittImLauf } = await import("../spiel/lauf.mjs");
+const { nimmKarte } = await import("../spiel/stufen.mjs");
+const { macheLockstep } = await import("../netz/lockstep.mjs");
+const { packeEingabe, entpackeEingabe, packe, entpacke, ruhendeEingabe } =
+  await import("../netz/nachrichten.mjs");
+
+/* ── Teil 2 · Gleichlauf ─────────────────────────────────────────── */
+
+const SAAT = 20260905;
+const SPIELERZAHL = 2;
+const SCHRITTE = 3600;
+
+/* Eine Eingabefolge, die sich wie ein Mensch bewegt: Sie wechselt die
+   Richtung, statt konstant zu drücken. Eine konstante Folge wäre der
+   schlechteste Prüffall — bei ihr ist eine Verschiebung um einen Tick
+   gar nicht zu erkennen, und Teil 2b bliebe grün, obwohl er nichts
+   misst (docs/FEHLERBUCH.md: die Messung, die nichts misst). */
+function macheFolge(anzahl, versatz) {
+  const folge = [];
+  for (let t = 0; t < anzahl; t++) {
+    const eingaben = [];
+    for (let i = 0; i < SPIELERZAHL; i++) {
+      const p = t + versatz + i * 37;
+      eingaben.push({
+        x: Math.sin(p / 23.5 + i) > 0 ? 1 : -1,
+        y: Math.cos(p / 17.25 + i * 2) > 0 ? 1 : -1,
+        ausweichen: p % 97 === 0
+      });
+    }
+    folge.push(eingaben);
+  }
+  return folge;
+}
+
+/* Der Abdruck einer Welt: alle Zahlen, die den Zustand ausmachen.
+   Funktionen (`zufall`, `modus`) fallen heraus — sie sind Bauteile,
+   kein Zustand. Der Zufallszustand selbst kommt als Zahl mit hinein,
+   denn er ist der eigentliche Prüfstein: Läuft er auseinander, laufen
+   ab dem nächsten Gegner auch die Welten auseinander. */
+function abdruck(welt) {
+  const z = (n) => Math.round(n * 1e6) / 1e6;
+  const teile = [
+    welt.phase, welt.welle, welt.ticks, z(welt.zeit), z(welt.dauer),
+    welt.planIndex, welt.zufall.zustand(), welt.verloreneBeute,
+    welt.gegner.length, welt.geschosse.length, welt.beute.length
+  ];
+  for (const s of welt.spieler)
+    teile.push(s.id, z(s.x), z(s.y), z(s.vx), z(s.vy), s.leben, s.lebenMax,
+      s.gold, s.wissen, s.stufe, s.zustand, s.getoetet, z(s.aufheben));
+  for (const g of welt.gegner)
+    teile.push(g.art.id, z(g.x), z(g.y), z(g.leben), z(g.bereitIn));
+  for (const p of welt.geschosse) teile.push(z(p.x), z(p.y));
+  for (const b of welt.beute) teile.push(z(b.x), z(b.y), b.art ?? "");
+  return teile.join("|");
+}
+
+/* Ein Lauf endet nicht von selbst: Bei einem Aufstieg geht die Welt in
+   die Phase `wahl` und **bleibt dort stehen**, bis jemand eine Karte
+   nimmt; nach einer Welle wartet sie im Laden. Im Spiel tut das
+   `runtime/oberflaeche.js`, das hier nichts zu suchen hat (es braucht
+   einen Browser).
+
+   ⚠️ **Das war der Fehler, den die eigene Gegenprobe gefunden hat:**
+   Ohne dieses Weiterschalten stand die Welt ab Tick 1391 in `wahl` —
+   die Marken bei 1799 und 3599 waren zeichengleich, und die
+   Gleichlauf-Prüfung verglich **zweimal dieselbe eingefrorene Welt**.
+   Sie wäre grün gewesen, ganz gleich was der Gleichlauf tut: 61 % der
+   3600 Schritte haben nichts gemessen.
+
+   Gewählt wird immer die **erste** Karte und im Laden nichts gekauft —
+   beides ohne Zufall, damit die Entscheidung selbst keine neue Quelle
+   von Unterschieden ist. */
+function schalteWeiter(welt) {
+  if (welt.phase === "wahl") {
+    for (const s of welt.spieler)
+      while (s.offeneWahlen > 0 && s.karten?.length) nimmKarte(welt, s, 0);
+  } else if (welt.phase === "laden") {
+    if (!welt.spieler[0].angebote) oeffneKraemer(welt);
+    naechsteWelle(welt);
+  }
+}
+
+function spieleDurch(folge) {
+  const welt = starteLauf({ spielerzahl: SPIELERZAHL, saat: SAAT });
+  naechsteWelle(welt);
+  const marken = [];
+  for (let t = 0; t < folge.length; t++) {
+    schrittImLauf(welt, folge[t]);
+    schalteWeiter(welt);
+    /* Zwischenmarken: Läuft es erst spät auseinander, will man den
+       Tick wissen und nicht bloß „am Ende verschieden". */
+    if (t === 599 || t === 1799 || t === folge.length - 1) marken.push(abdruck(welt));
+  }
+  return marken;
+}
+
+const laufA = spieleDurch(macheFolge(SCHRITTE, 0));
+const laufB = spieleDurch(macheFolge(SCHRITTE, 0));
+const laufVerschoben = spieleDurch(macheFolge(SCHRITTE, 1));
+
+let ersteAbweichung = -1;
+for (let i = 0; i < laufA.length; i++) if (laufA[i] !== laufB[i]) { ersteAbweichung = i; break; }
+
+console.log(`  ${SCHRITTE} Schritte, ${SPIELERZAHL} Spieler, Saat ${SAAT}`);
+console.log(`  Abdruck am Ende: ${laufA[laufA.length - 1].length} Zeichen`);
+
+melde(ersteAbweichung === -1,
+  `gleiche Saat und gleiche Eingaben ergeben nach ${SCHRITTE} Schritten denselben Zustand`,
+  `ab Marke ${ersteAbweichung} verschieden`);
+
+/* Die andere Richtung. Ohne sie wäre die Prüfung auch dann grün, wenn
+   die Eingaben gar nicht ankommen. */
+melde(laufA[laufA.length - 1] !== laufVerschoben[laufVerschoben.length - 1],
+  "eine um einen Tick verschobene Eingabefolge ergibt einen anderen Zustand",
+  "die Eingaben wirken nicht — der Vergleich oben bewiese dann nichts");
+
+/* Und die Gegenprobe zur Gegenprobe: Der Abdruck muss überhaupt
+   unterscheiden können. Ein Abdruck, der immer dieselbe Zeichenkette
+   liefert, bestünde Prüfung 1 mühelos und Prüfung 2 nie. */
+melde(new Set([laufA[0], laufA[1], laufA[2]]).size === 3,
+  "der Abdruck unterscheidet drei Zeitpunkte desselben Laufs",
+  "er misst nichts — dann sagen die beiden Prüfungen oben nichts aus");
+
+/* ── Teil 3 · Der Lockstep-Puffer ────────────────────────────────── */
+
+const VERZUG = 3;
+const macheProbe = () => macheLockstep({ eigenerPlatz: 0, plaetze: [0, 1], verzug: VERZUG });
+
+/* Die ersten `verzug` Ticks sind vorgefüllt — für sie kann niemand
+   rechtzeitig etwas geschickt haben. Ohne sie stünde der Gleichschritt
+   sofort still und wartete auf Post, die es nie geben wird. */
+{
+  const l = macheProbe();
+  let gelaufen = 0;
+  while (l.holeTick() && gelaufen < 50) gelaufen++;
+  melde(gelaufen === VERZUG, `die ersten ${VERZUG} Ticks laufen ohne Post`,
+    `${gelaufen} statt ${VERZUG} — der Lauf bliebe im ersten Bild stehen`);
+}
+
+/* Ohne die Eingabe des anderen darf kein Tick laufen — sonst rechnen
+   die beiden Rechner verschiedene Welten, und man merkt es erst
+   Minuten später an einem Gegner, der nur bei einem steht. */
+{
+  const l = macheProbe();
+  for (let i = 0; i < VERZUG; i++) l.holeTick();
+  l.setzeEigene(VERZUG, { x: 1, y: 0, ausweichen: false });
+  melde(l.holeTick() === null, "ohne die Eingabe des anderen läuft kein Tick",
+    "der Puffer gibt einen Tick frei, für den ihm eine Eingabe fehlt");
+  melde(l.fehlendePlaetze().join() === "1", "der Puffer sagt, wessen Eingabe fehlt",
+    `meldet [${l.fehlendePlaetze().join()}] statt [1]`);
+
+  l.setzeFremde(1, VERZUG, { x: -1, y: 0, ausweichen: false });
+  const tick = l.holeTick();
+  melde(tick !== null && tick.tick === VERZUG, "mit allen Eingaben läuft der Tick",
+    `bekam ${tick === null ? "null" : tick.tick}`);
+  melde(tick !== null && tick.eingaben[1].x === -1,
+    "die fremde Eingabe kommt an dem Platz an, an den sie gehört");
+}
+
+/* Wer wegbricht, hält die anderen nicht auf. Seine Figur bleibt stehen
+   und verschwindet nicht — ein Jäger, der sich auflöst, wäre für die
+   anderen eine Falschaussage über die Welt. */
+{
+  const l = macheProbe();
+  for (let i = 0; i < VERZUG; i++) l.holeTick();
+  l.setzeEigene(VERZUG, { x: 1, y: 0, ausweichen: false });
+  melde(l.holeTick() === null, "vor dem Wegbrechen steht der Tick still");
+  l.meldeWeg(1);
+  const tick = l.holeTick();
+  melde(tick !== null, "ein weggebrochener Spieler hält den Tick nicht auf",
+    "der Puffer wartet weiter auf jemanden, der nicht mehr da ist");
+  melde(tick !== null && tick.eingaben[1].x === 0 && tick.eingaben[1].y === 0,
+    "die Figur des Weggebrochenen bleibt stehen, statt weiterzulaufen");
+  melde(tick !== null && tick.eingaben.length === 2,
+    "der weggebrochene Platz bleibt in der Liste",
+    "die Plätze verrutschen — Spieler 2 bekäme die Figur von Spieler 3");
+}
+
+/* Das erste Wort gilt. Käme dieselbe Eingabe zweimal verschieden an,
+   dürfte nicht das zuletzt eingetroffene Paket entscheiden — sonst
+   hinge die Welt an der Reihenfolge der Post. */
+{
+  const l = macheProbe();
+  for (let i = 0; i < VERZUG; i++) l.holeTick();
+  l.setzeEigene(VERZUG, { x: 1, y: 0, ausweichen: false });
+  l.setzeFremde(1, VERZUG, { x: -1, y: 0, ausweichen: false });
+  l.setzeFremde(1, VERZUG, { x: 0.5, y: 0, ausweichen: true });   /* Nachhall */
+  const tick = l.holeTick();
+  melde(tick.eingaben[1].x === -1, "ein zweites Mal dieselbe Eingabe ändert nichts",
+    `bekam x=${tick.eingaben[1].x} statt -1`);
+}
+
+/* ── Teil 4 · Die Nachrichten überstehen den Umlauf ──────────────── */
+{
+  const original = { x: -0.734, y: 0.912, ausweichen: true };
+  const zurueck = entpackeEingabe(packeEingabe(original));
+  /* Gepackt wird auf eine Stufe von 1/127. Verglichen wird deshalb
+     gegen das **gepackte** Original, nicht gegen die rohe Zahl. */
+  const nochmal = entpackeEingabe(packeEingabe(zurueck));
+  melde(zurueck.x === nochmal.x && zurueck.y === nochmal.y,
+    "eine gepackte Eingabe bleibt beim zweiten Umlauf gleich",
+    "das Packen ist nicht stabil — die Rechner liefen langsam auseinander");
+  melde(zurueck.ausweichen === true, "der Ausweich-Knopf übersteht den Umlauf");
+  melde(Math.abs(zurueck.x - original.x) < 0.02 && Math.abs(zurueck.y - original.y) < 0.02,
+    "die gepackte Achse weicht um weniger als 1/50 ab",
+    `x ${original.x} → ${zurueck.x}`);
+
+  const ruht = ruhendeEingabe();
+  melde(ruht.x === 0 && ruht.y === 0 && ruht.ausweichen === false,
+    "die ruhende Eingabe drückt nichts");
+
+  const raus = entpacke(packe({ art: "eingaben", tick: 42, platz: 1, folge: [packeEingabe(original)] }));
+  melde(raus !== null && raus.art === "eingaben" && raus.tick === 42,
+    "eine Nachricht übersteht Packen und Entpacken");
+  melde(entpacke("kein JSON") === null,
+    "kaputte Daten von außen geben null statt zu werfen",
+    "ein Zeichenfehler auf der Leitung risse sonst das ganze Spiel ab");
+  melde(entpacke('{"ohne":"art"}') === null,
+    "eine Nachricht ohne Art gilt als kaputt",
+    "sonst liefe sie als leere Nachricht durch die Verteilung");
 }
 
 ende();

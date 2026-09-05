@@ -146,3 +146,53 @@ belanglos, obwohl er noch gar nicht verbunden war. Nach beiden
 Reparaturen erscheint nach acht Sekunden eine Meldung in normaler
 Sprache plus ein Knopf `ABBRECHEN`. Nebenbei: „noch 3 **Platze** frei"
 → „Plätze".
+
+---
+
+## Gleichlauf, und wenn einer wegbricht (05.09.2026)
+
+Neu `netz/lockstep.mjs` und die Verdrahtung in `runtime/start.js`. Über
+die Leitung gehen **nur Eingaben** — zwei Achsen und ein Knopf je
+Spieler und Tick, gepackt in **drei Byte**. Eine Welle mit achtzig
+Gegnern sechzigmal je Sekunde zu verschicken wären ein paar hundert
+Kilobyte je Sekunde.
+
+**Gemessen, mit demselben Takt, den `runtime/start.js` fährt:** Die
+Eingabe aus Bild N wirkt in Tick N+3, also nach **50,0 ms** bei 60 Ticks
+je Sekunde. Allein wird gar kein Gleichschritt angelegt — dort wirkt die
+Eingabe sofort, denn 50 ms ohne Mitspieler wären ein Preis ohne
+Gegenwert.
+
+`werkzeuge/pruefe-netz.mjs` (**22 Prüfungen**, ohne Browser) belegt den
+Gleichlauf in beide Richtungen: dieselbe Saat und dieselben Eingaben
+ergeben nach **3600 Schritten** denselben Zustand, eine um **einen Tick
+verschobene** Folge einen anderen. Dazu eine dritte Prüfung, ob der
+Abdruck überhaupt unterscheiden kann.
+
+**Genau die dritte hat sofort einen Fehler gefangen:** Die Welt fror bei
+Tick 1391 in der Phase `wahl` ein, weil im Prüfstand niemand eine Karte
+nimmt. Die Marken bei 1799 und 3599 waren zeichengleich — die
+Gleichlauf-Prüfung hätte **zweimal dieselbe eingefrorene Welt**
+verglichen und wäre grün gewesen, ganz gleich was der Gleichlauf tut.
+**61 % der 3600 Schritte haben nichts gemessen.** Der Prüfstand schaltet
+die Phasen jetzt selbst weiter, ohne Zufall.
+
+**Fünf Rot-Beweise:** Vollständigkeitsprüfung entfernt (6 Fehler) · das
+letzte statt des ersten Wortes gilt · Eingaben wirken gar nicht · die
+Saat reist nicht mit · das Packen ist nicht stabil. **Einer ging beim
+ersten Anlauf daneben** und ist der lehrreiche: `folge[t]` durch
+`folge[0]` zu ersetzen ließ die Prüfung **grün**, weil `folge[0]` bei
+beiden Folgen verschieden ist — die Sabotage bildete den Fehler nicht
+ab. Erst gar keine Eingaben trafen den Fall. Und mit abgeschaltetem
+Wächter lief eine Schleife im Prüfstand **endlos**, statt rot zu werden;
+die Schleifen sind jetzt begrenzt.
+
+**Wenn einer wegbricht:** Wer 2 Sekunden nichts schickt, wird
+übersprungen. Seine Figur bleibt stehen und verschwindet **nicht** — ein
+Jäger, der sich auflöst, wäre für die anderen eine Falschaussage über
+die Welt, und die Plätze dürfen nicht verrutschen. Gegen einzelne
+verlorene Pakete schleppt jede Nachricht die letzten **8** Eingaben mit.
+
+**Solo ist nachweislich unberührt:** `ALLEIN SPIELEN` → Arena erscheint,
+`D` über 100 Bilder → Figur **+80,66** nach rechts, und nach 1800
+weiteren Ticks läuft die Welle weiter.

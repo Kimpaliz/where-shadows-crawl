@@ -34,7 +34,8 @@ import {
   bedieneWahl, bedieneLaden, SPERRE_SEKUNDEN
 } from "./oberflaeche.js";
 import { macheLobby } from "./lobby.js";
-import { ruhendeEingabe } from "../netz/nachrichten.mjs";
+import { ruhendeEingabe, packeEingabe, entpackeEingabe } from "../netz/nachrichten.mjs";
+import { macheLockstep, VERZUG, NACHHALL } from "../netz/lockstep.mjs";
 
 /* Höchstens so viele Weltschritte je Bild. Bei 60 Bildern je Sekunde
    werden nie mehr als vier gebraucht; die Grenze fängt nur den Fall
@@ -65,6 +66,22 @@ let letztePhase = null;
    Lobby vergibt ihn der Wirt (netz/sitzung.mjs). */
 let eigenerPlatz = 0;
 let sitzung = null;
+/* `null` heißt: allein. Dann gibt es niemanden, auf den zu warten
+   wäre — und die 50 ms Eingabeverzug wären ein Preis ohne Gegenwert. */
+let gleichschritt = null;
+let sendeTick = 0;
+let letzteEigene = ruhendeEingabe();
+/* Die letzten Eingaben, die jede Nachricht mitschleppt. Sie decken den
+   Verlust einzelner Pakete ab, ohne dass jemand etwas nachfordern muss
+   (netz/lockstep.mjs, NACHHALL). */
+let nachhall = [];
+let blockiertSekunden = 0;
+
+/* Wie lange ein fehlender Mitspieler den Rest aufhält, bevor er
+   übersprungen wird. Zwei Sekunden sind lang genug, dass ein kurzer
+   Aussetzer der Leitung ihn nicht hinauswirft — und kurz genug, dass
+   niemand glaubt, das Spiel sei abgestürzt. */
+const WEG_NACH_SEKUNDEN = 2;
 
 /* Ganzzahlig vergrößern, solange etwas zu vergrößern da ist — und
    verkleinern, wenn der Bildschirm kleiner ist als das Bild.
@@ -126,6 +143,110 @@ function neuerLauf(spielerzahl, saat) {
   zustand = "spiel";
 }
 
+/* Ein Schritt der Welt mit fertigen Eingaben — und was danach mit den
+   Menüs geschieht. Beide Takte unten benutzen diese eine Stelle, damit
+   „allein" und „in einer Runde" nicht zwei Abläufe sind, die
+   auseinanderlaufen können. */
+function wendeAn(eingabenDesTicks) {
+  if (welt.phase === "welle") {
+    schrittImLauf(welt, eingabenDesTicks);
+  } else if (welt.phase === "wahl") {
+    bedieneWahl(welt, menue, eingabenDesTicks);
+    schrittImLauf(welt, eingabenDesTicks);
+  } else if (welt.phase === "laden") {
+    if (!welt.spieler[0].angebote) {
+      oeffneKraemer(welt);
+      for (const s of welt.spieler) menue.ladenZeiger[s.id] = 0;
+    }
+    if (bedieneLaden(welt, menue, eingabenDesTicks)) { naechsteWelle(welt); sammler = 0; }
+  }
+}
+
+/* Zurück in die Lobby — am Ende eines Laufs. */
+function heimInDieLobby() {
+  sitzung?.verlasse();
+  sitzung = null;
+  gleichschritt = null;
+  zustand = "lobby";
+  lobby.zeigeWahl();
+}
+
+/* Allein: unverändert wie vor dem Netz-Koop. Die eigene Eingabe wirkt
+   sofort, es gibt keinen Verzug und niemanden, auf den zu warten wäre. */
+function taktAllein(dt, eingaben) {
+  if (welt.phase === "welle") {
+    sammler += dt;
+    let n = 0;
+    while (sammler >= SCHRITT && n < MAX_SCHRITTE) {
+      wendeAn(eingaben);
+      sammler -= SCHRITT;
+      n++;
+      if (welt.phase !== "welle") break;
+    }
+    if (sammler > SCHRITT * MAX_SCHRITTE) sammler = 0;
+  } else if (welt.phase === "gewonnen" || welt.phase === "verloren") {
+    if (menue.sperre <= 0 && eingaben.some((e) => e.knopfFlanke)) { heimInDieLobby(); return true; }
+  } else {
+    wendeAn(eingaben);
+  }
+  return false;
+}
+
+/* In einer Runde: Gerechnet wird nur, was **vollständig** ist. Jeder
+   gerechnete Tick legt zugleich eine eigene Eingabe für die Zukunft
+   nach — so bleibt der Vorlauf von selbst bei `VERZUG`, ganz gleich
+   mit wie vielen Bildern je Sekunde ein Gerät läuft. */
+function taktImGleichschritt(dt) {
+  sammler += dt;
+  let n = 0;
+  let gelaufen = false;
+
+  while (sammler >= SCHRITT && n < MAX_SCHRITTE) {
+    const dran = gleichschritt.holeTick();
+    if (!dran) break;
+    gelaufen = true;
+    sammler -= SCHRITT;
+    n++;
+
+    wendeAn(flanken(dran.eingaben));
+
+    /* Für die Zukunft nachlegen und verschicken. Mitgeschickt werden
+       die letzten `NACHHALL` Eingaben — der Kanal ist unzuverlässig,
+       und ein verlorenes Paket noch einmal anzufordern wäre langsamer,
+       als es einfach mehrfach mitzugeben (netz/lockstep.mjs). */
+    gleichschritt.setzeEigene(sendeTick, letzteEigene);
+    nachhall.push(packeEingabe(letzteEigene));
+    if (nachhall.length > NACHHALL) nachhall.shift();
+    sitzung?.sendeEingaben({
+      art: "eingaben", platz: eigenerPlatz, tick: sendeTick, folge: nachhall.slice()
+    });
+    sendeTick++;
+
+    if (welt.phase === "gewonnen" || welt.phase === "verloren") break;
+  }
+
+  if (gelaufen) blockiertSekunden = 0;
+  else blockiertSekunden += dt;
+
+  /* Wer zu lange fehlt, wird übersprungen — sonst stünde die ganze
+     Runde still, weil einer den Deckel zugeklappt hat. Seine Figur
+     bleibt stehen und verschwindet nicht: Ein Jäger, der sich auflöst,
+     wäre für die anderen eine Falschaussage über die Welt. */
+  if (blockiertSekunden >= WEG_NACH_SEKUNDEN) {
+    for (const p of gleichschritt.fehlendePlaetze()) gleichschritt.meldeWeg(p);
+    blockiertSekunden = 0;
+  }
+
+  /* Zu viel Rückstand wird nicht nachgeholt — sonst rennt die Welt
+     nach einem Aussetzer in Zeitraffer davon. */
+  if (sammler > SCHRITT * MAX_SCHRITTE) sammler = 0;
+
+  if (welt.phase === "gewonnen" || welt.phase === "verloren") {
+    if (menue.sperre <= 0 && letzteEigene.ausweichen) { heimInDieLobby(); return true; }
+  }
+  return false;
+}
+
 function bild(jetzt) {
   requestAnimationFrame(bild);
   const dt = Math.min(0.25, (jetzt - vorher) / 1000);
@@ -136,12 +257,19 @@ function bild(jetzt) {
      hat nichts zu tun. */
   if (zustand === "lobby") return;
 
-  /* Dieser Rechner steuert genau eine Figur. Die übrigen Plätze
-     bekommen eine stehende Figur, bis der Gleichlauf sie füllt. */
+  /* Dieser Rechner steuert genau eine Figur — einmal je Bild gelesen.
+     Zweimal zu lesen wäre ein Fehler: `liesEigene()` leert dabei den
+     Puffer für den kurzen Tipp, den zweiten Aufruf sähe er nicht mehr. */
+  const eigene = eingabe.liesEigene();
+  letzteEigene = eigene;
+
+  /* Allein: die eigene Eingabe wirkt sofort. In einer Runde füllt der
+     Gleichschritt alle Plätze, und dann wirkt sie `VERZUG` Ticks
+     später (netz/lockstep.mjs). */
   const rohe = [];
   for (let i = 0; i < welt.spieler.length; i++) rohe.push(ruhendeEingabe());
-  if (eigenerPlatz < rohe.length) rohe[eigenerPlatz] = eingabe.liesEigene();
-  const eingaben = flanken(rohe);
+  if (eigenerPlatz < rohe.length) rohe[eigenerPlatz] = eigene;
+  const eingaben = gleichschritt ? null : flanken(rohe);
 
   /* Wechselt der Bildschirm, wird der Knopf kurz nicht gehoert —
      siehe oberflaeche.js. */
@@ -149,36 +277,8 @@ function bild(jetzt) {
   if (phaseJetzt !== letztePhase) { menue.sperre = SPERRE_SEKUNDEN; letztePhase = phaseJetzt; }
   if (menue.sperre > 0) menue.sperre -= dt;
 
-  if (welt.phase === "welle") {
-    sammler += dt;
-    let n = 0;
-    while (sammler >= SCHRITT && n < MAX_SCHRITTE) {
-      schrittImLauf(welt, eingaben);
-      sammler -= SCHRITT;
-      n++;
-      if (welt.phase !== "welle") break;
-    }
-    if (sammler > SCHRITT * MAX_SCHRITTE) sammler = 0;
-  } else if (welt.phase === "wahl") {
-    bedieneWahl(welt, menue, eingaben);
-    schrittImLauf(welt, eingaben);
-  } else if (welt.phase === "laden") {
-    if (!welt.spieler[0].angebote) {
-      oeffneKraemer(welt);
-      for (const s of welt.spieler) menue.ladenZeiger[s.id] = 0;
-    }
-    if (bedieneLaden(welt, menue, eingaben)) { naechsteWelle(welt); sammler = 0; }
-  } else if (welt.phase === "gewonnen" || welt.phase === "verloren") {
-    if (menue.sperre <= 0 && eingaben.some((e) => e.knopfFlanke)) {
-      /* Zurück in die Lobby, nicht in ein Vorspiel: Wer mitspielt,
-         steht dort und nicht an dieser Tastatur. */
-      sitzung?.verlasse();
-      sitzung = null;
-      zustand = "lobby";
-      lobby.zeigeWahl();
-      return;
-    }
-  }
+  const zurLobby = gleichschritt ? taktImGleichschritt(dt) : taktAllein(dt, eingaben);
+  if (zurLobby) return;
 
   /* Die Welt wird immer gezeichnet — auch hinter Laden und Kartenwahl.
      Das hält den Zusammenhang: Man sieht, wo man steht, während man
@@ -198,11 +298,42 @@ const lobby = macheLobby({
   beiStart({ saat, spielerzahl, eigenerPlatz: platz, sitzung: s }) {
     eigenerPlatz = platz ?? 0;
     sitzung = s ?? null;
+
+    /* Allein braucht es keinen Gleichschritt — er kostete 50 ms
+       Eingabeverzug für einen Gegenwert, den es ohne Mitspieler nicht
+       gibt. */
+    gleichschritt = sitzung
+      ? macheLockstep({
+        eigenerPlatz,
+        plaetze: Array.from({ length: spielerzahl }, (_, i) => i),
+        verzug: VERZUG
+      })
+      : null;
+    sendeTick = VERZUG;
+    nachhall = [];
+    letzteEigene = ruhendeEingabe();
+    blockiertSekunden = 0;
+
     neuerLauf(spielerzahl, saat);
     sammler = 0;
     letztePhase = null;
   }
 });
+
+/* Was über die Leitung ankommt, landet hier. Jede Nachricht schleppt
+   die letzten `NACHHALL` Eingaben mit; der letzte Eintrag gehört zu
+   `tick`, die davor zu den Ticks davor. Doppelte werden im
+   Gleichschritt verworfen — dort gilt das erste Wort. */
+lobby.setzeEingangsHorcher((platz, nachricht) => {
+  if (!gleichschritt || !Array.isArray(nachricht.folge)) return;
+  const letzter = Number(nachricht.tick);
+  if (!Number.isFinite(letzter)) return;
+  const erster = letzter - (nachricht.folge.length - 1);
+  nachricht.folge.forEach((gepackt, i) => {
+    gleichschritt.setzeFremde(platz, erster + i, entpackeEingabe(gepackt));
+  });
+});
+
 lobby.zeigeWahl();
 
 requestAnimationFrame(bild);
