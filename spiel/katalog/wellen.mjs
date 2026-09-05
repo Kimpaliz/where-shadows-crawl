@@ -109,6 +109,40 @@ export function artenInWelle(welle) {
   return GEGNER.filter((g) => !g.elite && (AB_WELLE[g.id] ?? 1) <= welle);
 }
 
+/* ── Der zweite Hauptmann ────────────────────────────────────────────
+
+   Janniks Ansage vom 05.09.2026: „Eine Hauptmannswelle muss anders
+   aussehen, nicht nur schwerer sein." Ein zweiter `hauptmann` mit mehr
+   Leben wäre genau das Falsche — derselbe Kampf, nur länger.
+
+   Deshalb bekommt der Hauptmann ab der **zweiten** Bosswelle
+   Gesellschaft: abwechselnd der Gebeinfürst (Steigerung des
+   Knochenritters, Nahkampf, kaum zu verschieben) und der Vielfraß
+   (Steigerung des Speiers, hält Abstand und spuckt) — zwei eigene
+   Silhouetten, zwei eigene Kämpfe, `spiel/katalog/gegner.mjs`. Die
+   allererste Bosswelle bleibt bewusst bei ihm allein: Sie ist die
+   Einführung, und wer zwei Bosse sieht, bevor er den ersten kennt,
+   lernt nichts daraus.
+
+   Welcher der beiden es ist, folgt der Wellenzahl selbst, **nicht**
+   dem Würfel — dieselbe Regel wie bei `schwankt` in
+   `spiel/gegner-verhalten.mjs`: Wo sich etwas aus dem Zustand ergibt,
+   muss man nicht würfeln, und jede zusätzliche Ziehung im Kern
+   verschiebt jede spätere im ganzen Lauf (siehe `spiel/zufall.mjs`).
+
+   `hauptmann` bleibt in **jeder** Bosswelle dabei, der zweite kommt
+   nur dazu — `werkzeuge/pruefe-katalog.mjs` (außerhalb dieser Aufgabe)
+   prüft an festen Wellen, dass „hauptmann" im Bauplan steht, und diese
+   Prüfung darf nicht rot werden. */
+const ZWEITER_HAUPTMANN = ["gebeinfuerst", "vielfrass"];
+
+/* Der wievielte Bosskampf ist das, gezählt ab 1? Nur für Bosswellen
+   sinnvoll — dort ist die Division immer glatt, weil `istElitewelle`
+   das schon geprüft hat. */
+export function elitewellenIndex(welle, modus) {
+  return welle / (modus?.elitewelleJede ?? 4);
+}
+
 /* Der Bauplan einer Welle: eine Liste von Einträgen
    `{ art, zeit }` — welche Art wann erscheint. Die Zeit ist über die
    Welle verteilt, mit einem ruhigen Anfang: Wer in Sekunde 0 von acht
@@ -126,6 +160,14 @@ export function baueWelle(welle, spielerzahl, zufall, modus) {
     const anzahl = Math.max(1, Math.floor(spielerzahl / 2));
     for (let i = 0; i < anzahl; i++) {
       plan.push({ art: "hauptmann", zeit: dauer * 0.25 + i * 1.5 });
+    }
+
+    const eliteIndex = elitewellenIndex(welle, modus);
+    if (eliteIndex >= 2) {
+      const zweiterId = ZWEITER_HAUPTMANN[(eliteIndex - 2) % ZWEITER_HAUPTMANN.length];
+      for (let i = 0; i < anzahl; i++) {
+        plan.push({ art: zweiterId, zeit: dauer * 0.55 + i * 1.5 });
+      }
     }
   }
 
