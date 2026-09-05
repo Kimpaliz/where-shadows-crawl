@@ -221,3 +221,100 @@ nachweislich nicht, und ein TURN-Server gehört nicht zum Projekt
 Danach wurden alle vier Sitzungen ordentlich beendet
 (`connectionState: closed`), damit am fremden Dienst nichts offen
 stehen bleibt.
+
+---
+
+## Schritt 3 · Eine echte Runde zu zweit (05.09.2026)
+
+Zwei Browser-Tabs, beide auf `http://127.0.0.1:8151/`, keine Attrappe
+und keine Abkürzung: die normale Oberfläche, der normale Lobbycode, der
+öffentliche Vermittler.
+
+### Was wirklich geklickt wurde
+
+| | Tab A | Tab B |
+| --- | --- | --- |
+| Name getippt | `ANKA` | `BOLKO` |
+| geklickt | **LOBBY AUFMACHEN** | **EINER LOBBY BEITRETEN** |
+| dann | Code abgelesen: **V6ZGA8** | Code `V6ZGA8` getippt, **BEITRETEN** |
+| dann | **ANFANGEN** | — |
+
+Alles davon waren **echte Mausklicks** auf die echten Knöpfe.
+
+### Was zu sehen war
+
+Nach dem Aufmachen stand in Tab A „DEIN LOBBYCODE · V6ZGA8" und
+darunter die Liste `★ ANKA (du)` / `noch 3 Plätze frei`. Nach dem
+Beitritt stand in **Tab B** `★ ANKA` / `· BOLKO (du)` / `noch 2 Plätze
+frei` — und in **Tab A** zur selben Zeit `★ ANKA (du)` / `· BOLKO` /
+`noch 2 Plätze frei`. Beide Listen kommen über den Datenkanal; das ist
+der erste sichtbare Beweis, dass die Leitung trägt.
+
+Danach lief die Runde durch: Nacht 1 → **DER KRÄMER — VOR NACHT 2** →
+Nacht 2 → **DIE NACHT LEHRT DICH ETWAS** (Aufstiegskarten) →
+Endbildschirm.
+
+### ⚠️ Die Tasten mussten von Hand ausgelöst werden
+
+Beide Automatisierungswege liefern **keine brauchbare Taste**:
+
+| Weg | was ankam |
+| --- | --- |
+| Browserfenster (`computer key`) | `keydown` kommt an, aber **`e.code` ist leer** |
+| echtes Chrome über die Erweiterung | **gar kein `keydown`** |
+
+`runtime/eingabe.js` bildet auf `e.code` ab (`KeyW`, `KeyA`, …), also
+ist beides unbrauchbar. Die Tasten wurden deshalb mit
+`dispatchEvent(new KeyboardEvent("keydown", { code: "KeyA" }))`
+ausgelöst — **durch genau den Horcher**, den das Spiel registriert hat,
+und mit demselben `code`, den eine echte Taste liefern würde. Die
+Mausklicks oben sind davon nicht betroffen; die waren echt.
+Ehrlich gesagt: Eine Tastatur unter einem Finger war es nicht.
+
+### Gemessen: die Eingabe des einen erreicht den anderen
+
+Die Zahl `65278` ist die ruhende Eingabe (`x=0, y=0`); alles andere ist
+Bewegung. Mitgeschnitten wurde auf der Transportebene, also am
+eingehenden Datenkanal.
+
+| gedrückt in | was der **andere** Tab empfing |
+| --- | --- |
+| Tab A: `KeyD` (rechts), 1,5 s | Tab B sah **Platz 0**: roh `130302` → `x = 1, y = 0`, Tick 15779 |
+| Tab B: `KeyW`+`KeyA` (hoch-links), 1,5 s | Tab A sah **Platz 1**: roh `0` → `x = −1, y = −1`, Tick 17065 |
+
+Beide Achsen unterscheiden sich zwischen den zwei Fällen — wäre ein
+Platz vertauscht oder eine Achse verdreht, fiele es hier auf. Nach dem
+Loslassen ging beides zurück auf `65278`.
+
+Dauerlast während der Runde: **60,5 Nachrichten je Sekunde hinaus, 60,0
+herein**; über die Runde **21 393 hinaus und 21 393 herein** in Tab A.
+Der Wirt sendet `platz: 0` und empfängt `platz: 1`.
+
+**Das ist zugleich der stärkste Beleg:** Der Gleichschritt rechnet
+einen Tick erst, wenn die Eingabe des anderen da ist
+(`netz/lockstep.mjs`). Dass beide Tabs über 21 000 Ticks
+durchgelaufen sind, ist nur möglich, wenn die Post ununterbrochen in
+**beide** Richtungen ankam. Bliebe sie aus, stünde das Bild.
+
+### Beide Bildschirme zeigten dasselbe
+
+Im Krämer stand in **beiden** Tabs `J1 24 GOLD` / `J2 30 GOLD`, und
+jeder Auswahlbalken stand dort, wohin ihn **sein eigener** Tab bewegt
+hatte (links `BERNSTEIN`, rechts `NEU 5`) — jeder steuert seine Spalte,
+beide sehen beide. Am Ende stand in beiden Tabs zeichengleich:
+
+```
+DIE NACHT BEHÄLT EUCH — BIS NACHT 2
+J1  STUFE 2  23 ERSCHLAGEN
+J2  STUFE 2  22 ERSCHLAGEN
+```
+
+Zwei Browser, dieselben Zahlen, und **verschiedene** Zahlen je Spieler
+(23 gegen 22) — es waren wirklich zwei Jäger in einer Welt.
+
+### Nebenbefund: kein Tab wurde gedrosselt
+
+Die Falle aus dem Auftrag wurde geprüft, bevor gemessen wurde: beide
+Tabs meldeten `document.visibilityState === "visible"` und **720 bzw.
+721 Bilder in 3 Sekunden** (~240 fps). Ein gedrosselter Hintergrundtab
+hätte den Gleichschritt für beide angehalten — das lag hier nicht vor.
