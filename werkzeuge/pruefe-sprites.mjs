@@ -16,6 +16,19 @@
       unsichtbar. Das ist der teuerste Fehler, weil er wie eine
       korrekte Umsetzung aussieht.
 
+   ── Seit den Bossen und Trefferzeichen (05.09.2026) zusätzlich ──────
+
+   4. **Ein Muster zerfällt in Einzelpunkte.** Zahlen wie „Breite
+      stimmt" und „Farbe existiert" sagen nichts darüber, ob das
+      Ergebnis noch als *ein Wesen* zu erkennen ist, statt als Staub.
+   5. **Ein Trefferzeichen ist auf dem Bannkreis-Boden fast unsichtbar.**
+      Genau das ist dem ersten Entwurf von `wucht` passiert (Steintöne
+      auf Steinboden). Erst am gerenderten Bild gesehen, nicht an einer
+      der bestehenden Prüfungen — deshalb jetzt eine eigene.
+   6. **Eine Bildfolge (`bilder`) weicht im ersten Bild von `bild` ab**,
+      oder ihre Rahmen haben unterschiedliche Maße. Beides sähe man erst
+      im Browser, und nur, wenn die Animation überhaupt schon läuft.
+
    ── Arbeitet zusammen mit ───────────────────────────────────────────
 
    `runtime/sprite-daten.js` (die Raster), `runtime/sprites.js` (die
@@ -23,7 +36,7 @@
 
 import { macheMelder } from "./helfer.mjs";
 import { FARBEN, JAEGER_FARBEN } from "../runtime/palette.js";
-import { JAEGER, SCHLAGBOGEN, GEGNER_BILDER, DINGE, GESCHOSSE } from "../runtime/sprite-daten.js";
+import { JAEGER, SCHLAGBOGEN, GEGNER_BILDER, DINGE, GESCHOSSE, TREFFER } from "../runtime/sprite-daten.js";
 import { pruefeRaster, dreheRaster, drehGroesse, richtungsIndex, RICHTUNGEN } from "../runtime/sprites.js";
 import { GEGNER } from "../spiel/katalog/gegner.mjs";
 
@@ -50,7 +63,8 @@ const ALLE = [
   ["jaeger", JAEGER], ["schlagbogen", SCHLAGBOGEN],
   ...Object.entries(GEGNER_BILDER).map(([k, v]) => [`gegner/${k}`, v]),
   ...Object.entries(DINGE).map(([k, v]) => [`dinge/${k}`, v]),
-  ...Object.entries(GESCHOSSE).map(([k, v]) => [`geschoss/${k}`, v])
+  ...Object.entries(GESCHOSSE).map(([k, v]) => [`geschoss/${k}`, v]),
+  ...Object.entries(TREFFER).map(([k, v]) => [`treffer/${k}`, v])
 ];
 
 for (const [name, sprite] of ALLE) {
@@ -64,9 +78,20 @@ for (const [name, sprite] of ALLE) {
 for (const g of GEGNER) {
   melde(GEGNER_BILDER[g.id] !== undefined, `Gegner "${g.id}" hat ein Bild`);
 }
-/* Und die Gegenrichtung: ein Bild ohne Gegner ist toter Ballast. */
+/* Und die Gegenrichtung: ein Bild ohne Gegner ist toter Ballast. Zwei
+   Bosse (05.09.2026, Auftrag "bild/sprites-und-bosse") sind bereits
+   gezeichnet, aber noch ohne Eintrag in `spiel/katalog/gegner.mjs` —
+   das ist Sache eines Spiellogik-Agenten, `spiel/*` gehört nicht zu
+   dieser Aufgabe. Befristete, benannte Ausnahme statt stillem Rot:
+   Sobald der Katalog die beiden IDs kennt, gehört diese Zeile weg und
+   die beiden laufen durch dieselbe Prüfung wie jeder andere Gegner. */
+const NOCH_OHNE_KATALOGEINTRAG = new Set(["gebeinfuerst", "vielfrass"]);
 for (const id of Object.keys(GEGNER_BILDER)) {
+  if (NOCH_OHNE_KATALOGEINTRAG.has(id)) continue;
   melde(GEGNER.some((g) => g.id === id), `Bild "${id}" gehört zu einem Gegner`);
+}
+for (const id of NOCH_OHNE_KATALOGEINTRAG) {
+  melde(GEGNER_BILDER[id] !== undefined, `Boss ohne Katalogeintrag "${id}" hat wenigstens ein Bild`);
 }
 
 /* ── Sind sie drehbar erkennbar? ─────────────────────────────────── */
@@ -141,5 +166,104 @@ for (let i = 0; i < 360; i++) {
   if (!Number.isInteger(r) || r < 0 || r >= RICHTUNGEN) ausserhalb++;
 }
 melde(ausserhalb === 0, "Richtungsnummer bleibt immer im gültigen Bereich", `${ausserhalb} daneben`);
+
+/* ── Silhouette erkennbar? ───────────────────────────────────────── */
+
+/* Wie viele Bildpunkte hängen (mit Diagonalen) an der größten
+   zusammenhängenden Fläche? Ein Wesen, das in Einzelpunkte zerfällt,
+   ist ganz schwarz gefüllt nicht mehr als *ein* Ding zu erkennen —
+   genau die Silhouettenregel aus dem Handwerk, nur als Zahl statt als
+   Blick. Diagonale Nachbarschaft zählt als verbunden: Pixelgrafik
+   klebt auch über die Ecke. */
+function groessteFlaeche(bild) {
+  const h = bild.length, w = bild[0].length;
+  const besucht = Array.from({ length: h }, () => new Array(w).fill(false));
+  let gesamt = 0, groesste = 0;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) if (bild[y][x] !== ".") gesamt++;
+  }
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (bild[y][x] === "." || besucht[y][x]) continue;
+      let groesse = 0;
+      const stapel = [[y, x]];
+      besucht[y][x] = true;
+      while (stapel.length > 0) {
+        const [cy, cx] = stapel.pop();
+        groesse++;
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            if (dy === 0 && dx === 0) continue;
+            const ny = cy + dy, nx = cx + dx;
+            if (ny < 0 || ny >= h || nx < 0 || nx >= w) continue;
+            if (besucht[ny][nx] || bild[ny][nx] === ".") continue;
+            besucht[ny][nx] = true;
+            stapel.push([ny, nx]);
+          }
+        }
+      }
+      groesste = Math.max(groesste, groesse);
+    }
+  }
+  return { gesamt, groesste };
+}
+
+/* Gilt für Wesen (gedreht — sie müssen als *ein* Ding lesbar sein),
+   nicht für Trefferzeichen: Blutstropfen und Schutt dürfen dort
+   absichtlich lose neben der Hauptform liegen, das ist keine
+   zerfallene Silhouette, sondern Spritzer. */
+for (const [name, sprite] of GEDREHT) {
+  const { gesamt, groesste } = groessteFlaeche(sprite.bild);
+  const anteil = groesste / gesamt;
+  melde(anteil >= 0.9, `${name}: Silhouette ist ein Stück, nicht Staub`,
+    `${groesste}/${gesamt} zusammenhängend (${(anteil * 100).toFixed(0)} %)`);
+}
+
+/* ── Trefferzeichen auf dem Boden lesbar? ────────────────────────── */
+
+/* Am 05.09.2026 gemessen: Der erste Entwurf von `wucht` malte in
+   Steintönen — auf dem Bannkreis-Boden fast unsichtbar (Abstand nur
+   21,4 von 255). Gefunden am gerenderten Bild, nicht an dieser Zahl;
+   diese Prüfung soll denselben Fehler künftig ohne Bild fangen. */
+function leuchtdichte(hexFarbe) {
+  const n = parseInt(hexFarbe.slice(1), 16);
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+const BODENTOENE = ["boden0", "boden1", "boden2", "aussen0", "aussen1"].map((n) => leuchtdichte(FARBEN[n]));
+const HELLSTER_BODEN = Math.max(...BODENTOENE);
+const KONTRAST_MINDESTENS = 60;
+
+for (const [id, sprite] of Object.entries(TREFFER)) {
+  const farben = Object.values(sprite.zeichen)
+    .filter((n) => !n.startsWith("@"))
+    .map((n) => leuchtdichte(FARBEN[n]));
+  const hellste = Math.max(...farben);
+  const abstand = hellste - HELLSTER_BODEN;
+  melde(abstand >= KONTRAST_MINDESTENS, `treffer/${id}: hellste Farbe hebt sich vom Bannkreis-Boden ab`,
+    `Abstand ${abstand.toFixed(1)} (Boden höchstens ${HELLSTER_BODEN.toFixed(1)})`);
+}
+
+/* ── Bildfolgen (`bilder`) unversehrt? ────────────────────────────── */
+
+/* Neu seit dem Bossauftrag: ein Sprite kann `bilder` tragen. Zwei
+   Dinge dürfen dabei nicht auseinanderlaufen: `bild` muss `bilder[0]`
+   sein (sonst zeigt jeder Aufrufer, der nur `bild` kennt, ein anderes
+   Bild als die Animation gleich danach), und jeder Rahmen muss für
+   sich ein heiles Raster in derselben Größe wie `bild` sein — sonst
+   springt die Figur beim ersten Bildwechsel im Ort. */
+for (const [name, sprite] of ALLE) {
+  if (!sprite.bilder) continue;
+  const gleich = JSON.stringify(sprite.bild) === JSON.stringify(sprite.bilder[0]);
+  melde(gleich, `${name}: bild ist bilder[0]`);
+  const b0 = sprite.bild[0].length, h0 = sprite.bild.length;
+  sprite.bilder.forEach((rahmen, i) => {
+    const maengel = pruefeRaster(`${name}/bilder[${i}]`, { bild: rahmen, zeichen: sprite.zeichen });
+    melde(maengel.length === 0, `${name}: Rahmen ${i} ist ein heiles Raster`, maengel.slice(0, 3).join(" | "));
+    const passtGroesse = rahmen[0].length === b0 && rahmen.length === h0;
+    melde(passtGroesse, `${name}: Rahmen ${i} hat dieselbe Größe wie bild`,
+      `${rahmen[0].length} × ${rahmen.length}, erwartet ${b0} × ${h0}`);
+  });
+}
 
 ende();
