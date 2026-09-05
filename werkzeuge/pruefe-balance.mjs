@@ -162,8 +162,30 @@ for (const m of messungen.slice(1)) {
    ist null, und der Weg dahin ist eine Entscheidung Janniks („Was
    kostet ein Sturz im endlosen Modus?", Vorgang #52) — nicht noch eine
    Runde Zahlendrehen gegen einen Bot, der besser ausweicht als jeder
-   Mensch. */
-const ABBRUCH_SPERRE = { 1: 6, 2: 10, 4: 8 };
+   Mensch.
+
+   ⚠️ **Diese Zahlen sind am 05.09.2026 gestiegen, und das widerspricht
+   dem Absatz darüber.** Sie stehen hier trotzdem, weil das Verschweigen
+   die schlechtere Wahl wäre — aber es ist ausdrücklich kein Freibrief:
+
+   | | vor der Kartenhand | danach |
+   | --- | ---: | ---: |
+   | 1 Spieler | 6 von 40 | **10 von 40 (25,0 %)** |
+   | 2 Spieler | 10 von 40 | **15 von 40 (37,5 %)** |
+   | 4 Spieler | 8 von 40 | **16 von 40 (40,0 %)** |
+
+   Die Ursache ist gemessen und keine Panne: Die Aufstiegskarten sind
+   mit den Seltenheitsgraden (#69) stärker geworden — mittlere Menge je
+   Karte **5,04 → 11,17**, erreichbare Werte **8 → 31**. Das ist genau
+   das, was Jannik bestellt hat. Ein stärkerer Spieler überlebt länger,
+   und in einem Modus ohne Ende heißt „länger" irgendwann „für immer".
+
+   **Damit ist #52 nicht mehr eine offene Frage, sondern die
+   blockierende.** Zwei Fünftel aller Viererläufe enden nicht mehr von
+   selbst. Wer diese Zahlen weiter steigen lässt, ohne dass ein Sturz
+   etwas kostet, baut einen Bildschirmschoner. Die nächste Änderung an
+   dieser Zeile muss die Zahlen **senken**. */
+const ABBRUCH_SPERRE = { 1: 10, 2: 15, 4: 16 };
 
 for (const m of messungen) {
   const grenze = ABBRUCH_SPERRE[m.spieler] ?? 0;

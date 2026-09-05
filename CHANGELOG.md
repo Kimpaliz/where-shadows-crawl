@@ -3,6 +3,42 @@
 Oben das Neueste. Jeder Eintrag sagt **was**, **warum** und **womit
 gemessen** — nicht nur, dass etwas anders ist.
 
+## 0.9.0 — Vier Baustellen zusammengeführt, und eine Sperrklinke ist gestiegen (05.09.2026)
+
+Kartenhand (#69), Angriffe und Anzeige (#80, #93), Truhen (#74–#76) und
+die Gegnerverhalten (#71–#73) sind auf einem Stand. Vier Agenten in vier
+eigenen Worktrees, **genau eine überschneidende Datei**
+(`werkzeuge/pruefe-alles.mjs`, drei Einträge, konfliktfrei) — der
+Schnitt hat gehalten.
+
+Die Kette wächst auf **23 Prüfläufe** und braucht auf dem integrierten
+Stand **247 s**; sie ist grün.
+
+### Die eine Zahl, die Jannik sehen muss
+
+**Zwei Fünftel aller Viererläufe enden nicht mehr von selbst.**
+
+| ohne Ende, 40 Läufe je Reihe | vorher | jetzt |
+| --- | ---: | ---: |
+| 1 Spieler | 6 (15,0 %) | **10 (25,0 %)** |
+| 2 Spieler | 10 (25,0 %) | **15 (37,5 %)** |
+| 4 Spieler | 8 (20,0 %) | **16 (40,0 %)** |
+
+Die Ursache ist gemessen und keine Panne: Mit den Seltenheitsgraden
+(#69) sind die Aufstiegskarten stärker geworden — mittlere Menge je
+Karte **5,04 → 11,17**, erreichbare Werte **8 → 31**. Das ist genau das,
+was bestellt war. Ein stärkerer Spieler überlebt länger, und in einem
+Modus ohne Ende heißt „länger" irgendwann „für immer".
+
+`ABBRUCH_SPERRE` in `werkzeuge/pruefe-balance.mjs` ist deshalb
+**gestiegen**, und das widerspricht ihrer eigenen Regel („darf sinken,
+niemals steigen"). Sie steht trotzdem dort — mit der Messung daneben,
+weil Verschweigen die schlechtere Wahl wäre. **Die nächste Änderung an
+dieser Zeile muss die Zahlen senken.**
+
+Damit ist Vorgang #52 („Was kostet ein Sturz im endlosen Modus?") nicht
+mehr eine offene Frage unter anderen, sondern die blockierende.
+
 ## 0.8.2 — Drei Verhalten hatten keinen Benutzer, und eine Prüfung log (05.09.2026)
 
 Der Monster-Agent hatte sechs Gegnerverhalten gebaut und geprüft. Drei
