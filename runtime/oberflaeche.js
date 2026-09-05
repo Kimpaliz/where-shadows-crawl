@@ -18,7 +18,10 @@
 
    `runtime/schrift.js` (die Bildpunktschrift), `runtime/palette.js`,
    `runtime/start.js` (ruft und reicht die Eingaben durch),
-   `spiel/laden.mjs` und `spiel/stufen.mjs` (die Vorgänge dahinter). */
+   `spiel/laden.mjs` und `spiel/stufen.mjs` (die Vorgänge dahinter),
+   `spiel/werte.mjs` (die Abklingzeit hinter der Angriffsleiste),
+   `spiel/schadensarten.mjs` (ihre Farbe),
+   `werkzeuge/pruefe-anzeige.mjs` (misst die reinen Funktionen hier). */
 
 import { FARBEN, JAEGER_FARBEN } from "./palette.js";
 import { zeichneText, zeichneTextMittig, zeichneTextUmrandet, textBreite, VORSCHUB } from "./schrift.js";
@@ -26,6 +29,9 @@ import { BREITE, HOEHE } from "./zeichnen.js";
 import { WELLEN_JE_LAUF } from "../spiel/katalog/wellen.mjs";
 import { neuwuerfelnPreis, kaufe, wuerfleNeu, ANGEBOTE } from "../spiel/laden.mjs";
 import { nimmKarte } from "../spiel/stufen.mjs";
+import { abklingzeit } from "../spiel/werte.mjs";
+import { ART_NACH_ID, STANDARD_ART } from "../spiel/schadensarten.mjs";
+import { SCHRITT } from "../spiel/welt.mjs";
 
 /* Der Laden hat je Spieler sechs Felder: vier Angebote, neu würfeln,
    bereit. Eine Reihe statt eines Rasters — mit einer Achse ist eine
@@ -47,6 +53,76 @@ function leiste(c, x, y, b, anteil, farbe, grund = FARBEN.kontur) {
   c.fillRect(x, y, b, 3);
   c.fillStyle = farbe;
   c.fillRect(x, y, Math.max(0, Math.round(b * Math.min(1, anteil))), 3);
+}
+
+/* ── Die Angriffsleiste ──────────────────────────────────────────────
+
+   Wie voll die Leiste einer Waffe steht: 1 heißt schlagbereit.
+
+   Der Nenner kommt aus **derselben** Funktion, mit der der Regelkern
+   die Abklingzeit setzt (`spiel/kampf.mjs` ruft `abklingzeit(s.werte,
+   v.abklingzeit)`). Eine eigene Formel hier wäre bei Hast still falsch:
+   Der Kern rechnete kürzer, die Leiste liefe weiter über die alte
+   Strecke, und niemand bekäme eine Meldung.
+
+   `bereitIn` läuft im Kern kurz ins Negative, bevor es auf 0 gesetzt
+   wird — deshalb wird nach oben geklemmt. Ohne das ragte die Leiste
+   für einzelne Bilder über ihren Kasten hinaus. */
+export function bereitAnteil(waffe, werte) {
+  const voll = abklingzeit(werte, waffe.vorlage.abklingzeit);
+  if (!(voll > 0)) return 1;
+  return Math.max(0, Math.min(1, 1 - waffe.bereitIn / voll));
+}
+
+/* Die Leiste trägt die Farbe der Schadensart — dieselbe, in der gleich
+   das Trefferzeichen und die Schadenszahl erscheinen
+   (`runtime/zeichnen.js`). Das ist der eigentliche Gewinn: Man lernt
+   „der orange Balken ist gleich voll" und sieht danach das orange
+   Feuerzeichen. Ein eigener Farbsatz für die Leisten wäre ein zweites
+   Vokabular für dieselbe Sache. */
+function waffenFarbe(waffe) {
+  const art = waffe.vorlage.schadensart ?? STANDARD_ART;
+  return (ART_NACH_ID.get(art) ?? ART_NACH_ID.get(STANDARD_ART)).farbe;
+}
+
+/* ── Wo die Leisten liegen und warum dort ────────────────────────────
+
+   **Über** der Spielertafel, nicht unter ihr und nicht am Rand.
+
+   Der untere Bildrand ist der umkämpfteste Streifen des Spiels: unten
+   links liegt auf dem Handy der Daumen, unten rechts der
+   Ausweichknopf, und die Kartenhand kommt ebenfalls dorthin. Nach oben
+   ist der einzige Weg, der niemandem etwas wegnimmt.
+
+   An der **Tafel** und nicht in einer Ecke, weil Waffen jemandem
+   gehören: Bei vier Jägern muss jeder seine eigenen sehen, und eine
+   feste Ecke kann nur einen bedienen. So wächst die Anzeige von selbst
+   mit der Spielerzahl mit.
+
+   Nicht **an der Figur** in der Welt: Dort läge sie unter dem Licht
+   und wäre am dunklen Rand des Bannkreises nicht zu lesen — und sie
+   liefe mit, während man sie zu lesen versucht. */
+const LEISTE_HOEHE = 3;
+const LEISTE_ABSTAND = 1;
+
+function zeichneAngriffsleisten(c, s, x, y, breite) {
+  const waffen = s.waffen ?? [];
+  if (waffen.length === 0) return;
+  /* Ein Feld je Waffe, nebeneinander. Bei sechs Waffen auf 112
+     Bildpunkten bleiben je 17 — schmal, aber die Leiste beantwortet
+     eine Ja-Nein-Frage („gleich soweit?"), keine Zahl. */
+  const luecke = 1;
+  const feld = Math.max(3, Math.floor((breite - (waffen.length - 1) * luecke) / waffen.length));
+  waffen.forEach((w, i) => {
+    const fx = x + i * (feld + luecke);
+    /* Durchgehend die Artfarbe, auch wenn die Waffe bereit ist. Ein
+       eigener Ton für „voll" war der erste Entwurf und wurde
+       verworfen: Er hätte die Zugehörigkeit ausgerechnet in dem
+       Augenblick gelöscht, in dem gleich das Trefferzeichen derselben
+       Farbe erscheint. Das sichtbare Ereignis ist ohnehin nicht das
+       Vollwerden, sondern das Zurückschnellen beim Zuschlagen. */
+    leiste(c, fx, y, feld, bereitAnteil(w, s.werte), waffenFarbe(w));
+  });
 }
 
 /* ── Anzeige während der Welle ───────────────────────────────────── */
@@ -80,6 +156,12 @@ export function zeichneAnzeige(c, welt) {
     const x = start + i * (breite + 4);
     const y = HOEHE - 26;
     const farbe = JAEGER_FARBEN[s.id % JAEGER_FARBEN.length];
+    /* Die Angriffsleisten sitzen dicht über der Tafel — siehe die
+       Begründung bei `zeichneAngriffsleisten`. Wer liegt, schlägt
+       nicht zu; dann wäre eine Reihe voller Balken eine Falschaussage. */
+    if (s.zustand === "lebt") {
+      zeichneAngriffsleisten(c, s, x + 3, y - LEISTE_HOEHE - LEISTE_ABSTAND, breite - 6);
+    }
     kasten(c, x, y, breite, 22, s.zustand === "liegt" ? FARBEN.blut : FARBEN.rahmen);
     zeichneText(c, `J${s.id + 1}`, x + 3, y + 4, farbe.hell);
     zeichneText(c, `${Math.ceil(s.leben)}`, x + 16, y + 4,
@@ -182,6 +264,15 @@ export function zeichneLaden(c, welt, menue) {
       s.bereit ? "#0a1a0e" : (bGewaehlt ? "#1a1426" : "#0d0a14"));
     zeichneText(c, s.bereit ? "BEREIT" : "LOS", x + 3, y + 4,
       s.bereit ? FARBEN.seucheHell : FARBEN.schrift);
+
+    /* Der Zähler erscheint erst in den letzten Sekunden. Von Anfang an
+       mitzulaufen hieße, jemanden zu drängen, der nur überlegt — und
+       ein Zähler, der immer da ist, wird nicht mehr gelesen. */
+    const rest = fristRest(welt, menue, s);
+    if (rest !== null && !s.bereit) {
+      zeichneText(c, `${Math.ceil(rest)}`, x + sb - 3 - textBreite(`${Math.ceil(rest)}`), y + 4,
+        FARBEN.blutHell);
+    }
     y += 16;
 
     zeichneText(c, `LEBEN ${Math.ceil(s.leben)}/${s.lebenMax}`, x, y, FARBEN.schriftMatt);
@@ -247,8 +338,93 @@ export function zeichneEnde(c, welt) {
 
 export const SPERRE_SEKUNDEN = 0.28;
 
+/* ── Wenn im Krämer jemand wegbricht (#93) ───────────────────────────
+
+   `bedieneLaden` wartete auf `jeder ist bereit`. Wer die Verbindung
+   verliert, wird nie bereit — die Runde stand still, und zwar für
+   alle. Der Fehler ist **älter als das Netz-Koop** und war nur nie
+   sichtbar: An einer Tastatur kann kein Spieler verschwinden.
+
+   ── Warum eine Frist und keine Abfrage beim Netz ────────────────────
+
+   Naheliegend wäre, `netz/lockstep.mjs` zu fragen, wer weggebrochen
+   ist. Das geht hier aus zwei Gründen nicht — und der zweite ist der
+   eigentliche:
+
+   1. Der Gleichschritt liegt in `runtime/start.js` und wird nicht
+      hierher gereicht.
+   2. **Es ist von hier aus gar nicht unterscheidbar.** Ein
+      weggebrochener Platz sendet `ruhendeEingabe()` — x 0, y 0, kein
+      Knopf. Genau dasselbe sendet jemand, der die Hände im Schoß hat.
+      Beide sehen identisch aus, und das ist kein Mangel: In beiden
+      Fällen soll es weitergehen.
+
+   Deshalb zählt hier **Stille**, nicht Verbindung. Wer sich rührt,
+   setzt den Zähler zurück; wer zwanzig Sekunden lang gar nichts tut,
+   wird übergangen. Ein sichtbarer Zähler warnt vorher, und jeder
+   Tastendruck nimmt ihn wieder weg — auch das Blättern durch die
+   Angebote.
+
+   ── Warum der Verbindungszustand nicht in den Regelkern gehört ─────
+
+   `s.zustand` ist eine Kette ohne Rückweg (`lebt` → `liegt`). Wer weg
+   ist, ist eine Frage der **Verbindung** und keine Spielregel; ein
+   Wiedereinstieg wäre über den Zustand für immer verbaut. Der Zähler
+   liegt deshalb am Menü — das ist Laufzeitzustand — und `spiel/` weiß
+   von alldem nichts.
+
+   ── Warum zwanzig Sekunden ──────────────────────────────────────────
+
+   Ein Abbruch ist meistens ein Aussetzer und kein Weggang. Zu kurz
+   übergeht jemanden, der noch überlegt; zu lang steht die Runde. Die
+   letzten zehn Sekunden sind sichtbar, sodass ein Anwesender die Frist
+   mit einem Tastendruck abwenden kann, bevor sie ihn erwischt. */
+export const FRIST_SEKUNDEN = 20;
+export const FRIST_ZEIGEN_AB = 10;
+const FRIST_TICKS = Math.round(FRIST_SEKUNDEN / SCHRITT);
+
+/* Rührt sich dieser Platz? Gehaltene Achse und gehaltener Knopf zählen
+   mit, nicht nur die Flanken — sonst liefe die Frist bei jemandem ab,
+   der nur lange auf eine Richtung drückt.
+
+   Die Totzone ist Absicht: Ein zitternder Analogstick soll die Frist
+   am Leben halten dürfen (sichere Richtung), ein weggebrochener Platz
+   sendet exakte Nullen und wird davon nicht gerettet. */
+const TOTZONE = 0.2;
+export function istRegung(e) {
+  if (!e) return false;
+  if (e.knopf || e.ausweichen || e.knopfFlanke) return true;
+  if (e.xFlanke || e.yFlanke) return true;
+  return Math.abs(e.x ?? 0) > TOTZONE || Math.abs(e.y ?? 0) > TOTZONE;
+}
+
+/* Allein wartet niemand — dort ist eine Pause einfach eine Pause, und
+   der Krämer soll in Ruhe zu lesen sein. */
+export function verstummt(stilleTicks, spielerzahl) {
+  return spielerzahl > 1 && stilleTicks >= FRIST_TICKS;
+}
+
+/* Wie viele Sekunden dieser Platz noch hat — oder `null`, wenn nichts
+   anzuzeigen ist. Getrennt von `verstummt`, weil Anzeigen und
+   Entscheiden zwei Fragen sind: Angezeigt wird früher, damit man noch
+   eingreifen kann. */
+export function fristRest(welt, menue, s) {
+  if (welt.spieler.length <= 1) return null;
+  const still = menue.stille?.[s.id] ?? 0;
+  const rest = (FRIST_TICKS - still) * SCHRITT;
+  if (rest > FRIST_ZEIGEN_AB) return null;
+  return Math.max(0, rest);
+}
+
 export function macheMenue() {
-  return { spielerzahl: 1, sperre: 0, ladenZeiger: [0, 0, 0, 0], wahlZeiger: [0, 0, 0, 0] };
+  return {
+    spielerzahl: 1, sperre: 0, ladenZeiger: [0, 0, 0, 0], wahlZeiger: [0, 0, 0, 0],
+    /* Wie viele Ticks ein Platz im Krämer schon still ist. Ticks und
+       nicht Sekunden: `bedieneLaden` wird genau einmal je
+       Simulationsschritt gerufen, eine Uhr gehört hier nicht her und
+       wäre auf zwei Rechnern verschieden. */
+    stille: [0, 0, 0, 0], ladenWelle: -1
+  };
 }
 
 export function bedieneWahl(welt, menue, eingaben) {
@@ -267,6 +443,23 @@ export function bedieneWahl(welt, menue, eingaben) {
 }
 
 export function bedieneLaden(welt, menue, eingaben) {
+  /* Jeder Krämer fängt mit frischen Zählern an. Erkannt an der Welle,
+     damit es ohne eine Änderung an `runtime/start.js` auskommt —
+     dieser Aufruf ist die einzige Stelle, die den Laden bedient. */
+  if (menue.ladenWelle !== welt.welle) {
+    menue.ladenWelle = welt.welle;
+    menue.stille = welt.spieler.map(() => 0);
+  }
+
+  for (const s of welt.spieler) {
+    const e = eingaben[s.id];
+    /* Zuerst zählen, dann bedienen: Auch wer schon bereit ist, wird
+       weitergezählt — sonst stünde sein Zähler fest und die Anzeige
+       behauptete später, er sei gerade noch da gewesen. */
+    if (istRegung(e)) menue.stille[s.id] = 0;
+    else menue.stille[s.id] = (menue.stille[s.id] ?? 0) + 1;
+  }
+
   for (const s of welt.spieler) {
     const e = eingaben[s.id];
     if (!e || s.bereit) continue;
@@ -282,7 +475,10 @@ export function bedieneLaden(welt, menue, eingaben) {
     else if (z === NEU_WUERFELN) wuerfleNeu(welt, s, welt.welle + 1);
     else kaufe(s, z);
   }
-  return welt.spieler.every((s) => s.bereit);
+  /* Weiter, sobald jeder entweder bereit ist **oder** verstummt. Ohne
+     das zweite Wort wartet die Runde ewig auf jemanden, der nicht mehr
+     da ist (#93). */
+  return welt.spieler.every((s) => s.bereit || verstummt(menue.stille[s.id] ?? 0, welt.spieler.length));
 }
 
 /* ── Kleinkram ───────────────────────────────────────────────────── */
