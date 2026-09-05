@@ -29,7 +29,7 @@
    `document` an. */
 
 import { FARBEN, JAEGER_FARBEN } from "./palette.js";
-import { JAEGER, SCHLAGBOGEN, GEGNER_BILDER, DINGE, GESCHOSSE } from "./sprite-daten.js";
+import { JAEGER, SCHLAGBOGEN, GEGNER_BILDER, DINGE, GESCHOSSE, TREFFER } from "./sprite-daten.js";
 
 export const RICHTUNGEN = 16;
 
@@ -138,6 +138,22 @@ function alleRichtungen(sprite, ersatz) {
   return raus;
 }
 
+/* Eine Bildfolge. Rein additiv neben `baueBild` — und das ist der
+   Punkt: Würde `alleRichtungen()` selbst auf Folgen umgestellt, hieße
+   `sprites.gegner[id][richtung]` plötzlich „Liste von Bildern" statt
+   „Bild", und **jeder** Aufruf in `zeichnen.js` malte ab dann ein
+   Objekt statt einer Leinwand — ohne Fehlermeldung, nur mit einem
+   leeren Bild.
+
+   `bilder` ist optional; fehlt es, ist die Folge einbildrig und
+   verhält sich wie vorher. Das Format garantiert `bild === bilder[0]`
+   (geprüft in `werkzeuge/pruefe-sprites.mjs`), deshalb darf hier
+   bedenkenlos das eine gegen das andere getauscht werden. */
+export function baueBildfolge(sprite, ersatz, richtung) {
+  const rahmen = sprite.bilder ?? [sprite.bild];
+  return rahmen.map((bild) => baueBild({ bild, zeichen: sprite.zeichen }, ersatz, richtung));
+}
+
 /* Einmal beim Start. Danach wird nur noch kopiert — kein Sprite wird
    je zur Laufzeit neu gezeichnet. */
 export function ladeSprites() {
@@ -149,5 +165,12 @@ export function ladeSprites() {
   const dinge = {};
   for (const [id, s] of Object.entries(DINGE)) dinge[id] = baueBild(s, null, 0);
   const schlagbogen = alleRichtungen(SCHLAGBOGEN);
-  return { jaeger, gegner, geschosse, dinge, schlagbogen };
+  /* Trefferzeichen: nicht gedreht (ein Einschlag hat einen Ort, keine
+     Blickrichtung), aber als **Folge** geladen — `feuer` verglimmt über
+     zwei Bilder, die übrigen vier haben genau eines. Der Zeichner
+     bekommt dadurch überall dieselbe Form `treffer[art][rahmen]` und
+     braucht keine Fallunterscheidung „hat das eine Folge oder nicht". */
+  const treffer = {};
+  for (const [id, s] of Object.entries(TREFFER)) treffer[id] = baueBildfolge(s, null, 0);
+  return { jaeger, gegner, geschosse, dinge, schlagbogen, treffer };
 }

@@ -181,7 +181,7 @@ export function schlageZu(welt, spieler, g, schlag, wirkung, waffenId) {
 export function trefferAufGegner(welt, spieler, g, treffer, wirkung, waffenId) {
   const menge = treffer.menge;
   g.leben -= menge;
-  welt.funken.push({ x: g.x, y: g.y, zeit: 0.18, art: waffenId });
+  welt.funken.push({ x: g.x, y: g.y, zeit: 0.18, art: treffer.art ?? STANDARD_ART, waffe: waffenId });
   welt.zahlen.push({
     x: g.x, y: g.y - g.radius, wert: Math.round(menge), zeit: 0.7, hoch: 0,
     krit: treffer.krit === true, art: treffer.art ?? STANDARD_ART

@@ -31,6 +31,8 @@
 import { FARBEN, JAEGER_FARBEN } from "./palette.js";
 import { richtungsIndex } from "./sprites.js";
 import { macheZufall } from "../spiel/zufall.mjs";
+import { bekannteZeichen, ZEICHEN_BREITE, ZEICHEN_HOEHE, VORSCHUB } from "./schrift.js";
+import { ART_NACH_ID, STANDARD_ART } from "../spiel/schadensarten.mjs";
 
 export const BREITE = 480;
 export const HOEHE = 270;
@@ -194,6 +196,265 @@ function zeichneLicht(licht, welt, kamera, zeit) {
   licht.c.putImageData(licht.bild, 0, 0);
 }
 
+/* ── Treffer: Zeichen, Staub, Zahlen ─────────────────────────────────
+
+   Vor dieser Änderung war ein Einschlag **ein weißes Quadrat**, und die
+   schwebenden Zahlen aus `welt.zahlen` wurden von niemandem gemalt —
+   der Regelkern füllte die Liste seit dem Wertefundament, gezeichnet
+   hat sie nie jemand (nachgezählt am 05.09.2026: 0 Fundstellen für
+   `zahlen` in `runtime/`). Man sah also weder *was* traf noch *wie
+   hart*. Genau das ist Janniks Befund „man kann nicht sehen, was
+   gerade passiert".
+
+   ── Was über dem Licht liegt und was darunter ──────────────────────
+
+   Diese Trennung ist die eine Entscheidung dieses Abschnitts:
+
+   * **Trefferzeichen und Zahlen liegen über dem Licht.** Sie sind
+     Auskunft, kein Gegenstand. Ein Einschlag am dunklen Rand des
+     Bannkreises wäre sonst um denselben Faktor gedämpft wie der Boden
+     dort — gemessen bleiben am Rand rund ein Sechstel der Helligkeit
+     übrig, und ein Zeichen, das man nur im Fackelschein lesen kann,
+     beantwortet die Frage nicht, die es beantworten soll.
+   * **Der Staub liegt darunter.** Er ist Stimmung und gehört in die
+     Szene; im Dunkeln verglimmt er, und das ist richtig so. Läge er
+     ebenfalls oben, sähe jeder Treffer aus wie aufgeklebt.
+
+   ── Arbeitet zusammen mit ───────────────────────────────────────────
+
+   `runtime/sprite-daten.js` (`TREFFER`, die fünf Zeichen),
+   `runtime/sprites.js` (`baueBildfolge` lädt sie),
+   `spiel/schadensarten.mjs` (Farbe je Art),
+   `spiel/kampf.mjs` (füllt `welt.funken` und `welt.zahlen`),
+   `werkzeuge/pruefe-anzeige.mjs` (misst die reinen Funktionen hier). */
+
+/* Wie lange ein Trefferfunke lebt. **Quelle ist `spiel/kampf.mjs`** —
+   die Zahl steht hier nur, weil der Funke seine eigene Lebensdauer
+   nicht mitbringt, sondern nur die Restzeit. Doppelt aufgeschriebene
+   Zahlen sind ein Fehler in Wartestellung, deshalb liest
+   `werkzeuge/pruefe-anzeige.mjs` beide Stellen nach und wird rot,
+   sobald sie auseinanderlaufen. */
+export const FUNKE_LEBEN = 0.18;
+export const TOD_LEBEN = 0.3;
+
+/* Wie viele Staubkörner ein Einschlag wirft. Je Art verschieden, weil
+   ein Flammenstoß anders staubt als ein Schnitt — und weil die Menge
+   das zweite Erkennungsmerkmal neben der Form ist. */
+const STAUB = { schnitt: 5, wucht: 8, feuer: 10, frost: 7, fluch: 6, tod: 12 };
+
+/* Der Rahmen einer Bildfolge zur Restzeit. Bewusst über das **Alter**
+   und nicht über die Restzeit gerechnet: So läuft die Folge vorwärts,
+   auch wenn jemand später die Lebensdauer ändert. */
+export function bildIndex(rest, leben, anzahl) {
+  if (!(anzahl > 1)) return 0;
+  const alter = 1 - Math.max(0, Math.min(1, rest / leben));
+  return Math.min(anzahl - 1, Math.floor(alter * anzahl));
+}
+
+/* Zwei Farben mischen. Nur für die helle Spielart eines Palettentons —
+   deshalb keine neue Farbe in der Palette: `#ff8c2e` und sein helles
+   Geschwister wären zwei Einträge, die immer zusammen geändert werden
+   müssten. */
+export function mische(hex, ziel, anteil) {
+  const a = parseInt(hex.slice(1), 16), b = parseInt(ziel.slice(1), 16);
+  const teil = (v) => Math.round(((a >> v) & 255) * (1 - anteil) + ((b >> v) & 255) * anteil);
+  return "#" + [teil(16), teil(8), teil(0)].map((v) => v.toString(16).padStart(2, "0")).join("");
+}
+
+export function artFarbe(art) {
+  return ART_NACH_ID.get(art)?.farbe ?? ART_NACH_ID.get(STANDARD_ART).farbe;
+}
+
+/* Wie eine schwebende Zahl aussieht.
+
+   ── Warum ein Krit auf **drei** Kanälen gleichzeitig anders ist ─────
+
+   Ein einzelner Kanal reicht nicht: Die Farbe allein trägt schon die
+   Schadensart (fünf Töne), ein sechster Ton dafür wäre ein Ton zu
+   viel; die Größe allein liest sich bei einer dreistelligen Zahl wie
+   „viel Schaden" statt „Krit"; die Bewegung allein sieht man erst nach
+   ein paar Bildern. Zusammen sind es vier voneinander unabhängige
+   Merkmale — Fläche mal vier, hellerer Ton, schnellerer Aufstieg und
+   das Ausrufezeichen. Wer eines davon nicht sieht, sieht die anderen.
+
+   Der Ton bleibt dabei **die Farbe der Schadensart**, nur ein Stück
+   nach Weiß gezogen: Ein Krit soll nicht verraten, *dass* er ein Krit
+   ist, und dabei verstecken, *was* getroffen hat.
+
+   ── Warum genau 0,30 nach Weiß ─────────────────────────────────────
+
+   Gemessen, nicht gewählt. Im gewichteten Farbabstand (Riemersma)
+   liegen die fünf Arten normal zwischen 107,1 (frost/fluch, das engste
+   Paar) und 348,8 auseinander. Jede Beimischung von Weiß zieht sie
+   zusammen. Zwei Schranken:
+
+   * **Die Art muss lesbar bleiben:** der engste Abstand unter den
+     Kritfarben soll mindestens 70 % des engsten normalen behalten,
+     also ≥ 75,0.
+   * **Der Krit muss heißer sein:** Abstand zur eigenen normalen Farbe
+     ≥ 40 und die Leuchtdichte echt höher.
+
+   0,30 ist der größte Anteil, der beides hält (75,1 und 50,2). Bei
+   0,35 fällt der Artabstand auf 69,8 und reißt die erste Schranke —
+   der erste Entwurf stand auf 0,45 (59,1), und im Bild sahen die fünf
+   Kritzahlen alle gleich weiß aus. Genau dafür ist die Messung da. */
+export const KRIT_WEISS = 0.30;
+
+export function zahlStil(z) {
+  const eigen = z.wert < 0;
+  const grund = eigen ? FARBEN.blutHell : artFarbe(z.art);
+  if (eigen) return { farbe: grund, skala: 1, tempo: 1, text: `${z.wert}`, krit: false };
+  if (z.krit) {
+    return {
+      farbe: mische(grund, "#ffffff", KRIT_WEISS), skala: 2, tempo: 1.7,
+      text: `${z.wert}!`, krit: true
+    };
+  }
+  return { farbe: grund, skala: 1, tempo: 1, text: `${z.wert}`, krit: false };
+}
+
+/* ── Ziffern in ganzen Vielfachen ────────────────────────────────────
+
+   `zeichneText` aus `runtime/schrift.js` malt fest in einfacher Größe.
+   Ein Krit braucht doppelte — und zwar in **ganzen** Bildpunkten, sonst
+   wäre die Zahl das einzige weiche Ding im ganzen Bild. Deshalb wird
+   hier dasselbe Glyphenraster benutzt, nur mit `skala` als Kantenlänge
+   je Zelle. `schrift.js` bleibt unangetastet: Sie ist die Schrift der
+   Anzeige, und die soll nicht skalierbar werden müssen, weil eine
+   Schadenszahl es ist. */
+const SCHRIFT = bekannteZeichen();
+
+/* Die Randzellen eines Glyphen — einmal je Zeichen gerechnet, dann
+   gemerkt. Der einfache Weg wäre, den Text viermal versetzt in
+   Konturfarbe zu malen; das sind vier volle Durchgänge je Zeichen.
+   Die Randzellen sind gemessen rund ein Drittel davon (12 statt 40
+   Rechtecke je Glyph) und ergeben denselben Rand. */
+const RAENDER = new Map();
+function randZellen(zeichen, glyph) {
+  let fertig = RAENDER.get(zeichen);
+  if (fertig) return fertig;
+  const voll = new Set();
+  for (let gy = 0; gy < ZEICHEN_HOEHE; gy++) {
+    for (let gx = 0; gx < ZEICHEN_BREITE; gx++) {
+      if (glyph[gy][gx] === "#") voll.add(gx + "," + gy);
+    }
+  }
+  fertig = [];
+  for (let gy = -1; gy <= ZEICHEN_HOEHE; gy++) {
+    for (let gx = -1; gx <= ZEICHEN_BREITE; gx++) {
+      if (voll.has(gx + "," + gy)) continue;
+      if (voll.has((gx - 1) + "," + gy) || voll.has((gx + 1) + "," + gy)
+        || voll.has(gx + "," + (gy - 1)) || voll.has(gx + "," + (gy + 1))) {
+        fertig.push([gx, gy]);
+      }
+    }
+  }
+  RAENDER.set(zeichen, fertig);
+  return fertig;
+}
+
+/* Breite eines Textes in dieser Größe — für das Mittigsetzen über dem
+   Getroffenen. */
+export function ziffernBreite(text, skala) {
+  return (text.length * VORSCHUB - 1) * skala;
+}
+
+function malZiffern(c, text, x, y, farbe, skala) {
+  const px0 = Math.round(x), py = Math.round(y);
+  /* Erst der ganze Rand, dann die ganze Zahl: zwei Farbwechsel statt
+     zwei je Zeichen. */
+  c.fillStyle = FARBEN.kontur;
+  let px = px0;
+  for (const zeichen of text) {
+    const glyph = SCHRIFT.glyphen[zeichen] ?? SCHRIFT.glyphen["?"];
+    for (const [gx, gy] of randZellen(zeichen, glyph)) {
+      c.fillRect(px + gx * skala, py + gy * skala, skala, skala);
+    }
+    px += VORSCHUB * skala;
+  }
+  c.fillStyle = farbe;
+  px = px0;
+  for (const zeichen of text) {
+    const glyph = SCHRIFT.glyphen[zeichen] ?? SCHRIFT.glyphen["?"];
+    for (let gy = 0; gy < ZEICHEN_HOEHE; gy++) {
+      const zeile = glyph[gy];
+      for (let gx = 0; gx < ZEICHEN_BREITE; gx++) {
+        if (zeile[gx] === "#") c.fillRect(px + gx * skala, py + gy * skala, skala, skala);
+      }
+    }
+    px += VORSCHUB * skala;
+  }
+}
+
+/* ── Staub ───────────────────────────────────────────────────────────
+
+   Kein `Math.random`: Zwei Rechner in derselben Runde sollen dasselbe
+   sehen, und eine Aufnahme soll sich wiederholen lassen. Die Streuung
+   kommt deshalb aus dem **Ort** des Einschlags — derselbe Treffer
+   wirft immer denselben Staub, ohne dass irgendwo ein Zustand liegt.
+   (Bauregel des Projekts: `spiel/` ist gesät; ein Zeichner, der würfelt,
+   nimmt der Wiederholbarkeit den halben Wert.) */
+function streu(a, b, k) {
+  let h = (Math.round(a) * 374761393 + Math.round(b) * 668265263 + k * 1274126177) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+
+function zeichneStaub(c, welt) {
+  for (const f of welt.funken) {
+    const tod = f.art === "tod";
+    const leben = tod ? TOD_LEBEN : FUNKE_LEBEN;
+    const alter = Math.max(0, Math.min(1, 1 - f.zeit / leben));
+    const anzahl = STAUB[f.art] ?? STAUB.schnitt;
+    const grund = tod ? FARBEN.blut : artFarbe(f.art);
+    const hell = tod ? FARBEN.blutHell : mische(grund, "#ffffff", 0.35);
+    for (let k = 0; k < anzahl; k++) {
+      const w = streu(f.x, f.y, k) * Math.PI * 2;
+      /* Die Reichweite steht in **Bildpunkten**, nicht in Tempo mal
+         Lebensdauer. Der erste Entwurf rechnete `tempo * leben` und kam
+         damit auf 3 bis 9 Bildpunkte — der Staub blieb innerhalb des
+         9 x 9 großen Zeichens und war schlicht nicht zu sehen. Jetzt
+         7 bis 18, also ein Kranz **um** das Zeichen herum. */
+      const reichweite = 7 + streu(f.x, f.y, k + 64) * 11;
+      /* Die Wurzel bremst: Ein Korn schießt weg und wird langsamer,
+         statt gleichmäßig zu fliegen wie ein Bauteil. */
+      const weg = Math.sqrt(alter) * reichweite;
+      c.fillStyle = alter < 0.5 ? hell : grund;
+      c.fillRect(Math.round(f.x + Math.cos(w) * weg),
+        Math.round(f.y + Math.sin(w) * weg * 0.8), 1, 1);
+    }
+  }
+}
+
+/* Die Zeichen selbst — über dem Licht, siehe oben. Der Tod hat kein
+   eigenes Zeichen: Dass ein Gegner fällt, sieht man daran, dass er
+   verschwindet; ein sechstes Symbol dafür wäre eine Auskunft über
+   etwas, das ohnehin nicht zu übersehen ist. */
+function zeichneTrefferZeichen(c, welt, sprites, kamera) {
+  for (const f of welt.funken) {
+    if (f.art === "tod") continue;
+    const folge = sprites.treffer?.[f.art];
+    if (!folge) continue;
+    const bild = folge[bildIndex(f.zeit, FUNKE_LEBEN, folge.length)];
+    c.drawImage(bild.l, Math.round(f.x - kamera.x) - bild.mx,
+      Math.round(f.y - kamera.y) - bild.my);
+  }
+}
+
+function zeichneZahlen(c, welt, kamera) {
+  for (const z of welt.zahlen) {
+    const stil = zahlStil(z);
+    const x = z.x - kamera.x - ziffernBreite(stil.text, stil.skala) / 2;
+    const y = z.y - kamera.y - z.hoch * stil.tempo;
+    /* Ausblenden im letzten Drittel — ein Verschwinden von einem Bild
+       aufs nächste liest sich als Aussetzer, nicht als Ende. */
+    const rest = z.zeit / (z.wert < 0 ? 0.8 : 0.7);
+    c.globalAlpha = rest < 0.34 ? Math.max(0, rest / 0.34) : 1;
+    malZiffern(c, stil.text, x, y, stil.farbe, stil.skala);
+    c.globalAlpha = 1;
+  }
+}
+
 /* ── Die Kamera ──────────────────────────────────────────────────── */
 
 export function kameraFuer(welt) {
@@ -348,12 +609,9 @@ export function zeichne(zeichner, welt, boden, sprites, zeit) {
     }
   }
 
-  for (const f of welt.funken) {
-    const g = f.zeit / 0.3;
-    c.fillStyle = f.art === "tod" ? FARBEN.blutHell : FARBEN.flammeHell;
-    const s = Math.max(1, Math.round(g * 4));
-    c.fillRect(Math.round(f.x) - s / 2, Math.round(f.y) - s / 2, s, s);
-  }
+  /* Staub in der Szene — er wird vom Licht gedämpft, das Trefferzeichen
+     weiter unten nicht. Warum, steht im Abschnitt „Treffer". */
+  zeichneStaub(c, welt);
 
   c.restore();
 
@@ -365,6 +623,13 @@ export function zeichne(zeichner, welt, boden, sprites, zeit) {
   c.globalCompositeOperation = "multiply";
   c.drawImage(licht.l, 0, 0, BREITE, HOEHE);
   c.globalCompositeOperation = "source-over";
+
+  /* Was gerade getroffen hat und wie hart — beides ist Auskunft und
+     liegt deshalb über dem Licht, genau wie die Anzeige in
+     `oberflaeche.js`. Ein Einschlag am dunklen Rand wäre sonst nicht
+     zu lesen, und das ist die Frage, um die es hier geht. */
+  zeichneTrefferZeichen(c, welt, sprites, kamera);
+  zeichneZahlen(c, welt, kamera);
 
   return kamera;
 }
