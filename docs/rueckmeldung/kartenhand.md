@@ -220,3 +220,41 @@ mit Begründung: Eine Prüfdatei aus einer anderen zu importieren hiesse,
 deren Prüfungen mitlaufen zu lassen. Sieben Zeilen sind der kleinere
 Preis. In der Wegweiser-Tabelle von `pruefe-alles.mjs` teilen sich beide
 **eine** Zeile.
+
+## Nach dem Teilen noch einmal geklickt
+
+Weil `runtime/karten-hand.js` beim Schärfen der Wächter eine Wache
+verloren hat, wurde der ganze Weg im Browser wiederholt — mit echten
+Mausklicks, Leinwand danach ausgelesen:
+
+| geklickt | grosse Karte vorher | nachher |
+| --- | --- | --- |
+| mittlere Karte | x 99–236 (Karte 1) | **x 171–308 (Karte 2)** |
+| dieselbe noch einmal | x 171–308 | **weg** — genommen |
+
+Im Bild: „NARBENGEWEBE" (Selten, blau) hervorgehoben mit **+15 LEBEN**
+in Grün, links „OFFENE WUNDE +2 REGENERATION", rechts „SCHARFE KANTE
++2 SCHADEN" — beide Titel vollständig lesbar, beide im Bogen tiefer.
+Konsole: keine einzige Meldung.
+
+## Stand der Kette
+
+`node werkzeuge/pruefe-alles.mjs` → **eine** Prüfung rot, und zwar
+`balance` (siehe oben, Sperrklinke gerissen, absichtlich nicht
+angehoben). Alle anderen 19 grün, darunter `karten` (74) und
+`kartenhand` (76).
+
+## Was offen bleibt
+
+1. **`zeichneWahl()` in `runtime/oberflaeche.js` ruft niemand mehr.**
+   Die Funktion steht dort weiter, weil die Datei einem anderen Bereich
+   gehört. Sie benutzt `k.name` und `k.menge` — Felder, die eine gezogene
+   Karte seit Schritt 13.1 nicht mehr trägt; wer sie wieder aufruft,
+   bekommt „undefined" auf die Karte. **Gehört gelöscht, aber nicht von
+   mir.**
+2. **Kein echtes Telefon und kein echter Finger.** Siehe oben.
+3. **Die Sperrklinke der Balance** — eine Entscheidung Janniks, keine
+   Reparatur.
+4. **Die vier wartenden Karten** (`abpraller`, `erstschlag`,
+   `flaechenbrand`, `hetzjagd`) warten weiter auf je eine Zeile in
+   `spiel/kampf.mjs` und `spiel/ausweichen.mjs` — fremde Dateien.
