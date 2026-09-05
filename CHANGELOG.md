@@ -3,6 +3,42 @@
 Oben das Neueste. Jeder Eintrag sagt **was**, **warum** und **womit
 gemessen** — nicht nur, dass etwas anders ist.
 
+## 0.9.2 — Wer schießen darf, hängt nicht mehr am Namen (05.09.2026)
+
+`spiel/kampf.mjs` entschied über die **Verhaltenskennung**, wer auf
+Abstand wehtut:
+
+```js
+if (art.verhalten !== "speit") continue;
+```
+
+Das ist dieselbe Bauart, die am selben Tag schon einmal teuer war — eine
+abgeschriebene Verhaltensliste in `werkzeuge/pruefe-katalog.mjs` machte
+drei fertig gebaute Verhalten unbenutzbar. **Ein Name ist keine
+Fähigkeit.** Gefragt wird jetzt, was ein Gegner *hat*: `abstand`,
+`abklingzeit`, `geschosstempo` — die drei Felder, ohne die ein Schuss
+gar nicht beschreibbar ist.
+
+**Umbau ohne sichtbare Änderung, und das ist bewiesen:** Beide
+Bedingungen wählen auf dem heutigen Katalog dieselbe Menge —
+`speier vielfrass` nach Kennung, `speier vielfrass` nach Feldern. Der
+Balancelauf bleibt damit zeichengleich.
+
+**Was dadurch gefährlich wird und jetzt geprüft ist:** Eine Art, die
+zwei der drei Felder trägt, würde ein Geschoss mit Geschwindigkeit
+`undefined` werfen — das fliegt nach `NaN` und trifft nie, ohne dass
+etwas rot wird. Neue Prüfung „Fernangriff ist ganz oder gar nicht
+beschrieben", rot bewiesen (dem Speier `geschosstempo` genommen: 2 von
+3 Feldern).
+
+**Für `kreist` heißt das:** Die technische Sperre ist weg — wer die drei
+Felder trägt, schießt, unabhängig davon, wie er läuft. Offen bleibt
+allein die Auslegungsfrage, **welche Art** einen Fernangriff bekommt.
+Der nächstliegende Träger ist die Aaskrähe (sie fliegt schon heute
+Bögen und heißt danach), aber das setzt einen speienden Gegner **ab
+Welle 3** in ein Spiel, das ihn bisher erst ab Welle 6 kennt. Das ist
+eine Schwierigkeitsentscheidung, keine Reparatur, und gehört Jannik.
+
 ## 0.9.1 — Die Truhen waren im Browser eine Sackgasse (05.09.2026)
 
 Der Truhen-Regelkern (#74–#76) war fertig und geprüft, aber

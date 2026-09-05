@@ -103,6 +103,19 @@ for (const g of GEGNER) {
   if (g.verhalten === "speit") {
     melde(g.abstand > 0 && g.abklingzeit > 0 && g.geschosstempo > 0, `${g.id}: Speier ist vollständig`);
   }
+  /* Seit dem 05.09.2026 entscheiden die **Felder** über den Fernangriff
+     und nicht mehr die Verhaltenskennung (`spiel/kampf.mjs`,
+     `feuereGegner`). Damit wird „halb ausgefüllt" gefährlich: Eine Art
+     mit `abstand` und `abklingzeit`, aber ohne `geschosstempo`, würde
+     ein Geschoss mit Geschwindigkeit `undefined` werfen — das fliegt
+     nach `NaN` und trifft nie, ohne dass irgendetwas rot wird. Genau
+     der Fall, vor dem der Kopf dieser Datei warnt. Alle drei oder
+     keines. */
+  {
+    const felder = [g.abstand, g.abklingzeit, g.geschosstempo].filter((w) => w > 0).length;
+    melde(felder === 0 || felder === 3,
+      `${g.id}: Fernangriff ist ganz oder gar nicht beschrieben`, `${felder} von 3 Feldern`);
+  }
   melde(g.kosten >= 0, `${g.id}: Kosten sind gesetzt`);
   /* Der Hauptmann kostet bewusst null — er kommt aus einem eigenen
      Budget. Alle anderen müssen etwas kosten, sonst füllt einer allein
@@ -127,21 +140,24 @@ melde(GEGNER.some((g) => g.elite), "es gibt mindestens einen Elitegegner");
    Gedanke wie bei einer Sperrklinke — eine Ausnahme darf schrumpfen,
    nie wachsen, ohne dass jemand sie begründet. */
 const VERHALTEN_OHNE_BENUTZER = {
-  /* Gemessen am 05.09.2026: `spiel/kampf.mjs` lässt **nur** Arten mit
-     `verhalten === "speit"` schießen (`feuereGegner`, eine Zeile). Ein
-     kreisender Gegner hält per Bauart Abstand und tut deshalb ohne
-     Fernangriff **gar nichts** — er wäre kein Gegner, sondern ein
-     Karussell. Der Aaskrähe steht `kreist` zu (sie fliegt schon heute
-     Bögen), aber erst mit einem Fernangriff.
+  /* Ein kreisender Gegner hält per Bauart Abstand. Ohne Fernangriff
+     käme er nie an und wäre kein Gegner, sondern ein Karussell — die
+     Kennung einer Art zu geben, die nur im Nahkampf wehtut, machte sie
+     harmlos statt neu.
 
-     Was es aufhebt: die Schussbedingung in `spiel/kampf.mjs` von der
-     Verhaltenskennung auf die vorhandenen Felder umstellen
-     (`abstand`/`abklingzeit`/`geschosstempo`). Nicht in dieser Arbeit
-     gemacht, weil `spiel/kampf.mjs` gleichzeitig einem anderen Agenten
-     gehört (Zweig `bild/angriffe-und-anzeige`) — zwei Schreiber in
-     einer Datei ist genau der Fall, der am selben Tag schon einmal
-     1.215 Zeilen auf den falschen Zweig gelegt hat. */
-  kreist: "braucht einen Fernangriff; spiel/kampf.mjs lässt nur \"speit\" schießen"
+     **Die technische Sperre ist weg:** `spiel/kampf.mjs` fragte bis zum
+     05.09.2026 die Verhaltenskennung ab (`verhalten === "speit"`) und
+     ließ damit gar keinen anderen schießen; jetzt entscheiden die
+     Felder `abstand`/`abklingzeit`/`geschosstempo`. Wer `kreist`
+     bekommen soll, muss also nur diese drei tragen.
+
+     **Was offen ist, ist keine Technik, sondern Auslegung:** Der
+     nächstliegende Träger ist die Aaskrähe — sie fliegt schon heute
+     Bögen und heißt danach. Ihr einen Fernangriff zu geben, setzt aber
+     einen **speienden Gegner ab Welle 3** in ein Spiel, das ihn bisher
+     erst ab Welle 6 kennt (Speier), und das ist eine
+     Schwierigkeitsentscheidung, keine Reparatur. Sie gehört Jannik. */
+  kreist: "technisch frei; welche Art einen Fernangriff bekommt, ist eine Auslegungsfrage"
 };
 
 for (const id of VERHALTEN_IDS) {

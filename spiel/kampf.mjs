@@ -257,12 +257,32 @@ export function bewegeGeschosse(welt, dt) {
   welt.geschosse = welt.geschosse.filter((p) => !p.weg);
 }
 
-/* Speier schießen. Sie sind die einzige Gegnerart, die auf Abstand
-   wehtut — und damit der einzige Grund, freiwillig nach vorn zu gehen. */
+/* Wer auf Abstand wehtut, ist der einzige Grund, freiwillig nach vorn
+   zu gehen.
+
+   ⚠️ **Hier stand `if (art.verhalten !== "speit") continue;`** — die
+   Fähigkeit zu schießen hing am **Namen** des Verhaltens. Das ist
+   dieselbe Bauart, die am 05.09.2026 schon einmal teuer war: Eine
+   abgeschriebene Verhaltensliste in `werkzeuge/pruefe-katalog.mjs`
+   machte drei fertig gebaute Verhalten unbenutzbar. Ein Name ist keine
+   Fähigkeit.
+
+   Gefragt wird jetzt, was ein Gegner **hat**: die drei Felder, ohne die
+   ein Schuss gar nicht beschreibbar ist. Für den heutigen Katalog ist
+   das nachweislich dieselbe Menge — jede `speit`-Art trägt alle drei,
+   keine andere Art trägt eine davon (`werkzeuge/pruefe-katalog.mjs`
+   prüft beide Richtungen). Die Änderung ist deshalb ein Umbau ohne
+   sichtbare Änderung, und der Balancelauf bleibt zeichengleich.
+
+   Was sie **möglich macht**: ein Gegner, der auf Abstand kreist und
+   dabei spuckt. `kreist` gibt es seit #71 fertig gebaut, und ohne
+   Fernangriff wäre ein kreisender Gegner ein Karussell — er hält per
+   Bauart Abstand und käme nie an. Welche Art das bekommt, ist eine
+   Auslegungsfrage und steht offen. */
 export function feuereGegner(welt, dt) {
   for (const g of welt.gegner) {
     const art = g.art;
-    if (art.verhalten !== "speit") continue;
+    if (!(art.abstand > 0 && art.abklingzeit > 0 && art.geschosstempo > 0)) continue;
     g.bereitIn -= dt;
     if (g.bereitIn > 0) continue;
 
