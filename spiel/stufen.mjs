@@ -296,7 +296,7 @@ export function nimmKarte(welt, spieler, index) {
   /* `aderlass`: Jeder Aufstieg macht dich wieder ganz. Nach der
      Wertanwendung, damit ein frisch gewachsenes Lebensmaximum
      mitzählt. */
-  
+  if (regeln.aderlass) spieler.leben = spieler.lebenMax;
 
   /* `blutzoll`: Der Kreis nimmt sich seinen Anteil. */
   if (regeln.blutzoll) {

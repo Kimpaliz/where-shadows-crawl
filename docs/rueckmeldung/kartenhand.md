@@ -18,3 +18,20 @@ endet. Jede Zeile trägt ihr Datum.
   `for (let i = 0; i < GEWICHT[w]; i++)`, und `0 < undefined` ist
   `false`. Die 47 Werte ohne Eintrag in `GEWICHT` fielen still aus dem
   Spiel. Keine Meldung, keine rote Prüfung.
+
+## Zwischenfall F3 — eine Zeile fehlte (05.09.2026)
+
+Der Sicherungs-Commit `46d58e8` („letzter Stand vor dem Zwischenfall")
+hat einen **halb bearbeiteten** Stand festgehalten: Gegenüber `8f34c3d`
+fehlte genau eine Zeile in `spiel/stufen.mjs`,
+
+    if (regeln.aderlass) spieler.leben = spieler.lebenMax;
+
+Damit war die Regel `aderlass` gesetzt, aber nirgends gefragt.
+`werkzeuge/pruefe-karten.mjs` war deshalb beim Antritt **rot** (74
+Prüfungen, 2 Fehler: „Regel gesetzt, aber nie gefragt" und „aderlass
+macht beim Aufstieg wieder ganz · 3 von 50"). Zeile wiederhergestellt,
+danach 74 Prüfungen, 0 Fehler.
+
+**Merksatz:** Eine Sicherung mitten in einer Bearbeitung sichert auch
+die Hälfte. Nur die Prüfkette sagt, welche Hälfte es war.
