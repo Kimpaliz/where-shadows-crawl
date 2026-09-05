@@ -35,3 +35,34 @@ danach 74 Prüfungen, 0 Fehler.
 
 **Merksatz:** Eine Sicherung mitten in einer Bearbeitung sichert auch
 die Hälfte. Nur die Prüfkette sagt, welche Hälfte es war.
+
+## Schritt 13.4 — Die Kartenhand am unteren Rand (#69, 05.09.2026)
+
+- Neu `runtime/karten-hand.js` (426 Zeilen), eingehängt in
+  `runtime/start.js`. `zeichneWahl()` aus `runtime/oberflaeche.js` wird
+  nicht mehr gerufen — die Funktion selbst bleibt dort stehen, weil die
+  Datei einem anderen Bereich gehört (siehe „Offen" am Ende).
+- Drei Karten, gefächert und um 16 Bildpunkte überlappend, im Bogen
+  (die mittlere steht 8 Bildpunkte höher). **Nicht gedreht:** Eine
+  gedrehte Bildpunktschrift ist verwaschene Schrift.
+- Angetippt wird eine Karte hervorgehoben: 88 × 88 → **140 × 132**, mit
+  Seltenheitsname, allen Wertzeilen und dem Flavour-Text. Titel oben,
+  darunter die Werte; die **Zahl grün** (`FARBEN.seucheHell`), der Name
+  daneben nicht.
+- **Ein Klick ruft nicht `nimmKarte`.** Über die Leitung gehen rohe
+  Eingaben; `bedieneWahl()` läuft auf allen Rechnern für alle Spieler.
+  Ein Klick, der `menue.wahlZeiger` nur örtlich verschöbe, liesse die
+  Welten auseinanderlaufen. Der Zeigefinger wird deshalb in Achsen- und
+  Knopfeingaben übersetzt und nimmt denselben Weg wie Tastatur und
+  Daumen.
+- **Zwei Fallen, beide gemessen statt geraten:**
+  - `GROSS_B` stand auf 128, gerechnet nur mit dem **Namen** der
+    Wertzeile (24 Zeichen). Die Zahl davor war vergessen — 220 von rund
+    9.000 gemessenen Zeilen passten nicht. Jetzt 140.
+  - Der zweite Tipp („nehmen") verlangte eine **leere** Kette. Nach
+    einer Bewegung liegt aber noch das Loslassen darin, während der
+    Zeiger schon am Ziel steht: Der zweite Tipp tat **41 Bilder lang
+    nichts**. Jetzt wird der Knopf angehängt, aber nie zweimal.
+- Auf dem Telefon liegt `#stickfeld` über der ganzen linken Bildhälfte.
+  Die Hand horcht deshalb in der **Einfangphase** am Fenster und hält
+  ein Zeigerereignis nur an, wenn es wirklich eine Karte trifft.

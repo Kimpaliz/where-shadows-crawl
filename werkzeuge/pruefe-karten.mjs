@@ -46,7 +46,14 @@ import {
   ziehKarten, nimmKarte, mengeVon, hatRegel, regelnVon,
   KARTEN_JE_WAHL, META_SCHUB
 } from "../spiel/stufen.mjs";
-import { bekannteZeichen } from "../runtime/schrift.js";
+import { bekannteZeichen, VORSCHUB, ZEILE } from "../runtime/schrift.js";
+import { BREITE, HOEHE } from "../runtime/zeichnen.js";
+import { macheFlanken } from "../runtime/eingabe.js";
+import { FARBEN, JAEGER_FARBEN } from "../runtime/palette.js";
+import {
+  felderFuer, schritteZu, brich, maleKlein, maleGross,
+  KARTE_B, KARTE_H, GROSS_B, GROSS_H, SCHRITT_X, GRUND_Y, ZAHL_FARBE
+} from "../runtime/karten-hand.js";
 
 const { melde, ende } = macheMelder({ still: true });
 const LAUT = process.argv.includes("--statistik");
@@ -545,6 +552,440 @@ laut(`\n── Meta-Regeln ${"─".repeat(46)}\n`);
   const text = liesDatei("spiel/katalog/karten.mjs").replace(/\/\*[\s\S]*?\*\//g, "");
   melde(!/Math\.random/.test(text), "der Kartenkatalog ohne Math.random");
   melde(!/\b(document|window|navigator)\b/.test(text), "der Kartenkatalog ohne Browser");
+}
+
+/* ── 9 · Die Kartenhand ──────────────────────────────────────────── */
+
+/* Diese Prüfungen sind die Antwort auf Fehlerbuch E8: Der Zeichenpass
+   für die Wesen war gebaut, geprüft und gemergt — und **niemand setzte
+   ein Wesen in die Welt**. Deshalb wird hier nicht die Zeichenfunktion
+   allein geprüft, sondern der ganze Weg: Klick → Eingabe → `bedieneWahl`
+   → Zeiger → `nimmKarte`.
+
+   ⚠️ Was sie **nicht** kann: sagen, ob es gut aussieht. Ein Browser
+   fehlt hier, und mit ihm alles, was E5 meint. Das steht in
+   `docs/rueckmeldung/kartenhand.md`. */
+
+laut(`\n── Kartenhand ${"─".repeat(45)}\n`);
+
+/* Ein Zeichner, der nichts malt, sondern mitschreibt. Damit lässt sich
+   messen, **wo** etwas landet — und nicht nur, dass es nicht abstürzt. */
+function macheAufnahme() {
+  return {
+    fillStyle: "#000000",
+    rechtecke: [],
+    fillRect(x, y, b, h) { this.rechtecke.push({ x, y, b, h, farbe: this.fillStyle }); }
+  };
+}
+
+/* 9a · Wo die Karten liegen */
+{
+  for (const n of [3, 4]) {
+    for (let gewaehlt = 0; gewaehlt < n; gewaehlt++) {
+      const felder = felderFuer(n, gewaehlt);
+      melde(felder.length === n, `${n} Karten geben ${n} Felder`, `${felder.length}`);
+
+      const raus = felder.filter((f) =>
+        f.x < 0 || f.y < 0 || f.x + f.b > BREITE || f.y + f.h > HOEHE);
+      melde(raus.length === 0,
+        `${n} Karten, ${gewaehlt} gewählt: keine ragt aus dem Bild`,
+        raus.map((f) => `#${f.i} ${f.x},${f.y}`).join(" "));
+
+      const gross = felder.filter((f) => f.gross);
+      melde(gross.length === 1 && gross[0].i === gewaehlt,
+        `${n} Karten: genau die gewählte ist gross`, `${gross.length}`);
+      melde(gross[0].b > KARTE_B && gross[0].h > KARTE_H,
+        "und wirklich grösser als die anderen",
+        `${gross[0].b}x${gross[0].h} gegen ${KARTE_B}x${KARTE_H}`);
+    }
+  }
+
+  /* Am **unteren** Rand — das ist Janniks Wortlaut, nicht Geschmack. */
+  const felder = felderFuer(3, 1);
+  const tiefste = Math.max(...felder.map((f) => f.y + f.h));
+  melde(HOEHE - tiefste <= 8, "die Hand liegt am unteren Bildrand",
+    `${HOEHE - tiefste} Bildpunkte Luft`);
+
+  /* Wie in einer Hand gehalten: die Karten überlappen. */
+  melde(SCHRITT_X < KARTE_B, "die Karten überlappen einander",
+    `${KARTE_B - SCHRITT_X} Bildpunkte`);
+
+  /* Der Bogen: die mittlere Karte steht höher als die äusseren. Ohne
+     ihn wäre es eine Reihe und keine Hand — und genau das sähe man,
+     ohne dass eine Prüfung anschlüge. */
+  const flach = felderFuer(3, 99);
+  melde(flach[1].y < flach[0].y && flach[1].y < flach[2].y,
+    "die mittlere Karte steht im Bogen höher",
+    `${flach[0].y} · ${flach[1].y} · ${flach[2].y}`);
+}
+
+/* 9b · Was man anklickt, ist auch das, was man sieht */
+{
+  const felder = felderFuer(3, 1);
+  const reihenfolge = [...felder.filter((f) => !f.gross), ...felder.filter((f) => f.gross)];
+  const treffer = (x, y) => {
+    for (let i = reihenfolge.length - 1; i >= 0; i--) {
+      const f = reihenfolge[i];
+      if (x >= f.x && x < f.x + f.b && y >= f.y && y < f.y + f.h) return f.i;
+    }
+    return null;
+  };
+
+  let daneben = 0;
+  for (const f of reihenfolge) {
+    /* Die Mitte jeder Karte muss ihre eigene Karte treffen — ausser bei
+       den kleinen, die unter der grossen liegen können. */
+    const mx = Math.floor(f.x + f.b / 2), my = Math.floor(f.y + f.h / 2);
+    const t = treffer(mx, my);
+    if (t === null) daneben++;
+  }
+  melde(daneben === 0, "jede Kartenmitte trifft überhaupt eine Karte", `${daneben}`);
+
+  /* Die gewählte Karte liegt oben — in der Überlappung gewinnt sie.
+     Ohne diese Zusicherung klickte man auf das, was man sieht, und
+     träfe, was darunter liegt. */
+  const gross = felder.find((f) => f.gross);
+  const eck = treffer(gross.x + 2, gross.y + 2);
+  melde(eck === gross.i, "in der Überlappung gewinnt die hervorgehobene Karte",
+    `getroffen: ${eck}, erwartet: ${gross.i}`);
+
+  /* Gegenprobe: Ein Punkt weit über der Hand trifft nichts. Sonst
+     schluckte die Hand jeden Tipp im Bild — auch den auf den
+     Ausweich-Knopf. */
+  melde(treffer(BREITE / 2, 30) === null, "über der Hand trifft man nichts");
+  melde(treffer(2, HOEHE - 2) === null, "und in der linken unteren Ecke auch nicht");
+}
+
+/* 9c · Der kürzeste Weg im Ring */
+{
+  let falsch = 0;
+  for (const n of [3, 4]) {
+    for (let von = 0; von < n; von++) {
+      for (let nach = 0; nach < n; nach++) {
+        const { richtung, anzahl } = schritteZu(nach, von, n);
+        /* Nachgerechnet mit derselben Formel, die `bedieneWahl` benutzt. */
+        let z = von;
+        for (let s = 0; s < anzahl; s++) z = (z + richtung + n) % n;
+        if (z !== nach) { falsch++; console.log(`    ${von} → ${nach} (n=${n}) landet auf ${z}`); }
+        if (anzahl > Math.floor(n / 2)) { falsch++; console.log(`    ${von} → ${nach}: ${anzahl} Schritte, das geht kürzer`); }
+      }
+    }
+  }
+  melde(falsch === 0, "der Klickweg ist immer der kürzeste im Ring", `${falsch} daneben`);
+}
+
+/* 9d · Passt der Text auf die Karte? */
+{
+  const proKlein = Math.floor((KARTE_B - 8 + 1) / VORSCHUB);
+  const proGross = Math.floor((GROSS_B - 8 + 1) / VORSCHUB);
+
+  /* Ein Wort lässt sich nicht umbrechen. Das längste Titelwort muss
+     also in **eine** Zeile der kleinen Karte passen — sonst wird es
+     stumm gekürzt, und aus „LEICHENFLEDDERER" wird „LEICHENFLEDDERE.". */
+  const woerter = KARTEN.flatMap((k) => k.titel.split(" "));
+  const laengstes = woerter.reduce((a, b) => (b.length > a.length ? b : a), "");
+  melde(laengstes.length <= proKlein,
+    "das längste Titelwort passt in eine Zeile der kleinen Karte",
+    `„${laengstes}" ${laengstes.length} von ${proKlein}`);
+
+  /* Und jeder Titel in höchstens zwei Zeilen, ohne Kürzungspunkt. */
+  const gekuerzt = KARTEN.filter((k) => brich(k.titel, KARTE_B - 8, 2).join(" ") !== k.titel);
+  melde(gekuerzt.length === 0, "jeder Titel passt in zwei Zeilen der kleinen Karte",
+    gekuerzt.map((k) => k.titel).join(", "));
+
+  /* Die Wertzeile ist der Kern der Karte — sie muss auf der grossen
+     Karte in **eine** Zeile passen, sonst ist „besser lesen können"
+     eine Behauptung. Geprüft an allen wirklich erzeugten Zeilen. */
+  const zufall = macheZufall(4711);
+  let zuLang = 0, laengste = "";
+  const gesehen = new Set();
+  for (let i = 0; i < 3000; i++) {
+    for (const k of ziehKarten(zufall, probeSpieler())) {
+      gesehen.add(k.id);
+      for (const z of k.zeilen) {
+        const ganz = `${z.zahl} ${z.text}`;
+        if (ganz.length > proGross) { zuLang++; if (ganz.length > laengste.length) laengste = ganz; }
+      }
+    }
+  }
+  melde(zuLang === 0, "jede Wertzeile passt in eine Zeile der grossen Karte",
+    zuLang ? `${zuLang} mal, am längsten „${laengste}"` : `bis ${proGross} Zeichen`);
+
+  /* Und: in 3.000 Händen ist wirklich **jede** ziehbare Karte einmal
+     dabei gewesen. Ohne diese Zusicherung prüften die Zeilen oben nur
+     die Karten, die der Würfel zufällig mochte. */
+  const fehlend = ziehbareKarten().filter((k) => !gesehen.has(k.id));
+  melde(fehlend.length === 0, "in 3.000 Händen kam jede ziehbare Karte mindestens einmal",
+    fehlend.map((k) => k.id).join(", "));
+  laut(`  ${gesehen.size} verschiedene Karten in 3.000 Händen gesehen`);
+}
+
+/* 9e · Nichts läuft aus der Karte heraus */
+{
+  const zufall = macheZufall(1234);
+  const jaeger = JAEGER_FARBEN[0];
+  let rausKlein = 0, rausGross = 0, gemalt = 0;
+  const gesehen = new Set();
+
+  for (let i = 0; i < 2000 && gesehen.size < ziehbareKarten().length; i++) {
+    for (const k of ziehKarten(zufall, probeSpieler({ kartenwert: i % 3 === 0 ? 100 : 0 }))) {
+      if (gesehen.has(k.id)) continue;
+      gesehen.add(k.id);
+      gemalt++;
+
+      const a = macheAufnahme();
+      maleKlein(a, k, 10, 20);
+      for (const r of a.rechtecke) {
+        if (r.x < 10 || r.y < 20 || r.x + r.b > 10 + KARTE_B || r.y + r.h > 20 + KARTE_H) {
+          rausKlein++;
+          if (rausKlein === 1) console.log(`    ragt aus der kleinen Karte: ${k.id} bei ${r.x},${r.y}`);
+          break;
+        }
+      }
+
+      const b = macheAufnahme();
+      maleGross(b, k, 10, 20, jaeger);
+      for (const r of b.rechtecke) {
+        if (r.x < 10 || r.y < 20 || r.x + r.b > 10 + GROSS_B || r.y + r.h > 20 + GROSS_H) {
+          rausGross++;
+          if (rausGross === 1) console.log(`    ragt aus der grossen Karte: ${k.id} bei ${r.x},${r.y}`);
+          break;
+        }
+      }
+    }
+  }
+  melde(gemalt >= 20, "es wurden genug verschiedene Karten gemalt", `${gemalt}`);
+  melde(rausKlein === 0, "keine kleine Karte malt über ihren Rand hinaus", `${rausKlein}`);
+  melde(rausGross === 0, "keine grosse Karte malt über ihren Rand hinaus", `${rausGross}`);
+}
+
+/* 9f · Die Zahlen sind grün, der Rest nicht */
+{
+  const karte = ziehKarten(macheZufall(21), probeSpieler()).find((k) => k.wert);
+  const a = macheAufnahme();
+  maleKlein(a, karte, 0, 0);
+  const gruen = a.rechtecke.filter((r) => r.farbe === ZAHL_FARBE);
+  melde(gruen.length > 0, "die Zahl wird grün gemalt",
+    `${gruen.length} Bildpunkte in ${ZAHL_FARBE}`);
+
+  /* Der Titel darf **nicht** grün sein — sonst wäre „hervorgehoben"
+     kein Unterschied mehr. Der Titel steht in den obersten zwei Zeilen. */
+  const imTitel = gruen.filter((r) => r.y < 9 + ZEILE * 2);
+  melde(imTitel.length === 0, "und nur die Zahl, nicht der Titel", `${imTitel.length}`);
+
+  /* Gegenprobe: Der Zeilentext daneben ist matt. Ohne sie bestünde die
+     Zusicherung auch, wenn die ganze Karte grün wäre. */
+  const matt = a.rechtecke.filter((r) => r.farbe === FARBEN.schriftMatt);
+  melde(matt.length > 0, "der Name des Werts daneben ist matt", `${matt.length} Bildpunkte`);
+
+  melde(ZAHL_FARBE === FARBEN.seucheHell, "das Grün kommt aus der Palette", ZAHL_FARBE);
+
+  /* Auch eine Meta-Karte trägt eine grüne Zahl — ihre Zeilen kommen aus
+     dem Katalog und nicht aus einer Wertrechnung. */
+  const meta = ziehbareKarten().find(istMeta);
+  const b = macheAufnahme();
+  maleGross(b, {
+    titel: meta.titel, text: meta.text, zeilen: meta.zeilen,
+    seltenheitName: seltenheitVon(meta).name, farbe: seltenheitVon(meta).farbe
+  }, 0, 0, JAEGER_FARBEN[0]);
+  melde(b.rechtecke.some((r) => r.farbe === ZAHL_FARBE),
+    "auch eine Meta-Karte trägt eine grüne Zahl", meta.id);
+}
+
+/* 9g · Der ganze Weg: Klick → Eingabe → Zeiger → Karte
+
+   Das ist die eigentliche Prüfung. Sie stellt dieselbe Kette wie
+   `runtime/start.js`: Die Hand übersetzt einen Tipp in Achsenausschläge,
+   `macheFlanken()` macht daraus Flanken — **dieselbe** Funktion, die
+   auch die Eingaben aus dem Netz umformt —, und `bedieneWahl()` bewegt
+   den Zeiger. Wäre die Übersetzung falsch, träfe der Klick eine andere
+   Karte, ohne dass irgendwo etwas bricht. */
+{
+  const horcher = [];
+  const altesAdd = globalThis.addEventListener;
+  globalThis.addEventListener = (art, fn) => horcher.push({ art, fn });
+
+  const { macheKartenhand } = await import("../runtime/karten-hand.js");
+  const { macheMenue, bedieneWahl } = await import("../runtime/oberflaeche.js");
+
+  /* Eine Leinwand, die nur ihre Masse kennt — mehr braucht die
+     Umrechnung von Bildschirm auf Bild nicht. */
+  const leinwand = { getBoundingClientRect: () => ({ left: 0, top: 0, width: BREITE, height: HOEHE }) };
+  const hand = macheKartenhand(leinwand);
+  globalThis.addEventListener = altesAdd;
+
+  melde(horcher.length === 1 && horcher[0].art === "pointerdown",
+    "die Hand horcht auf genau einen Zeiger", horcher.map((h) => h.art).join(","));
+
+  const zeigerDown = horcher[0].fn;
+  let angehalten = 0;
+  const tippe = (x, y) => {
+    angehalten = 0;
+    zeigerDown({
+      clientX: x, clientY: y, pointerType: "touch", button: 0,
+      stopPropagation() { angehalten++; }, preventDefault() {}
+    });
+  };
+
+  /* Eine Welt, so klein wie möglich — `bedieneWahl` braucht Spieler,
+     Karten und den Zeiger, sonst nichts. */
+  function probeWelt(regeln = {}) {
+    const s = probeSpieler({}, regeln);
+    s.id = 0;
+    s.offeneWahlen = 1;
+    const welt = { phase: "wahl", zufall: macheZufall(2026), gegner: [], spieler: [s] };
+    s.karten = ziehKarten(welt.zufall, s);
+    return welt;
+  }
+
+  /* Ein Bild wie in `start.js`: mischen, Flanken bilden, bedienen,
+     quittieren. Der Rückgabewert ist der Zeiger danach. */
+  function bild(welt, menue, hand, flanken, rohe = { x: 0, y: 0, ausweichen: false }) {
+    const eigene = hand.mische(rohe, welt);
+    const eingaben = flanken([eigene]);
+    if (welt.phase === "wahl") {
+      bedieneWahl(welt, menue, eingaben);
+      hand.quittiere();
+    }
+    return menue.wahlZeiger[0];
+  }
+
+  {
+    const welt = probeWelt();
+    const menue = macheMenue();
+    menue.sperre = 0;
+    const flanken = macheFlanken();
+    hand.zeichne(macheAufnahme(), welt, menue, 0);
+
+    const felder = felderFuer(welt.spieler[0].karten.length, 0);
+    const ziel = felder[2];
+    tippe(ziel.x + ziel.b / 2, ziel.y + ziel.h / 2);
+    melde(angehalten === 1, "ein Tipp auf eine Karte wird abgefangen (sonst frisst ihn der Stick)");
+
+    let bilder = 0;
+    while (menue.wahlZeiger[0] !== 2 && bilder++ < 40) bild(welt, menue, hand, flanken);
+    melde(menue.wahlZeiger[0] === 2,
+      "ein Tipp auf die dritte Karte hebt die dritte Karte hervor",
+      `Zeiger ${menue.wahlZeiger[0]} nach ${bilder} Bildern`);
+    laut(`  Tipp auf Karte 3: nach ${bilder} Bildern hervorgehoben`);
+
+    /* Der zweite Tipp nimmt sie. Vorher ist die Kette leer — das ist
+       die Bedingung, unter der die Hand einen Tipp als „nehmen" liest. */
+    const genommen = welt.spieler[0].karten[2];
+    const wert = genommen.wert;
+    const vorher = wert ? welt.spieler[0].werte[wert] : null;
+    tippe(ziel.x + ziel.b / 2, ziel.y + ziel.h / 2);
+    bilder = 0;
+    while (welt.spieler[0].offeneWahlen > 0 && bilder++ < 40) bild(welt, menue, hand, flanken);
+    melde(welt.spieler[0].offeneWahlen === 0,
+      "ein zweiter Tipp auf dieselbe Karte nimmt sie", `nach ${bilder} Bildern`);
+    if (wert) {
+      melde(welt.spieler[0].werte[wert] === vorher + genommen.menge,
+        "und der Wert der Karte kommt wirklich an",
+        `${vorher} → ${welt.spieler[0].werte[wert]} (+${genommen.menge})`);
+    } else {
+      melde(hatRegel(welt.spieler[0], genommen.regel), "und ihre Regel wird gesetzt", genommen.regel);
+    }
+  }
+
+  /* Gegenprobe 1: Ohne Tipp bewegt sich nichts. Sonst bestünde die
+     Prüfung oben auch, wenn der Zeiger von allein wanderte. */
+  {
+    const welt = probeWelt();
+    const menue = macheMenue();
+    menue.sperre = 0;
+    const flanken = macheFlanken();
+    hand.zeichne(macheAufnahme(), welt, menue, 0);
+    for (let i = 0; i < 40; i++) bild(welt, menue, hand, flanken);
+    melde(menue.wahlZeiger[0] === 0 && welt.spieler[0].offeneWahlen === 1,
+      "ohne Tipp bleibt der Zeiger stehen und nichts wird genommen",
+      `Zeiger ${menue.wahlZeiger[0]}, offen ${welt.spieler[0].offeneWahlen}`);
+  }
+
+  /* Gegenprobe 2: Ein Tipp neben die Karten wird nicht abgefangen —
+     sonst käme der Ausweich-Knopf auf dem Telefon nie mehr durch. */
+  {
+    const welt = probeWelt();
+    const menue = macheMenue();
+    const flanken = macheFlanken();
+    hand.zeichne(macheAufnahme(), welt, menue, 0);
+    tippe(BREITE / 2, 30);
+    melde(angehalten === 0, "ein Tipp neben die Karten läuft weiter zum Stick");
+  }
+
+  /* Gegenprobe 3 — die eigentliche Falle: Die Kette darf **nur**
+     vorrücken, wenn ein Weltschritt sie wirklich benutzt hat. Auf einem
+     144-Hz-Bildschirm rechnet die Welt nicht bei jedem Bild; ein
+     Eingabebild ohne Weltschritt wäre sonst verloren, und der Zeiger
+     bliebe auf halbem Weg stehen. */
+  {
+    const welt = probeWelt();
+    const menue = macheMenue();
+    menue.sperre = 0;
+    const flanken = macheFlanken();
+    hand.zeichne(macheAufnahme(), welt, menue, 0);
+    const felder = felderFuer(welt.spieler[0].karten.length, 0);
+    const ziel = felder[2];
+    tippe(ziel.x + ziel.b / 2, ziel.y + ziel.h / 2);
+
+    /* Zwanzig Bilder ohne einen einzigen Weltschritt. */
+    const vorher = hand.kette().length;
+    for (let i = 0; i < 20; i++) hand.mische({ x: 0, y: 0, ausweichen: false }, welt);
+    melde(hand.kette().length === vorher,
+      "ohne Weltschritt rückt die Klickkette nicht vor",
+      `${vorher} → ${hand.kette().length}`);
+
+    let bilder = 0;
+    while (menue.wahlZeiger[0] !== 2 && bilder++ < 40) bild(welt, menue, hand, flanken);
+    melde(menue.wahlZeiger[0] === 2, "und danach kommt sie trotzdem an", `Zeiger ${menue.wahlZeiger[0]}`);
+  }
+
+  /* Gegenprobe 4: Verlässt die Welt die Kartenwahl, wird die Kette
+     geräumt. Eine Bewegung, die in der nächsten Welle ankäme, wäre ein
+     Ruck ohne Ursache. */
+  {
+    const welt = probeWelt();
+    const menue = macheMenue();
+    const flanken = macheFlanken();
+    hand.zeichne(macheAufnahme(), welt, menue, 0);
+    const felder = felderFuer(welt.spieler[0].karten.length, 0);
+    tippe(felder[2].x + 4, felder[2].y + 4);
+    melde(hand.kette().length > 0, "nach einem Tipp wartet etwas in der Kette",
+      `${hand.kette().length}`);
+    welt.phase = "welle";
+    const raus = hand.mische({ x: 0, y: 0, ausweichen: true }, welt);
+    melde(hand.kette().length === 0, "ausserhalb der Kartenwahl ist die Kette leer");
+    melde(raus.ausweichen === true, "und die eigene Eingabe kommt unverändert durch");
+  }
+
+  /* Gegenprobe 5: Ohne gemalte Hand trifft kein Tipp. Sonst schluckte
+     die Hand Zeiger, während sie gar nicht da ist. */
+  {
+    const welt = probeWelt();
+    welt.phase = "welle";
+    hand.mische({ x: 0, y: 0, ausweichen: false }, welt);
+    tippe(BREITE / 2, HOEHE - 40);
+    melde(angehalten === 0, "ist keine Hand gemalt, wird kein Tipp abgefangen");
+  }
+
+  /* 9h · Vier Karten: `weitsicht` darf die Hand nicht sprengen */
+  {
+    const welt = probeWelt({ weitsicht: true });
+    const menue = macheMenue();
+    menue.sperre = 0;
+    const flanken = macheFlanken();
+    const n = welt.spieler[0].karten.length;
+    melde(n === KARTEN_JE_WAHL + 1, "mit weitsicht liegen vier Karten in der Hand", `${n}`);
+    hand.zeichne(macheAufnahme(), welt, menue, 0);
+    const felder = felderFuer(n, 0);
+    const ziel = felder[3];
+    tippe(ziel.x + ziel.b / 2, ziel.y + ziel.h / 2);
+    let bilder = 0;
+    while (menue.wahlZeiger[0] !== 3 && bilder++ < 40) bild(welt, menue, hand, flanken);
+    melde(menue.wahlZeiger[0] === 3, "und die vierte Karte lässt sich antippen",
+      `Zeiger ${menue.wahlZeiger[0]} nach ${bilder} Bildern`);
+    laut(`  vier Karten: Tipp auf die vierte nach ${bilder} Bildern angekommen`);
+  }
 }
 
 if (LAUT) console.log("");

@@ -30,9 +30,10 @@ import { ladeSprites } from "./sprites.js";
 import { macheZeichner, zeichne, baueBoden, fackelOrte, BREITE, HOEHE } from "./zeichnen.js";
 import { macheEingabe, macheFlanken } from "./eingabe.js";
 import {
-  macheMenue, zeichneAnzeige, zeichneWahl, zeichneLaden, zeichneEnde,
+  macheMenue, zeichneAnzeige, zeichneLaden, zeichneEnde,
   bedieneWahl, bedieneLaden, SPERRE_SEKUNDEN
 } from "./oberflaeche.js";
+import { macheKartenhand } from "./karten-hand.js";
 import { macheLobby } from "./lobby.js";
 import { ruhendeEingabe, packeEingabe, entpackeEingabe } from "../netz/nachrichten.mjs";
 import { macheLockstep, VERZUG, NACHHALL } from "../netz/lockstep.mjs";
@@ -50,6 +51,12 @@ const zeichner = macheZeichner(leinwand);
 const sprites = ladeSprites();
 const eingabe = macheEingabe();
 const menue = macheMenue();
+/* Die Kartenhand malt die Aufstiegswahl und nimmt Zeiger entgegen. Sie
+   ersetzt `zeichneWahl()` aus `runtime/oberflaeche.js`; bedient wird
+   weiterhin dort (`bedieneWahl`), denn ein Klick wird hier in ganz
+   gewoehnliche Achsen- und Knopfeingaben uebersetzt — siehe die
+   Kopfnotiz von `runtime/karten-hand.js`. */
+const kartenhand = macheKartenhand(leinwand);
 
 const flanken = macheFlanken();
 
@@ -153,6 +160,10 @@ function wendeAn(eingabenDesTicks) {
     schrittImLauf(welt, eingabenDesTicks);
   } else if (welt.phase === "wahl") {
     bedieneWahl(welt, menue, eingabenDesTicks);
+    /* Erst **hier** rueckt die Klickkette nach: Ein Eingabebild, das
+       kein Weltschritt abholt, waere verloren — auf einem Bildschirm
+       mit 144 Hz gilt das fuer zwei von drei Bildern. */
+    kartenhand.quittiere();
     schrittImLauf(welt, eingabenDesTicks);
   } else if (welt.phase === "laden") {
     if (!welt.spieler[0].angebote) {
@@ -271,7 +282,10 @@ function bild(jetzt) {
   /* Dieser Rechner steuert genau eine Figur — einmal je Bild gelesen.
      Zweimal zu lesen wäre ein Fehler: `liesEigene()` leert dabei den
      Puffer für den kurzen Tipp, den zweiten Aufruf sähe er nicht mehr. */
-  const eigene = eingabe.liesEigene();
+  /* Der Zeigefinger auf einer Karte wird zu Achse und Knopf — damit er
+     denselben Weg nimmt wie Tastatur und Daumen und im Netzspiel bei
+     allen ankommt (`runtime/karten-hand.js`). */
+  const eigene = kartenhand.mische(eingabe.liesEigene(), welt);
   letzteEigene = eigene;
 
   /* Allein: die eigene Eingabe wirkt sofort. In einer Runde füllt der
@@ -298,8 +312,10 @@ function bild(jetzt) {
   zeichne(zeichner, welt, boden, sprites, zeit);
 
   if (welt.phase === "welle") zeichneAnzeige(zeichner.c, welt);
-  else if (welt.phase === "wahl") { zeichneAnzeige(zeichner.c, welt); zeichneWahl(zeichner.c, welt, menue); }
-  else if (welt.phase === "laden") zeichneLaden(zeichner.c, welt, menue);
+  else if (welt.phase === "wahl") {
+    zeichneAnzeige(zeichner.c, welt);
+    kartenhand.zeichne(zeichner.c, welt, menue, eigenerPlatz);
+  } else if (welt.phase === "laden") zeichneLaden(zeichner.c, welt, menue);
   else zeichneEnde(zeichner.c, welt);
 }
 
