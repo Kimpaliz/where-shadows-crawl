@@ -20,9 +20,12 @@
    ── Arbeitet zusammen mit ───────────────────────────────────────────
 
    Allen anderen `spiel/`-Modulen. `spiel/lauf.mjs` steuert darüber die
-   Abfolge Welle → Laden → Welle. */
+   Abfolge Welle → Laden → Welle. Neu dazwischen (spiel/truhen.mjs):
+   eine Welle kann mit „truhen" enden statt direkt mit „laden" oder
+   „gewonnen" — nur wenn jemand eine Truhe trägt, und nur so lange, wie
+   der Öffnen-Moment dauert. */
 
-import { macheZufall } from "./zufall.mjs";
+import { macheZufall, abgeleitet } from "./zufall.mjs";
 import { macheGitter } from "./gitter.mjs";
 import { macheWerte, lebenMax, genesungJeWelle } from "./werte.mjs";
 import { macheWaffe } from "./katalog/waffen.mjs";
@@ -37,6 +40,7 @@ import {
 } from "./kampf.mjs";
 import { bewegeBeute, raeumeBeute } from "./beute.mjs";
 import { pruefeAufstieg, alleGewaehlt } from "./stufen.mjs";
+import { bewegeTruhen, raeumeTruhen, oeffneTruhen, fortschreiteTruhen } from "./truhen.mjs";
 
 export const SCHRITT = 1 / 60;
 
@@ -66,7 +70,10 @@ export function macheSpieler(id, spielerzahl) {
     gold: 0, wissen: 0, stufe: 1, offeneWahlen: 0, karten: null,
     zustand: "lebt", aufheben: 0, unverwundbar: 0,
     trefferZeit: 0, schlagZeit: 0, schlagWaffe: null,
-    getoetet: 0, angebote: null, malGewuerfelt: 0, bereit: false
+    getoetet: 0, angebote: null, malGewuerfelt: 0, bereit: false,
+    /* Ungeöffnete Truhen, die diese Figur gerade trägt — geleert von
+       `oeffneTruhen()` am Wellenende (spiel/truhen.mjs). */
+    truhen: 0
   };
   /* Die Felder des Sprungs setzt `spiel/ausweichen.mjs` selbst.
      Stünden sie hier noch einmal, wären es zwei Listen, von denen
@@ -80,12 +87,22 @@ export function macheWelt({ spielerzahl = 1, saat = 1, modusId = STANDARD_MODUS 
     saat, spielerzahl,
     modus: holeModus(modusId),
     zufall: macheZufall(saat),
+    /* Eigener, unabhängiger Strom für Truhenfall und -inhalt
+       (spiel/truhen.mjs) — verschiebt `zufall` oben nicht, egal wie
+       viele Truhen fallen oder was in ihnen steckt. */
+    truhenZufall: abgeleitet(saat, "truhen"),
     gitter: macheGitter(24),
     welle: 0, phase: "laden", zeit: 0, dauer: 0,
     plan: [], planIndex: 0,
     arena: { radius: arenaRadius(spielerzahl) },
     spieler: Array.from({ length: spielerzahl }, (_, i) => macheSpieler(i, spielerzahl)),
     gegner: [], geschosse: [], beute: [], funken: [], zahlen: [],
+    /* Truhen, die gerade am Boden liegen (noch nicht aufgehoben). Was
+       aufgehoben, aber noch nicht geöffnet ist, steht auf dem Spieler
+       selbst (`spieler.truhen`) — erst am Wellenende wird daraus
+       `truhenErgebnis` (spiel/truhen.mjs `oeffneTruhen`). */
+    truhen: [], truhenGefallen: 0, truhenAngekommen: 0, truhenVerloren: 0,
+    truhenErgebnis: null, truhenZeit: 0, truhenWeiter: null,
     ticks: 0, verloreneBeute: 0
   };
   return welt;
@@ -104,6 +121,7 @@ export function starteWelle(welt, welle) {
   welt.gegner = [];
   welt.geschosse = [];
   welt.beute = [];
+  welt.truhen = [];
   welt.funken = [];
   welt.zahlen = [];
   welt.phase = "welle";
@@ -179,8 +197,17 @@ function altereListen(welt, dt) {
 
    `ausweichen` darf fehlen; dann wird nicht gesprungen. Das ist der
    Grund, warum der Kunstspieler in `werkzeuge/balance.mjs` unverändert
-   weiterläuft. */
+   weiterläuft.
+
+   ⚠️ **„truhen" ist zeitgesteuert, nicht spielergesteuert** (anders als
+   „wahl"). Deshalb behandelt `schritt()` diese Phase selbst, statt sie
+   wie „wahl" nur an `spiel/lauf.mjs` `schrittImLauf()` zu delegieren:
+   So läuft jeder Aufrufer, der `schrittImLauf`/`schritt` unverändert
+   für jede Phase außer „wahl" aufruft (`werkzeuge/balance.mjs`,
+   `runtime/start.js` in der Wellen-Schleife), ohne eigene Änderung
+   durch den Öffnen-Moment hindurch — siehe spiel/truhen.mjs. */
 export function schritt(welt, eingaben = []) {
+  if (welt.phase === "truhen") return fortschreiteTruhen(welt, SCHRITT);
   if (welt.phase !== "welle") return welt.phase;
   const dt = SCHRITT;
   welt.ticks++;
@@ -205,6 +232,7 @@ export function schritt(welt, eingaben = []) {
   beruehrung(welt, dt);
   regeneriere(welt, dt);
   bewegeBeute(welt, dt);
+  bewegeTruhen(welt, dt);
   hebeAuf(welt, dt);
   altereListen(welt, dt);
 
@@ -256,6 +284,7 @@ export function pruefeWeiter(welt) {
 
 export function beendeWelle(welt) {
   welt.verloreneBeute += raeumeBeute(welt);
+  welt.truhenVerloren += raeumeTruhen(welt);
   welt.gegner = [];
   welt.geschosse = [];
 
@@ -275,7 +304,13 @@ export function beendeWelle(welt) {
 
   /* Ein endloser Modus kennt kein Gewinnen — nur ein „wie weit".
      Deshalb fragt auch das der Modus und nicht der Regelkern. */
-  welt.phase = (!welt.modus.endlos
+  const naechstePhase = (!welt.modus.endlos
     && welt.welle >= (welt.modus.wellenJeLauf ?? WELLEN_JE_LAUF))
     ? "gewonnen" : "laden";
+
+  /* Trägt jemand eine ungeöffnete Truhe, hält die Welt für einen
+     eigenen Moment an, bevor sie zu `naechstePhase` weiterzieht
+     (spiel/truhen.mjs `oeffneTruhen`/`fortschreiteTruhen`). Trägt
+     niemand eine, ändert sich hier nichts gegenüber vorher. */
+  welt.phase = oeffneTruhen(welt, naechstePhase) ? "truhen" : naechstePhase;
 }
