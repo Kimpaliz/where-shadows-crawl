@@ -294,10 +294,17 @@ export function artFarbe(art) {
    * **Der Krit muss heißer sein:** Abstand zur eigenen normalen Farbe
      ≥ 40 und die Leuchtdichte echt höher.
 
-   0,30 ist der größte Anteil, der beides hält (75,1 und 50,2). Bei
-   0,35 fällt der Artabstand auf 69,8 und reißt die erste Schranke —
-   der erste Entwurf stand auf 0,45 (59,1), und im Bild sahen die fünf
-   Kritzahlen alle gleich weiß aus. Genau dafür ist die Messung da. */
+   0,30 ist der größte Anteil, der beides hält (75,1 und 49,9). Bei
+   0,35 fällt der Artabstand auf 68,8 und reißt die erste Schranke —
+   der erste Entwurf stand auf 0,45 (58,3), und im Bild sahen die fünf
+   Kritzahlen alle gleich weiß aus. Genau dafür ist die Messung da.
+
+   Nachgemessen am 05.09.2026 mit `werkzeuge/pruefe-anzeige.mjs`; drei
+   dieser Zahlen standen vorher um bis zu 1,0 daneben (50,2 · 69,8 ·
+   59,1). Die Schlussfolgerung war davon unberührt — 0,30 bleibt der
+   größte haltbare Anteil —, aber eine Zahl im Kommentar ist eine
+   Behauptung wie jede andere. Beide Schranken laufen jetzt als
+   Prüfung mit. */
 export const KRIT_WEISS = 0.30;
 
 export function zahlStil(z) {

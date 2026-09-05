@@ -30,6 +30,7 @@
    | `pruefe-katalog.mjs` | Waffen, Gegner, Fundstücke und Wellen sind in sich stimmig | ein verschriebener Merkmalsname: der Gruppenbonus dieser Fraktion ist unerreichbar, und niemand merkt es |
    | `pruefe-sprites.mjs` | Bildpunktraster heil, Farben gültig, Figuren drehbar erkennbar | eine Zeile einen Bildpunkt zu kurz — man sieht es und findet es nicht |
    | `pruefe-schrift.mjs` | jeder Anzeigetext lässt sich malen | ein Zeichen ohne Glyph wird still zu `?` und sieht aus wie ein Fehler im Text |
+   | `pruefe-anzeige.mjs` | die fünf Trefferzeichen sind voneinander unterscheidbar, Angriffsleiste und Krämer-Frist rechnen richtig, und keine Lebensdauer läuft zwischen Kern und Zeichner auseinander | fünf Zeichen, die einzeln tadellos sind und alle gleich aussehen — und eine Leiste, die bei Hast still die falsche Strecke läuft |
    | `pruefe-werte.mjs` | Werte-Tabelle, Schadensarten, die eine Schadensrechnung und der Sprung | ein Umlaut in einer Wertkennung, eine vertauschte Rechenreihenfolge (20 % Schaden daneben) oder ein Kritwurf ohne Chance, der den gesäten Strom verschiebt — alles drei ohne eine einzige Fehlermeldung |
    | `pruefe-balance.mjs` | man kann gewinnen, man kann verlieren, es gibt keine Wand | „ich habe eine Waffe stärker gemacht, und jetzt gewinnt man immer" |
    | `pruefe-protokoll.mjs` | das Auswertungsprotokoll misst wirklich, nicht nur bequem | ein Gegner, der am Wellenende überlebt, wird zum erfundenen Toten; eine Zahl, die sich nicht bewegt, wenn das Gemessene sich bewegt |
