@@ -1,0 +1,84 @@
+# [Aufgabe: Bedienung] Das Spiel ins Netz stellen — die Adresse für die Freunde.
+#
+# Janniks Auftrag wörtlich: „Das spiel über github erreichbar machen für
+# freunde! also webadresse!"
+#
+# ── Warum hier kein Bauschritt steht ─────────────────────────────────
+#
+# Das Spiel ist reines HTML mit ES-Modulen und hat null Abhängigkeiten.
+# Es gibt nichts zu übersetzen und nichts zu bündeln — der Ordner, der
+# im Repository liegt, ist derselbe, der ausgeliefert wird. Deshalb
+# lädt dieser Ablauf das Wurzelverzeichnis unverändert hoch.
+#
+# Das ist kein Sparen, sondern die Absicherung: Was hier live geht, ist
+# byteweise das, was `node werkzeuge/vorschau.mjs` daheim ausliefert.
+# Ein Bauschritt dazwischen wäre eine zweite Wahrheit, in der ein
+# Fehler stecken könnte, den daheim niemand sieht.
+#
+# ── Die zwei Fallstricke, die hier abgefangen sind ───────────────────
+#
+# 1. `.nojekyll` im Wurzelverzeichnis. Ohne diese leere Datei schiebt
+#    GitHub Pages jede Auslieferung durch Jekyll, und Jekyll schluckt
+#    stillschweigend jeden Ordner und jede Datei mit führendem
+#    Unterstrich. Es gäbe keine Fehlermeldung — die Datei wäre
+#    einfach 404.
+# 2. Alle Importpfade sind relativ (`./`, `../`). Unter
+#    `https://kimpaliz.github.io/where-shadows-crawl/` liegt die Seite
+#    in einem **Unterordner**; ein `/runtime/start.js` zeigte dort auf
+#    `kimpaliz.github.io/runtime/start.js` und damit ins Leere. Das ist
+#    der häufigste Grund, warum ein Spiel daheim läuft und im Netz
+#    weiß bleibt. Der Schritt „Pfade prüfen" unten bricht ab, wenn
+#    jemand versehentlich einen absoluten Pfad einträgt.
+#
+# ── Arbeitet zusammen mit ────────────────────────────────────────────
+#
+# `.nojekyll`, `index.html` (der Einstieg) und `werkzeuge/vorschau.mjs`
+# (dasselbe Ergebnis, nur daheim).
+
+name: Seite veröffentlichen
+
+on:
+  push:
+    branches: [main]
+  # Von Hand auslösbar, damit eine Veröffentlichung nicht zwingend
+  # einen Commit braucht.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Läuft eine Veröffentlichung noch, während die nächste kommt, gewinnt
+# die neuere. `cancel-in-progress: false` — eine halb hochgeladene Seite
+# abzubrechen wäre schlimmer als ein paar Sekunden zu warten.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  veroeffentlichen:
+    environment:
+      name: github-pages
+      url: ${{ steps.auslieferung.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Stand holen
+        uses: actions/checkout@v4
+
+      - name: Pfade prüfen
+        # Ein absoluter Pfad bleibt daheim unbemerkt und macht die Seite
+        # im Netz weiß. Lieber hier abbrechen als dort raten.
+        run: node werkzeuge/pruefe-netz.mjs --nur-pfade
+
+      - name: Pages einrichten
+        uses: actions/configure-pages@v5
+
+      - name: Wurzelverzeichnis packen
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Ausliefern
+        id: auslieferung
+        uses: actions/deploy-pages@v4

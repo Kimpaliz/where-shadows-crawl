@@ -31,6 +31,7 @@
    | `pruefe-sprites.mjs` | Bildpunktraster heil, Farben gültig, Figuren drehbar erkennbar | eine Zeile einen Bildpunkt zu kurz — man sieht es und findet es nicht |
    | `pruefe-schrift.mjs` | jeder Anzeigetext lässt sich malen | ein Zeichen ohne Glyph wird still zu `?` und sieht aus wie ein Fehler im Text |
    | `pruefe-balance.mjs` | man kann gewinnen, man kann verlieren, es gibt keine Wand | „ich habe eine Waffe stärker gemacht, und jetzt gewinnt man immer" |
+   | `pruefe-netz.mjs` | jeder Pfad relativ; gleiche Eingaben ergeben dieselbe Welt, verschobene eine andere | der absolute Pfad, der die Seite im Netz weiß lässt — und der Gleichlauf, der erst nach Minuten sichtbar auseinanderläuft |
 
    **Nicht in der Kette:** `pruefe-freigabe.mjs` — die Freigabeliste
    vor einer Veröffentlichung. Während der Entwicklung ist ein
