@@ -51,7 +51,7 @@ import { BREITE, HOEHE } from "../runtime/zeichnen.js";
 import { macheFlanken } from "../runtime/eingabe.js";
 import { FARBEN, JAEGER_FARBEN } from "../runtime/palette.js";
 import {
-  felderFuer, schritteZu, brich, maleKlein, maleGross,
+  felderFuer, schritteZu, brich, maleKlein, maleGross, zeichenReihenfolge,
   KARTE_B, KARTE_H, GROSS_B, GROSS_H, SCHRITT_X, GRUND_Y, ZAHL_FARBE
 } from "../runtime/karten-hand.js";
 
@@ -633,7 +633,10 @@ function macheAufnahme() {
 /* 9b · Was man anklickt, ist auch das, was man sieht */
 {
   const felder = felderFuer(3, 1);
-  const reihenfolge = [...felder.filter((f) => !f.gross), ...felder.filter((f) => f.gross)];
+  /* **Dieselbe** Reihenfolge wie beim Malen — aus dem Modul, nicht hier
+     noch einmal getippt. Zwei Kopien waeren zwei Wahrheiten, und man
+     klickte genau um den Unterschied daneben. */
+  const reihenfolge = zeichenReihenfolge(felder);
   const treffer = (x, y) => {
     for (let i = reihenfolge.length - 1; i >= 0; i--) {
       const f = reihenfolge[i];
@@ -652,12 +655,20 @@ function macheAufnahme() {
   }
   melde(daneben === 0, "jede Kartenmitte trifft überhaupt eine Karte", `${daneben}`);
 
-  /* Die gewählte Karte liegt oben — in der Überlappung gewinnt sie.
-     Ohne diese Zusicherung klickte man auf das, was man sieht, und
-     träfe, was darunter liegt. */
+  /* Die gewählte Karte wird **zuletzt** gemalt und liegt damit oben.
+     Seit dem Versatz überlappen sich grosse und kleine Karten nicht mehr,
+     also kann ein Trefferpunkt das nicht mehr belegen — im Rot-Beweis
+     genau so aufgefallen: Die Reihenfolge umzudrehen liess die Prüfung
+     grün. Zugesichert wird deshalb die Reihenfolge selbst. */
   const gross = felder.find((f) => f.gross);
+  melde(reihenfolge[reihenfolge.length - 1].gross === true,
+    "die hervorgehobene Karte wird zuletzt gemalt und liegt damit oben",
+    `zuletzt: #${reihenfolge[reihenfolge.length - 1].i}`);
+  melde(reihenfolge.length === felder.length
+    && new Set(reihenfolge.map((f) => f.i)).size === felder.length,
+    "und die Reihenfolge enthält jede Karte genau einmal");
   const eck = treffer(gross.x + 2, gross.y + 2);
-  melde(eck === gross.i, "in der Überlappung gewinnt die hervorgehobene Karte",
+  melde(eck === gross.i, "ein Punkt auf der grossen Karte trifft auch sie",
     `getroffen: ${eck}, erwartet: ${gross.i}`);
 
   /* Gegenprobe: Ein Punkt weit über der Hand trifft nichts. Sonst
@@ -744,10 +755,22 @@ function macheAufnahme() {
       gesehen.add(k.id);
       gemalt++;
 
+      /* **Nur Schriftpunkte.** Rahmen und Seltenheitsbalken liegen
+         absichtlich am Rand; Buchstaben nicht. `zeichneText` malt jeden
+         Bildpunkt einzeln — Kantenlänge 1 ist also genau die Schrift.
+
+         Der innere Rand von 3 Bildpunkten ist der Grund, warum dieser
+         Fall überhaupt etwas findet: Ein **nicht** umgebrochener Titel
+         mit 17 Zeichen bleibt rechnerisch noch in der Karte (84 von 88),
+         klebt aber am Rahmen. Im Rot-Beweis blieb die Prüfung ohne
+         diesen Rand grün. */
+      const innen = (r, x0, y0, b0, h0) => r.b !== 1 || r.h !== 1
+        || (r.x >= x0 + 3 && r.y >= y0 + 3 && r.x + r.b <= x0 + b0 - 3 && r.y + r.h <= y0 + h0 - 3);
+
       const a = macheAufnahme();
       maleKlein(a, k, 10, 20);
       for (const r of a.rechtecke) {
-        if (r.x < 10 || r.y < 20 || r.x + r.b > 10 + KARTE_B || r.y + r.h > 20 + KARTE_H) {
+        if (!innen(r, 10, 20, KARTE_B, KARTE_H)) {
           rausKlein++;
           if (rausKlein === 1) console.log(`    ragt aus der kleinen Karte: ${k.id} bei ${r.x},${r.y}`);
           break;
@@ -757,7 +780,7 @@ function macheAufnahme() {
       const b = macheAufnahme();
       maleGross(b, k, 10, 20, jaeger);
       for (const r of b.rechtecke) {
-        if (r.x < 10 || r.y < 20 || r.x + r.b > 10 + GROSS_B || r.y + r.h > 20 + GROSS_H) {
+        if (!innen(r, 10, 20, GROSS_B, GROSS_H)) {
           rausGross++;
           if (rausGross === 1) console.log(`    ragt aus der grossen Karte: ${k.id} bei ${r.x},${r.y}`);
           break;
@@ -765,6 +788,23 @@ function macheAufnahme() {
       }
     }
   }
+  /* Die Platzrechnung für den Flavour-Text ist mit den echten Texten
+     nicht zu beweisen — sie sind alle kurz genug, und im Rot-Beweis
+     blieb die Prüfung deshalb grün, als ich die Rechnung durch eine
+     feste Zahl ersetzte. Also ein Text, der die Karte sprengen **will**. */
+  {
+    const lang = macheAufnahme();
+    maleGross(lang, {
+      titel: "LANGE REDE", text: ("WORT ").repeat(80).trim(),
+      zeilen: [{ zahl: "+9", text: "LEBEN" }],
+      seltenheitName: "Gemein", farbe: FARBEN.schriftMatt
+    }, 10, 20, jaeger);
+    const raus = lang.rechtecke.filter((r) => r.b === 1 && r.h === 1
+      && (r.x < 13 || r.y < 23 || r.x + 1 > 10 + GROSS_B - 3 || r.y + 1 > 20 + GROSS_H - 3));
+    melde(raus.length === 0, "auch ein masslos langer Text bleibt in der grossen Karte",
+      raus.length ? `${raus.length} Bildpunkte draussen, tiefster bei y ${Math.max(...raus.map((r) => r.y))}` : "");
+  }
+
   melde(gemalt >= 20, "es wurden genug verschiedene Karten gemalt", `${gemalt}`);
   melde(rausKlein === 0, "keine kleine Karte malt über ihren Rand hinaus", `${rausKlein}`);
   melde(rausGross === 0, "keine grosse Karte malt über ihren Rand hinaus", `${rausGross}`);
@@ -943,12 +983,47 @@ function macheAufnahme() {
     const vorher = hand.kette().length;
     for (let i = 0; i < 20; i++) hand.mische({ x: 0, y: 0, ausweichen: false }, welt);
     melde(hand.kette().length === vorher,
-      "ohne Weltschritt rückt die Klickkette nicht vor",
+      "zwanzig Bilder ohne Weltschritt lassen die Klickkette stehen",
       `${vorher} → ${hand.kette().length}`);
 
     let bilder = 0;
     while (menue.wahlZeiger[0] !== 2 && bilder++ < 40) bild(welt, menue, hand, flanken);
     melde(menue.wahlZeiger[0] === 2, "und danach kommt sie trotzdem an", `Zeiger ${menue.wahlZeiger[0]}`);
+  }
+
+  /* Gegenprobe 3b — die Zusicherung, die `ausgegeben` wirklich trägt:
+     Laufen in **einem** Bild zwei Weltschritte, ist die Eingabe trotzdem
+     nur **einmal** verschickt worden. Die Kette darf dann auch nur um
+     eins vorrücken; sonst fiele das Loslassen zwischen zwei Schritten
+     heraus, es entstünde keine neue Flanke, und der Zeiger bliebe auf
+     halbem Weg stehen.
+
+     ⚠️ Der erste Anlauf prüfte nur `mische()` — das rückt die Kette
+     ohnehin nie vor, und im Rot-Beweis blieb die Prüfung grün, als ich
+     die Bedingung aus `quittiere()` entfernte. */
+  {
+    const welt = probeWelt();
+    const menue = macheMenue();
+    const flanken = macheFlanken();
+    hand.zeichne(macheAufnahme(), welt, menue, 0);
+    const felder = felderFuer(welt.spieler[0].karten.length, 0);
+    tippe(felder[1].x + 4, felder[1].y + 4);
+    const vorher = hand.kette().length;
+    melde(vorher >= 2, "der Tipp hat wirklich etwas in die Kette gelegt", `${vorher}`);
+
+    hand.mische({ x: 0, y: 0, ausweichen: false }, welt);
+    hand.quittiere();
+    const nachEinem = hand.kette().length;
+    hand.quittiere();
+    melde(nachEinem === vorher - 1, "ein Weltschritt nimmt genau eine Eingabe aus der Kette",
+      `${vorher} → ${nachEinem}`);
+    melde(hand.kette().length === nachEinem,
+      "ein zweiter Weltschritt im selben Bild nimmt keine weitere",
+      `${nachEinem} → ${hand.kette().length}`);
+    /* Aufräumen, damit der Rest nicht auf einer angebrochenen Kette
+       weiterprüft. */
+    welt.phase = "welle";
+    hand.mische({ x: 0, y: 0, ausweichen: false }, welt);
   }
 
   /* Gegenprobe 4: Verlässt die Welt die Kartenwahl, wird die Kette

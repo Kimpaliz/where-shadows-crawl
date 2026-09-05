@@ -294,6 +294,14 @@ export function felderFuer(anzahl, gewaehlt) {
   return felder;
 }
 
+/* In welcher Reihenfolge gemalt wird — und damit, was oben liegt.
+   Steht als eigene Funktion da, weil die Pruefung dieselbe Reihenfolge
+   braucht: Zwei Kopien waeren zwei Wahrheiten, und man klickte
+   irgendwann genau um den Unterschied daneben. */
+export function zeichenReihenfolge(felder) {
+  return [...felder.filter((f) => !f.gross), ...felder.filter((f) => f.gross)];
+}
+
 /* Der kuerzeste Weg im Ring. `bedieneWahl()` rechnet
    `(z + xFlanke + n) % n` — der Zeiger laeuft also im Kreis, und ueber
    den Rand ist es manchmal naeher. */
@@ -376,7 +384,12 @@ export function macheKartenhand(leinwand) {
      auf der linken Bildhaelfte ab (siehe Kopfnotiz). Angehalten wird
      das Ereignis nur, wenn es wirklich eine Karte trifft. */
   addEventListener("pointerdown", (e) => {
-    if (!sicht || (e.pointerType === "mouse" && e.button !== 0)) return;
+    /* Nur die linke Maustaste. Ob ueberhaupt eine Hand daliegt, klaert
+       `getroffen()` — die Frage zweimal zu stellen hiesse, dass eine der
+       beiden Stellen unbemerkt falsch werden kann (im Rot-Beweis genau
+       so aufgefallen: Die eine Wache liess sich entfernen, ohne dass
+       eine Pruefung anschlug). */
+    if (e.pointerType === "mouse" && e.button !== 0) return;
     const feld = getroffen(ortAufLeinwand(e));
     if (!feld) return;
     e.stopPropagation();
@@ -450,7 +463,7 @@ export function macheKartenhand(leinwand) {
 
       /* Erst alle kleinen, dann die grosse — die Reihenfolge **ist** die
          Ueberlappung. */
-      const reihenfolge = [...felder.filter((f) => !f.gross), ...felder.filter((f) => f.gross)];
+      const reihenfolge = zeichenReihenfolge(felder);
       for (const f of reihenfolge) {
         if (f.gross) maleGross(c, karten[f.i], f.x, f.y, jaeger);
         else maleKlein(c, karten[f.i], f.x, f.y);
