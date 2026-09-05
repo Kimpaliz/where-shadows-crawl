@@ -32,6 +32,7 @@
    | `pruefe-schrift.mjs` | jeder Anzeigetext lässt sich malen | ein Zeichen ohne Glyph wird still zu `?` und sieht aus wie ein Fehler im Text |
    | `pruefe-werte.mjs` | Werte-Tabelle, Schadensarten, die eine Schadensrechnung und der Sprung | ein Umlaut in einer Wertkennung, eine vertauschte Rechenreihenfolge (20 % Schaden daneben) oder ein Kritwurf ohne Chance, der den gesäten Strom verschiebt — alles drei ohne eine einzige Fehlermeldung |
    | `pruefe-balance.mjs` | man kann gewinnen, man kann verlieren, es gibt keine Wand | „ich habe eine Waffe stärker gemacht, und jetzt gewinnt man immer" |
+   | `pruefe-protokoll.mjs` | das Auswertungsprotokoll misst wirklich, nicht nur bequem | ein Gegner, der am Wellenende überlebt, wird zum erfundenen Toten; eine Zahl, die sich nicht bewegt, wenn das Gemessene sich bewegt |
 
    **Nicht in der Kette:** `pruefe-freigabe.mjs` — die Freigabeliste
    vor einer Veröffentlichung. Während der Entwicklung ist ein
