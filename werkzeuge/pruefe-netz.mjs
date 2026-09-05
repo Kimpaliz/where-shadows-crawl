@@ -167,11 +167,40 @@ function abdruck(welt) {
    Gewählt wird immer die **erste** Karte und im Laden nichts gekauft —
    beides ohne Zufall, damit die Entscheidung selbst keine neue Quelle
    von Unterschieden ist. */
+/* ⚠️ **Warum hier ein Zähler steht, obwohl die Bedingung reicht.**
+
+   Diese Schleife endet nur, wenn `nimmKarte()` die Wahl auch wirklich
+   abräumt. Nimmt sie die Karte **nicht** an — weil ein Katalogschlüssel
+   fehlt, weil ein Wächter beim Rot-Beweis abgeschaltet ist, weil sich
+   der Kartenkatalog ändert —, sinkt `offeneWahlen` nie, und die
+   Prüfung läuft **endlos bei voller Last**.
+
+   Das ist kein erfundener Fall: Am 05.09.2026 hing genau dieser Aufruf
+   **297 Minuten** mit 17.791 Sekunden Rechenzeit auf einem Kern, weil
+   ein Rot-Beweis den Kartenweg unterbrochen hatte. Niemand hat es
+   gemerkt — ein hängender Prozess meldet nichts.
+
+   `werkzeuge/balance.mjs` hat denselben Zähler seit jeher
+   (`schutz++ < 40`); beim Übernehmen der Schleife ging er verloren.
+
+   **Der Zähler bricht nicht still ab, er macht die Prüfung rot.** Eine
+   Prüfung, die hängt, ist schlimmer als eine, die fehlschlägt: Die eine
+   sieht aus wie Arbeit, die andere wie ein Fehler. */
+const WAHL_SCHUTZ = 40;
+let wahlenHaengengeblieben = 0;
+
 function schalteWeiter(welt) {
   if (welt.phase === "wahl") {
-    for (const s of welt.spieler)
-      while (s.offeneWahlen > 0 && s.karten?.length) nimmKarte(welt, s, 0);
-  } else if (welt.phase === "laden") {
+    for (const s of welt.spieler) {
+      let schutz = 0;
+      while (s.offeneWahlen > 0 && s.karten?.length && schutz++ < WAHL_SCHUTZ) {
+        nimmKarte(welt, s, 0);
+      }
+      if (s.offeneWahlen > 0 && s.karten?.length) wahlenHaengengeblieben++;
+    }
+    return;
+  }
+  if (welt.phase === "laden") {
     if (!welt.spieler[0].angebote) oeffneKraemer(welt);
     naechsteWelle(welt);
   }
@@ -419,5 +448,14 @@ const macheProbe = () => macheLockstep({ eigenerPlatz: 0, plaetze: [0, 1], verzu
   melde(viele.size === 500, "500 frische Verbindungskennungen sind alle verschieden",
     `nur ${viele.size} verschiedene — zwei Gäste teilten sich eine Leitung`);
 }
+
+/* Die Notbremse aus `schalteWeiter()` meldet sich hier — und nur hier.
+   Ein Zähler, den niemand abfragt, ist kein Schutz, sondern eine
+   Ausrede: Die Prüfung liefe dann zwar zu Ende, aber mit einer Welt,
+   die nie über die Kartenwahl hinausgekommen ist, und wäre grün. */
+melde(wahlenHaengengeblieben === 0,
+  "die Kartenwahl räumt sich ab, ohne in die Notbremse zu laufen",
+  `${wahlenHaengengeblieben}-mal blieben nach ${WAHL_SCHUTZ} Versuchen`
+  + " offene Wahlen stehen — vorher hing dieser Aufruf hier endlos");
 
 ende();

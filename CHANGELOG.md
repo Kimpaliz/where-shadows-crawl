@@ -3,6 +3,58 @@
 Oben das Neueste. Jeder Eintrag sagt **was**, **warum** und **womit
 gemessen** — nicht nur, dass etwas anders ist.
 
+## 0.8.1 — Eine Prüfung, die hängen konnte (05.09.2026)
+
+Janniks Meldung: *„die laufende aufgabe läuft seid 300 min??????"*
+
+Er hatte recht, und die Ursache war schlimmer als eine träge Anzeige:
+Ein Aufruf von `werkzeuge/pruefe-netz.mjs` lief seit 09:42 Uhr —
+**297 Minuten mit 17.791 Sekunden Rechenzeit**, also fast fünf Stunden
+Volllast auf einem Kern.
+
+### Die Ursache
+
+```js
+while (s.offeneWahlen > 0 && s.karten?.length) nimmKarte(welt, s, 0);
+```
+
+Die Schleife endet nur, wenn `nimmKarte()` die Wahl auch abräumt. Beim
+Rot-Beweis eines anderen Wächters tat sie das nicht — und dann läuft
+sie für immer. Dieselbe Schleife steht in `werkzeuge/balance.mjs` seit
+jeher mit `schutz++ < 40`; **beim Übernehmen ging der Zähler verloren.**
+
+### Warum es niemand gemerkt hat
+
+Ein hängender Prozess meldet nichts. Die Kette blieb grün, weil sie ihre
+Läufe einzeln startet und dieser Aufruf danebenlief. In der
+Aufgabenliste stand nur „vor 5 h gestartet" — was wie ein
+abgeschlossener Auftrag aussieht. Der Agent, der die Schleife gebaut
+hat, hatte den Fall sogar gemeldet („mit abgeschaltetem Wächter lief
+eine Schleife endlos statt rot zu werden") und ihn als danebengegangenen
+Rot-Beweis abgehakt, statt ihn zu beheben.
+
+### Behoben
+
+Zähler `WAHL_SCHUTZ = 40`, und er **meldet**, statt still abzubrechen —
+ein Zähler, den niemand abfragt, ließe die Prüfung mit einer Welt
+weiterlaufen, die nie über die Kartenwahl hinausgekommen ist, und sie
+wäre grün.
+
+**Der Beleg ist die Dauer, nicht die Meldung:** Mit `WAHL_SCHUTZ = 0`
+gestellt — genau der Zustand, der vorher endlos lief — meldet die
+Prüfung jetzt „6483-mal blieben offene Wahlen stehen", Rückgabewert 1,
+in **unter einer Sekunde**. `pruefe-netz.mjs` 38 → **39 Prüfungen**.
+
+### Gegengeprüft
+
+Alle 13 `while`-Schleifen in `spiel/` und `werkzeuge/` durchgesehen.
+Zehn enden garantiert, weil sich ihre Laufvariable im Rumpf ändert
+(Index wächst, Wissen sinkt, Stapel schrumpft); zwei tragen bereits eine
+Obergrenze. Diese eine war die einzige, deren Ende an einem
+Rückgabewert hing.
+
+Neu im Fehlerbuch als **E3**.
+
 ## 0.8.0 — Janniks große Liste, gebaut (05.09.2026)
 
 Fünf Zweige, parallel gebaut, hier zusammengeführt. Die ausführlichen

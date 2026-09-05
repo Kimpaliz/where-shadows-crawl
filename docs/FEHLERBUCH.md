@@ -238,6 +238,43 @@ eine Konstante wiederholt.
 
 ---
 
+### E3 · Eine Prüfung, die hängt statt rot zu werden
+
+`werkzeuge/pruefe-netz.mjs` räumte die Kartenwahl mit
+
+```js
+while (s.offeneWahlen > 0 && s.karten?.length) nimmKarte(welt, s, 0);
+```
+
+ab — abgeschrieben aus `werkzeuge/balance.mjs`, wo dieselbe Schleife
+seit jeher `schutz++ < 40` trägt. **Der Zähler ging beim Übernehmen
+verloren.**
+
+Die Schleife endet nur, wenn `nimmKarte()` die Wahl auch wirklich
+abräumt. Beim Rot-Beweis eines anderen Wächters tat sie das nicht — und
+der Prozess lief **297 Minuten mit 17.791 Sekunden Rechenzeit** auf
+einem Kern weiter. Niemand merkte es: Ein hängender Prozess meldet
+nichts, die Kette war grün (sie startet ihre Läufe einzeln), und in der
+Aufgabenliste stand nur „vor 5 h gestartet". Aufgefallen ist es dem
+Auftraggeber, weil die Anzeige eine Laufzeit von 300 Minuten zeigte.
+
+Der Agent, der die Schleife gebaut hat, hatte den Fall sogar gemeldet —
+„mit abgeschaltetem Wächter lief eine Schleife im Prüfstand endlos statt
+rot zu werden" — und ihn als danebengegangenen Rot-Beweis abgehakt,
+statt ihn zu beheben und den Prozess zu beenden.
+
+**Woran ich es früher merke:** Jede `while`-Schleife, deren Ende an
+einem **Rückgabewert** oder an fremdem Zustand hängt statt an einer
+Laufvariablen, die sich im Rumpf garantiert ändert, bekommt einen
+Zähler — und der Zähler **meldet**, statt still abzubrechen. Eine
+Prüfung, die hängt, ist schlimmer als eine, die fehlschlägt: Die eine
+sieht aus wie Arbeit, die andere wie ein Fehler.
+
+Der Beleg ist die Dauer, nicht die Meldung: Derselbe Zustand, der vorher
+297 Minuten lief, wird jetzt in **unter einer Sekunde** rot.
+
+---
+
 ## F · Zu viel Kontext in einer Sitzung
 
 ### F1 · Zwei Besitzer für dieselbe Datei *(Startkapital)*
