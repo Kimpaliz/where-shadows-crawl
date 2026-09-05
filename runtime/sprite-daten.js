@@ -30,6 +30,18 @@
    Breite, und es fiel niemandem auf. Ein Bildpunktraster steht da oder
    es steht nicht da.
 
+   ── Bildfolgen: `bilder` neben `bild` ──────────────────────────────
+
+   Ein Sprite **kann** zusätzlich `bilder: [muster1, muster2, ...]`
+   tragen — mehrere gleich große Raster für eine Animation. `bild`
+   bleibt Pflicht und ist immer `bilder[0]`, damit jeder bestehende
+   Aufruf, der nur `sprite.bild` liest (`runtime/sprites.js`,
+   `werkzeuge/pruefe-sprites.mjs`), unverändert weiterläuft — er sieht
+   dann einfach das erste Bild und weiß nichts von den übrigen. Bisher
+   nutzt das nur `DINGE.truheAuf` (zwei Bilder, ein Lichtpuls). Wie ein
+   künftiger Bild-Agent daraus wirklich eine Animation macht, steht in
+   `docs/rueckmeldung/sprites-und-bosse.md`.
+
    ── Arbeitet zusammen mit ───────────────────────────────────────────
 
    `runtime/sprites.js` (dreht und rendert), `runtime/palette.js`
@@ -314,5 +326,139 @@ export const GESCHOSSE = {
   speichel: {
     zeichen: { g: "seuche", G: "seucheHell" },
     bild: [".g.", "gGg", ".g."]
+  }
+};
+
+/* Trefferzeichen — ein eigenes Bild je Schadensart, damit man sieht,
+   *was* gerade trifft, statt nur *dass* etwas trifft (Janniks
+   Kernbeschwerde: „optisch klar erkennbare Angriffe"). Fünf Arten sind
+   verbindlich: schnitt, wucht, feuer, frost, fluch — die Schlüssel hier
+   sind bewusst genau diese fünf Wörter, damit ein künftiger Aufruf
+   `TREFFER[schadensart]` ohne Übersetzungstabelle auskommt.
+
+   Nicht gedreht (wie `DINGE`): ein Treffer hat keine Blickrichtung, nur
+   einen Ort. Deshalb dürfen sie auch punktsymmetrisch sein — anders als
+   bei `GEGNER_BILDER` ist das hier kein Fehler.
+
+   `werkzeuge/pruefe-sprites.mjs` prüft zusätzlich den Kontrast gegen
+   den Bannkreis-Boden: Der erste Entwurf von `wucht` malte in
+   Steintönen (`steinHell`/`stein`/`steinDunkel`) — Farben, die für den
+   Boden selbst gedacht sind und darauf fast unsichtbar waren (heller
+   Bodenton 52,8 von 255, hellste Wucht-Farbe nur 74,2 — Abstand 21,4).
+   Jetzt Eisentöne (Abstand 83,2). Gemessen mit
+   `werkzeuge/pruefe-sprites.mjs`, Abschnitt „Trefferzeichen lesbar". */
+export const TREFFER = {
+  /* Schnitt: eine dicke helle Diagonale mit dunklem Rand, Blutstropfen
+     an beiden Enden — liest sich als Klingenspur, nicht als Fleck. */
+  schnitt: {
+    zeichen: { k: "kontur", e: "eisenHell", r: "blutHell" },
+    bild: [
+      "..r......",
+      "rek......",
+      ".kek.....",
+      "..kek....",
+      "...kek...",
+      "....kek..",
+      ".....kek.",
+      "......ker",
+      "......r.."
+    ]
+  },
+
+  /* Wucht: ein kompakter Kreuzschlag mit hellem Kern und Schutt in den
+     Ecken — bewusst ein dichter Block statt eines offenen Sterns, damit
+     er sich von `frost` klar unterscheidet. */
+  wucht: {
+    zeichen: { c: "eisenHell", m: "eisen", o: "eisenDunkel" },
+    bild: [
+      "....o....",
+      ".o.mmm.o.",
+      "...mmm...",
+      ".mmcccmm.",
+      "ommcccmmo",
+      ".mmcccmm.",
+      "...mmm...",
+      ".o.mmm.o.",
+      "....o...."
+    ]
+  },
+
+  /* Feuer: eine Flammenzunge, unten breit, oben spitz — wie die
+     Feuerschale, nur klein und kurzlebig. Zwei Funken lösen sich ab.
+     Zweites Bild (`bilder[1]`) ist dieselbe Flamme, schon kleiner und
+     ohne den weißglühenden Kern — das Verglimmen. */
+  feuer: {
+    zeichen: { g: "glut", f: "flamme", G: "flammeHell" },
+    bild: [
+      ".g..G....",
+      "...fGf.g.",
+      "...fGf...",
+      "..gfGfg..",
+      "..gfGfg..",
+      ".ggfGfgg.",
+      ".ggfGfgg.",
+      ".ggfGfgg.",
+      "..gfGfg.."
+    ],
+    bilder: [
+      [
+        ".g..G....",
+        "...fGf.g.",
+        "...fGf...",
+        "..gfGfg..",
+        "..gfGfg..",
+        ".ggfGfgg.",
+        ".ggfGfgg.",
+        ".ggfGfgg.",
+        "..gfGfg.."
+      ],
+      [
+        ".........",
+        ".........",
+        "....f....",
+        "...gfg...",
+        "...gfg...",
+        "..ggfgg..",
+        "..ggfgg..",
+        "...gfg...",
+        "...gfg..."
+      ]
+    ]
+  },
+
+  /* Frost: ein dünner Achtstrahl-Stern mit kleinen Ästen an den
+     Kardinalspitzen — ein Kristall, keine Explosion. Dünn und weit
+     ausgreifend statt dick und kompakt (Gegenteil von `wucht`). */
+  frost: {
+    zeichen: { e: "frost", h: "frostHell" },
+    bild: [
+      "h...h...h",
+      ".e.heh.e.",
+      "..e.e.e..",
+      ".h.eee.h.",
+      "heeeheeeh",
+      ".h.eee.h.",
+      "..e.e.e..",
+      ".e.heh.e.",
+      "h...h...h"
+    ]
+  },
+
+  /* Fluch: ein Ring mit vier abstehenden Widerhaken und einem
+     Augenschlitz in der Mitte — die einzige Trefferform mit einem
+     Loch in der Mitte, das ist ihr Erkennungszeichen. */
+  fluch: {
+    zeichen: { b: "bann", B: "bannHell", k: "kontur" },
+    bild: [
+      ".b.....b.",
+      "..bbbbb..",
+      ".b.....b.",
+      ".b..B..b.",
+      ".b..k..b.",
+      ".b..B..b.",
+      ".b.....b.",
+      "..bbbbb..",
+      ".b.....b."
+    ]
   }
 };
