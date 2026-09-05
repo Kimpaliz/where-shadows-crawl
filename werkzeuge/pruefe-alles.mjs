@@ -34,6 +34,7 @@
    | `pruefe-balance.mjs` | man kann gewinnen, man kann verlieren, es gibt keine Wand | „ich habe eine Waffe stärker gemacht, und jetzt gewinnt man immer" |
    | `pruefe-protokoll.mjs` | das Auswertungsprotokoll misst wirklich, nicht nur bequem | ein Gegner, der am Wellenende überlebt, wird zum erfundenen Toten; eine Zahl, die sich nicht bewegt, wenn das Gemessene sich bewegt |
    | `pruefe-netz.mjs` | jeder Pfad relativ; gleiche Eingaben ergeben dieselbe Welt, verschobene eine andere | der absolute Pfad, der die Seite im Netz weiß lässt — und der Gleichlauf, der erst nach Minuten sichtbar auseinanderläuft |
+   | `pruefe-truhen.mjs` | Truhenfall hat einen eigenen Zufallsstrom, „truhen" endet immer von selbst, ein voller Gürtel schluckt keinen Fund, Glück wirkt auf den Inhalt | eine Truhen-Ziehung, die `welt.zufall` verschiebt und jeden späteren Wellenplan ändert — oder eine Phase, in der ein echter Lauf hängen bleibt |
 
    **Nicht in der Kette:** `pruefe-freigabe.mjs` — die Freigabeliste
    vor einer Veröffentlichung. Während der Entwicklung ist ein
