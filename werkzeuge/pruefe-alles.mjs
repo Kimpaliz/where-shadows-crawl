@@ -33,6 +33,7 @@
    | `pruefe-werte.mjs` | Werte-Tabelle, Schadensarten, die eine Schadensrechnung und der Sprung | ein Umlaut in einer Wertkennung, eine vertauschte Rechenreihenfolge (20 % Schaden daneben) oder ein Kritwurf ohne Chance, der den gesäten Strom verschiebt — alles drei ohne eine einzige Fehlermeldung |
    | `pruefe-balance.mjs` | man kann gewinnen, man kann verlieren, es gibt keine Wand | „ich habe eine Waffe stärker gemacht, und jetzt gewinnt man immer" |
    | `pruefe-protokoll.mjs` | das Auswertungsprotokoll misst wirklich, nicht nur bequem | ein Gegner, der am Wellenende überlebt, wird zum erfundenen Toten; eine Zahl, die sich nicht bewegt, wenn das Gemessene sich bewegt |
+   | `pruefe-netz.mjs` | jeder Pfad relativ; gleiche Eingaben ergeben dieselbe Welt, verschobene eine andere | der absolute Pfad, der die Seite im Netz weiß lässt — und der Gleichlauf, der erst nach Minuten sichtbar auseinanderläuft |
 
    **Nicht in der Kette:** `pruefe-freigabe.mjs` — die Freigabeliste
    vor einer Veröffentlichung. Während der Entwicklung ist ein
