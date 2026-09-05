@@ -67,7 +67,13 @@ const SAMMELN_LADE = 1.0;
 const SAMMELN_LADE_STREUUNG = [0.25, 1.0];
 const SAMMELN_STURM = 0.4;
 const SAMMELN_LADE_TEMPO = 0.06;
-const SAMMELN_STURM_TEMPO = 2.5;
+/* Exportiert, weil `werkzeuge/pruefe-gegner.mjs` damit nachrechnet, ob
+   der Ausbruch den Spieler überhaupt überholen kann — ein Ladevorgang,
+   dem man spazierend davonläuft, ist eine Ankündigung ohne Drohung.
+   Die Zahl gehört diesem Verhalten; sie ein zweites Mal in die Prüfung
+   zu tippen wäre genau die Doppelung, an der die Verhaltensliste in
+   `pruefe-katalog.mjs` schon einmal veraltet ist. */
+export const SAMMELN_STURM_TEMPO = 2.5;
 
 /* Wie oft ein sturer Gegner seine Richtung neu nach dem Spieler
    ausrichtet. Dazwischen hält er sie, auch wenn der Spieler längst

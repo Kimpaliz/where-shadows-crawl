@@ -3,6 +3,111 @@
 Oben das Neueste. Jeder Eintrag sagt **was**, **warum** und **womit
 gemessen** — nicht nur, dass etwas anders ist.
 
+## 0.8.2 — Drei Verhalten hatten keinen Benutzer, und eine Prüfung log (05.09.2026)
+
+Der Monster-Agent hatte sechs Gegnerverhalten gebaut und geprüft. Drei
+davon — `kreist`, `sammelt`, `stur` — konnte **kein Gegner benutzen**,
+weil `werkzeuge/pruefe-katalog.mjs` eine abgeschriebene Liste der
+damaligen drei führte:
+
+```js
+melde(["laeuft", "schwankt", "speit"].includes(g.verhalten), …);
+```
+
+Die Liste hat still gearbeitet, solange es nur drei gab. In dem Moment,
+als der Katalog drei weitere bekam, war sie kein Wächter mehr, sondern
+ein Riegel. Gefragt wird jetzt der Katalog selbst (`VERHALTEN_IDS`).
+
+### Zwei Verhalten haben Benutzer bekommen
+
+| Gegner | vorher | jetzt | warum dieser |
+| --- | --- | --- | --- |
+| Hetzer | `laeuft` | **`stur`** | peilt nur alle 1,5 s neu — die Frage stellt sich nur bei einem, der den Spieler überholt |
+| Wächter | `laeuft` | **`sammelt`** | lädt und bricht dann aus; die Konstanten hießen schon immer „wie lange ein **Wächter** lädt" |
+
+Beides gegen das Grundtempo 78 gemessen, nicht geschätzt: Der Hetzer
+überholt ab **Welle 10** (Deckel 117,8), der Wächter im Ausbruch ab
+**Welle 15** (Deckel 104,5). Der Knochenritter käme mit 64,6 nie über
+das Spielertempo — `stur` auf ihm wäre Zierde gewesen. Genau das prüft
+jetzt `pruefe-gegner.mjs` Abschnitt 6, damit das Verhalten nicht später
+auf einen Schlurfer rutscht.
+
+**`kreist` bleibt ohne Benutzer, mit Grund im Code:** `spiel/kampf.mjs`
+lässt nur Arten mit `verhalten: "speit"` schießen, und ein Gegner, der
+per Bauart Abstand hält, tut ohne Fernangriff gar nichts. Die Ausnahme
+steht benannt in `pruefe-katalog.mjs` und ist **zweiseitig** geprüft:
+Sie wird rot, sobald sie überflüssig ist. Aufgehoben wird sie, wenn die
+Schussbedingung von der Verhaltenskennung auf die vorhandenen Felder
+(`abstand`/`abklingzeit`/`geschosstempo`) umgestellt ist.
+
+### Der eigentliche Fund: `pruefe-balance.mjs` hat nicht gemessen, was sie behauptet
+
+Sie lief auf **10, 6 und 6** Läufen und schrieb dazu „allein endet jeder
+Lauf", abgesichert durch `ABBRUCH_SPERRE[1] = 0`. Über **120** Läufe
+gemessen war zur selben Zeit jeder fünfte Alleinlauf ohne Ende:
+
+| | 10/6/6 Läufe | 120 Läufe je Reihe |
+| --- | ---: | ---: |
+| 1 Spieler ohne Ende | 0 von 10 | **26 von 120 (21,7 %)** |
+| 2 Spieler ohne Ende | 3 von 6 | 39 von 120 (32,5 %) |
+| 4 Spieler ohne Ende | 3 von 6 | 22 von 120 (18,3 %) |
+
+Bewiesen hat die Schwäche diese Änderung selbst: `stur` auf dem Hetzer
+senkte die Abbrüche über 120 Läufe von **26 auf 16** — und **machte die
+Prüfung rot** (0 → 1 bei zehn Saaten). Ein Wächter, dessen Urteil bei
+einer echten Verbesserung umkippt, ist ein Würfel mit Meinung.
+
+Jetzt **40 Läufe je Reihe** (rund 60 s statt 11 s). Der Satz „allein
+endet jeder Lauf" ist ersatzlos weg — er war nie wahr, nur nie
+widerlegt. An seine Stelle tritt die Eigenschaft, die er meinte: allein
+darf es nicht *seltener* ohne Ende ausgehen als zu mehreren.
+
+### Und was die größere Stichprobe sonst zutage gefördert hat
+
+Die feste Wandgrenze von 0,78 („keine Wand in einer einzelnen Welle")
+war bei sechs Läufen nicht zu halten. Gemessen über 40 Läufe:
+
+| Spieler | schlimmste Welle | Anteil | davon auf Bosswellen |
+| ---: | ---: | ---: | ---: |
+| 1 | 6 | 58,8 % | 26,5 % |
+| 2 | 8 | 40,0 % | 43,3 % |
+| 4 | 8 | **78,1 %** | **84,4 %** |
+
+Zwei verschiedene Befunde, nicht einer: **Zu viert stirbt man fast nur
+noch auf Bosswellen** — Welle 8 ist die erste mit zwei Hauptleuten und
+trägt bei vier Spielern **19.270** Lebenspunkte gegen 9.157 in Welle 7,
+eine Verdopplung in einer Welle. **Allein** dagegen steht die Wand auf
+einer gewöhnlichen Welle. Eine feste Grenze müsste eines von beidem für
+falsch erklären; sie ist deshalb dieselbe Sperrklinke wie
+`ABBRUCH_SPERRE` — gemessene Wirklichkeit, die sinken darf und nicht
+steigen. Ob eine Bosswelle eine Wand sein *soll*, ist Janniks
+Entscheidung (#52), nicht die einer Prüfung, die sie wegdefiniert.
+
+**Ein Gegenversuch ist gemessen und verworfen:** Den Knochenritter von
+Welle 8 auf 9 zu schieben — er betritt den Topf genau in der zweiten
+Bosswelle — machte die Wand **schlimmer** statt besser (78,1 → 82,9 %),
+weil dann mehr Läufe Welle 8 überhaupt erreichen. Zurückgenommen.
+
+### Rot-Beweise
+
+| Fall | Meldung |
+| --- | --- |
+| die drei Verhalten ohne Benutzer | 3 Fehler, „Verhalten \"kreist\" hat einen Benutzer · 0 Gegnerarten" |
+| `kreist` einem Gegner gegeben | „Verhalten \"kreist\" ist benutzt — die Ausnahme kann weg" |
+| `stur` auf den Knochenritter | „sitzt auf einem Gegner, der den Spieler irgendwann überholt · 64,6 gegen 78" |
+| Sperrklinke `ABBRUCH_SPERRE` | vor der Vergrößerung rot bei 1 von 10 |
+
+### Ein eigener Fehler
+
+`git checkout -- spiel/katalog/gegner.mjs` nach einem Rot-Beweis hat
+**meine eigenen, noch nicht committeten Zuweisungen mitgenommen** —
+beide Verhalten waren wieder `laeuft`, die Kopfnotiz wieder die alte.
+Gemerkt am Prüflauf („428 Prüfungen, 2 Fehler", wo eben noch 0 standen).
+Fehlerbuch **C6**, derselbe Fall wie im Age-of-Beast-Wiki: Ein
+Rot-Beweis läuft auf ungespeicherter Arbeit, und der Befehl holt den
+Stand aus dem Index, wo diese Arbeit nie war. Seitdem: erst committen,
+dann Rot-Beweise.
+
 ## 0.8.1 — Eine Prüfung, die hängen konnte (05.09.2026)
 
 Janniks Meldung: *„die laufende aufgabe läuft seid 300 min??????"*

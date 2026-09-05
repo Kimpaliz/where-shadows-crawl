@@ -21,6 +21,7 @@
 import { macheMelder } from "./helfer.mjs";
 import { WAFFEN, MERKMALE, STUFEN_FAKTOR, STUFEN_PREIS, preisDerWaffe } from "../spiel/katalog/waffen.mjs";
 import { GEGNER, lebenInWelle, schadenInWelle } from "../spiel/katalog/gegner.mjs";
+import { VERHALTEN_IDS } from "../spiel/gegner-verhalten.mjs";
 import { GEGENSTAENDE, SELTEN_AB_WELLE } from "../spiel/katalog/gegenstaende.mjs";
 import { baueWelle, budgetDerWelle, dauerDerWelle, artenInWelle, WELLEN_JE_LAUF } from "../spiel/katalog/wellen.mjs";
 import { WERTE, WERT_TEXT } from "../spiel/werte.mjs";
@@ -91,7 +92,13 @@ melde(eindeutig(GEGNER), "Gegnerkennungen sind eindeutig");
 for (const g of GEGNER) {
   melde(g.leben > 0 && g.tempo > 0 && g.schaden > 0 && g.radius > 0, `${g.id}: Zahlen sind positiv`);
   melde(g.gold > 0 && g.wissen > 0, `${g.id}: lässt etwas fallen`);
-  melde(["laeuft", "schwankt", "speit"].includes(g.verhalten), `${g.id}: bekanntes Verhalten`, g.verhalten);
+  /* Bis zum 05.09.2026 stand hier eine **abgeschriebene** Liste der drei
+     damaligen Verhalten. Sie hat still gearbeitet, solange es nur drei
+     gab — und in dem Moment, als `spiel/gegner-verhalten.mjs` drei
+     weitere bekam, war sie kein Wächter mehr, sondern ein Riegel: Die
+     neuen Verhalten waren gebaut und geprüft und ließen sich trotzdem
+     keinem Gegner geben. Gefragt wird jetzt der Katalog selbst. */
+  melde(VERHALTEN_IDS.includes(g.verhalten), `${g.id}: bekanntes Verhalten`, g.verhalten);
   melde(g.wucht >= 0, `${g.id}: Wucht ist nicht negativ`);
   if (g.verhalten === "speit") {
     melde(g.abstand > 0 && g.abklingzeit > 0 && g.geschosstempo > 0, `${g.id}: Speier ist vollständig`);
@@ -103,6 +110,49 @@ for (const g of GEGNER) {
   if (!g.elite) melde(g.kosten > 0, `${g.id}: normaler Gegner kostet Budget`);
 }
 melde(GEGNER.some((g) => g.elite), "es gibt mindestens einen Elitegegner");
+
+/* Die Gegenrichtung, und sie ist die eigentlich neue: Ein Verhalten,
+   das niemand benutzt, ist gebauter und geprüfter Code, den kein
+   Spieler je zu sehen bekommt. Genau der Zustand bestand am 05.09.2026
+   für `kreist`, `sammelt` und `stur` — die Fachprüfung war grün, weil
+   sie das Verhalten selbst prüft und nicht seinen Gebrauch.
+
+   Dasselbe Muster wie oben bei den Merkmalen: Ein Katalogeintrag ohne
+   Benutzer ist kein Fehler im Code, sondern eine Lücke im Spiel.
+
+   ⚠️ **Die Ausnahmeliste ist bewusst zweiseitig geprüft.** Sie darf
+   nicht zur stillen Ablage werden, in der ein Verhalten für immer
+   liegen bleibt: Wird ein aufgeführtes Verhalten benutzt, wird die
+   Prüfung rot, bis es aus der Liste verschwindet. Das ist derselbe
+   Gedanke wie bei einer Sperrklinke — eine Ausnahme darf schrumpfen,
+   nie wachsen, ohne dass jemand sie begründet. */
+const VERHALTEN_OHNE_BENUTZER = {
+  /* Gemessen am 05.09.2026: `spiel/kampf.mjs` lässt **nur** Arten mit
+     `verhalten === "speit"` schießen (`feuereGegner`, eine Zeile). Ein
+     kreisender Gegner hält per Bauart Abstand und tut deshalb ohne
+     Fernangriff **gar nichts** — er wäre kein Gegner, sondern ein
+     Karussell. Der Aaskrähe steht `kreist` zu (sie fliegt schon heute
+     Bögen), aber erst mit einem Fernangriff.
+
+     Was es aufhebt: die Schussbedingung in `spiel/kampf.mjs` von der
+     Verhaltenskennung auf die vorhandenen Felder umstellen
+     (`abstand`/`abklingzeit`/`geschosstempo`). Nicht in dieser Arbeit
+     gemacht, weil `spiel/kampf.mjs` gleichzeitig einem anderen Agenten
+     gehört (Zweig `bild/angriffe-und-anzeige`) — zwei Schreiber in
+     einer Datei ist genau der Fall, der am selben Tag schon einmal
+     1.215 Zeilen auf den falschen Zweig gelegt hat. */
+  kreist: "braucht einen Fernangriff; spiel/kampf.mjs lässt nur \"speit\" schießen"
+};
+
+for (const id of VERHALTEN_IDS) {
+  const n = GEGNER.filter((g) => g.verhalten === id).length;
+  const grund = VERHALTEN_OHNE_BENUTZER[id];
+  if (grund) {
+    melde(n === 0, `Verhalten "${id}" ist benutzt — die Ausnahme kann weg`, grund);
+    continue;
+  }
+  melde(n >= 1, `Verhalten "${id}" hat einen Benutzer`, `${n} Gegnerarten`);
+}
 
 /* Teurere Gegner müssen auch mehr Gold geben, sonst lohnt sich das
    Erschlagen des Schwierigen nie. */

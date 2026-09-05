@@ -30,14 +30,19 @@
                das ist der planmäßige Gegenzug zu einer hohen
                `schnitt`-Resistenz, nicht ein zweiter Zufall.
 
-   ⚠️ **`verhalten` ist nicht frei wählbar.** Sechs Kennungen sind in
-   `spiel/gegner-verhalten.mjs` fertig gebaut (`laeuft`, `schwankt`,
-   `speit`, `kreist`, `sammelt`, `stur`), aber `werkzeuge/pruefe-katalog.mjs`
-   — außerhalb dieser Aufgabe, nicht anzufassen — lässt bisher nur die
-   ersten drei durch: `["laeuft", "schwankt", "speit"].includes(g.verhalten)`.
-   `kreist`, `sammelt` und `stur` sind fertig und geprüft
-   (`werkzeuge/pruefe-gegner.mjs`), aber **im Katalog noch ohne
-   Benutzer** — das ist eine offene Übergabe, keine vergessene Zeile.
+   ⚠️ **`verhalten` ist nicht frei wählbar**, aber die Liste steht
+   nicht mehr hier: `werkzeuge/pruefe-katalog.mjs` fragt seit dem
+   05.09.2026 `VERHALTEN_IDS` aus `spiel/gegner-verhalten.mjs` selbst.
+   Vorher stand dort eine abgeschriebene Liste der damaligen drei — und
+   die machte `kreist`, `sammelt` und `stur` unbenutzbar, obwohl sie
+   fertig gebaut und geprüft waren.
+
+   Fünf der sechs haben jetzt einen Benutzer. **`kreist` fehlt noch**,
+   und zwar aus einem Grund im Code, nicht aus Vergesslichkeit:
+   `spiel/kampf.mjs` lässt nur Arten mit `verhalten: "speit"` schießen,
+   und ein Gegner, der auf Abstand kreist, tut ohne Fernangriff gar
+   nichts. Die Ausnahme steht benannt in `pruefe-katalog.mjs` und wird
+   dort rot, sobald sie überflüssig wird.
 
    ── Arbeitet zusammen mit ───────────────────────────────────────────
 
@@ -63,10 +68,25 @@ export const GEGNER = [
     text: "Kommt nie allein."
   },
   {
+    /* `stur` gehört genau hierher und nirgendwo sonst: Die Frage des
+       Verhaltens („liest du eine Linie voraus, die sich anderthalb
+       Sekunden nicht mehr nach dir richtet?") stellt sich nur bei einem
+       Gegner, der den Spieler **überholt**. Bei einem langsameren wäre
+       sie sinnlos — man läuft ihm ohnehin davon, ob er nun peilt oder
+       nicht. Gemessen gegen das Grundtempo 78: Der Hetzer überholt ab
+       Welle 10 und erreicht am Tempodeckel 117,8; der Knochenritter
+       bliebe mit 64,6 für immer darunter. `werkzeuge/pruefe-gegner.mjs`
+       hält genau das fest, damit `stur` nicht später auf einen
+       Schlurfer rutscht.
+
+       Damit bekommt der Hetzer zum ersten Mal einen Gegenzug. Bis heute
+       war „Schneller als du. Immer." eine Feststellung ohne Antwort;
+       jetzt ist sie eine, die man mit einem Schritt zur Seite
+       beantwortet — und mit einem Schritt zu spät bezahlt. */
     id: "hetzer", name: "Hetzer",
     leben: 14, tempo: 62, schaden: 6, radius: 4, wucht: 1.2,
-    gold: 9, wissen: 2, kosten: 3, verhalten: "laeuft",
-    text: "Schneller als du. Immer."
+    gold: 9, wissen: 2, kosten: 3, verhalten: "stur",
+    text: "Schneller als du. Aber er zielt nur alle paar Schritte neu."
   },
   {
     id: "aaskraehe", name: "Aaskraehe",
@@ -82,13 +102,26 @@ export const GEGNER = [
     text: "Bleibt weg und spuckt. Man muss zu ihm."
   },
   {
+    /* `sammelt` war von Anfang an für ihn gedacht — die Konstanten in
+       `spiel/gegner-verhalten.mjs` heißen bis heute „wie lange ein
+       Wächter lädt". Ein Standbild, das sich sammelt und dann losbricht,
+       ist derselbe Gegner mit einer zweiten Zeitachse: Sein Tempo von 22
+       machte ihn bisher zur reinen Wegsperre, an der man vorbeiläuft.
+
+       Gemessen, gegen das Grundtempo des Spielers von 78: Der Ausbruch
+       (`SAMMELN_STURM_TEMPO` 2,5) erreicht in Welle 1 erst 55 — da ist
+       er noch einholbar —, überholt den Spieler **ab Welle 15** und
+       kommt am Tempodeckel auf 104,5. Der Wächter wird also nicht
+       sofort gefährlich, sondern genau dort, wo er es bisher nicht mehr
+       war. Wer das Laden übersieht, wird ab dann von dem Gegner
+       getroffen, dem er eben noch spazieren auswich. */
     id: "waechter", name: "Waechter",
     leben: 70, tempo: 22, schaden: 10, radius: 8, wucht: 0.35,
-    gold: 23, wissen: 4, kosten: 8, verhalten: "laeuft",
+    gold: 23, wissen: 4, kosten: 8, verhalten: "sammelt",
     /* Steinernes Standbild, kein Fleisch: Blunte Schläge verpuffen an
        ihm, Frost sprengt ihm dagegen die Fugen. */
     widerstaende: { wucht: 35, frost: -15 },
-    text: "Steht im Weg und bleibt stehen."
+    text: "Steht. Sammelt sich. Und dann steht er plötzlich vor dir."
   },
   {
     id: "knochenritter", name: "Knochenritter",

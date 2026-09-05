@@ -22,13 +22,19 @@
 
    `spiel/gegner-verhalten.mjs` nennt sechs Verhalten. Diese Prüfung
    bestätigt, dass alle sechs **funktionieren** — nicht, dass alle
-   sechs **im Katalog stehen**. Nur drei stehen darin (`laeuft`,
-   `schwankt`, `speit`): `werkzeuge/pruefe-katalog.mjs` — außerhalb
-   dieser Aufgabe, nicht verändert — lässt bislang nur diese drei als
-   `g.verhalten` durch. `kreist`, `sammelt` und `stur` sind fertig,
-   geprüft und tot: Kein Katalogeintrag nutzt sie. Das ist eine offene
-   Übergabe (siehe `docs/rueckmeldung/monster.md`), keine Lücke in
-   dieser Prüfung.
+   sechs **im Katalog stehen**. Das ist Sache von
+   `werkzeuge/pruefe-katalog.mjs`, und zwar an genau einer Stelle: Wer
+   die Liste der unbenutzten Verhalten hier ein zweites Mal führt,
+   bekommt eine, die veraltet, ohne rot zu werden.
+
+   **Stand 05.09.2026:** Von den sechs hat einer keinen Benutzer —
+   `kreist`, weil `spiel/kampf.mjs` nur Arten mit `verhalten: "speit"`
+   schießen lässt und ein kreisender Gegner ohne Fernangriff nichts
+   tut. Das steht als benannte Ausnahme mit ihrem Aufhebungsgrund in
+   `pruefe-katalog.mjs` und wird dort rot, sobald sie überflüssig ist.
+
+   Was diese Prüfung dafür kann und `pruefe-katalog.mjs` nicht: ob die
+   **Paarung** aus Gegner und Verhalten überhaupt trägt (Abschnitt 6).
 
    ── Arbeitet zusammen mit ───────────────────────────────────────────
 
@@ -42,16 +48,16 @@
 
 import { macheMelder } from "./helfer.mjs";
 import {
-  GEGNER, GEGNER_NACH_ID, lebenInWelle, schadenInWelle
+  GEGNER, GEGNER_NACH_ID, lebenInWelle, schadenInWelle, tempoInWelle
 } from "../spiel/katalog/gegner.mjs";
 import {
-  VERHALTEN, VERHALTEN_IDS, VERHALTEN_NACH_ID, richteVerhalten
+  VERHALTEN, VERHALTEN_IDS, VERHALTEN_NACH_ID, richteVerhalten, SAMMELN_STURM_TEMPO
 } from "../spiel/gegner-verhalten.mjs";
 import {
   baueWelle, istElitewelle, elitewellenIndex, dauerDerWelle, WELLEN_JE_LAUF
 } from "../spiel/katalog/wellen.mjs";
 import { macheZufall } from "../spiel/zufall.mjs";
-import { macheWerte, widerstandAus, berechneSchaden } from "../spiel/werte.mjs";
+import { macheWerte, widerstandAus, berechneSchaden, GRUND_TEMPO } from "../spiel/werte.mjs";
 import { SCHADENSARTEN } from "../spiel/schadensarten.mjs";
 import { GEGNER_BILDER } from "../runtime/sprite-daten.js";
 
@@ -249,16 +255,48 @@ for (const g of GEGNER) {
   melde(alleGanz, "elitewellenIndex ist an jeder Bosswelle eine ganze Zahl");
 }
 
-/* ── 6 · Und die bekannte Grenze dieser Aufgabe, maschinell belegt statt
-   nur behauptet: die drei stillen Verhalten stehen wirklich in keinem
-   Katalogeintrag ─────────────────────────────────────────────────── */
+/* ── 6 · Jedes Verhalten, das ein Gegner trägt, muss zu ihm passen ──
+
+   Bis zum 05.09.2026 stand hier die Gegenrichtung: eine Liste der drei
+   Verhalten, die **kein** Katalogeintrag benutzen durfte, weil
+   `werkzeuge/pruefe-katalog.mjs` sie nicht durchließ. Die Sperre ist
+   aufgehoben, `sammelt` und `stur` haben Benutzer, und wer unbenutzt
+   ist, prüft jetzt `pruefe-katalog.mjs` an einer Stelle — hier stünde
+   dieselbe Liste ein zweites Mal, und die zweite altert unbemerkt.
+
+   Was hier bleibt, ist das, was nur diese Prüfung wissen kann: ob die
+   **Paarung** trägt. Ein `stur`-Gegner, der langsamer ist als der
+   Spieler, stellt seine Frage nicht — man läuft ihm davon, ob er nun
+   alle anderthalb Sekunden neu peilt oder gar nicht. Genau daran wurde
+   der Hetzer ausgewählt und nicht der Knochenritter. */
 
 {
-  const benutzt = new Set(GEGNER.map((g) => g.verhalten));
-  const unbenutzt = VERHALTEN_IDS.filter((id) => !benutzt.has(id));
-  melde(unbenutzt.length === 3 && ["kreist", "sammelt", "stur"].every((id) => unbenutzt.includes(id)),
-    "die bekannte Lücke ist genau die drei gesperrten Verhalten — nicht mehr, nicht weniger",
-    unbenutzt.join(" "));
+  /* Verglichen wird gegen das **Grundtempo** des Spielers und gegen das
+     Gegnertempo **am Deckel**, nicht in Welle 1. Beides ist gemessen:
+
+     | | Welle 1 | am Deckel | überholt ab |
+     | --- | ---: | ---: | ---: |
+     | Hetzer | 62 | 117,8 | Welle 10 |
+     | Wächter im Ausbruch | 55 | 104,5 | Welle 15 |
+     | Spieler | 78 | 78 | — |
+
+     In Welle 1 ist **keiner** von beiden schneller als der Spieler —
+     eine Prüfung auf `g.tempo > GRUND_TEMPO` wäre also rot gewesen und
+     hätte ein richtiges Design für falsch erklärt. Die Frage lautet
+     nicht „ist er schneller", sondern „**wird** er schneller": Ein
+     Verhalten, dessen Frage sich nie stellt, ist Zierde. */
+  for (const g of GEGNER.filter((e) => e.verhalten === "stur")) {
+    const schnellste = tempoInWelle(g, 999);
+    melde(schnellste > GRUND_TEMPO,
+      `${g.id}: "stur" sitzt auf einem Gegner, der den Spieler irgendwann überholt`,
+      `${schnellste.toFixed(1)} gegen ${GRUND_TEMPO}`);
+  }
+  for (const g of GEGNER.filter((e) => e.verhalten === "sammelt")) {
+    const ausbruch = tempoInWelle(g, 999) * SAMMELN_STURM_TEMPO;
+    melde(ausbruch > GRUND_TEMPO,
+      `${g.id}: der Ausbruch von "sammelt" überholt den Spieler irgendwann`,
+      `${ausbruch.toFixed(1)} gegen ${GRUND_TEMPO}`);
+  }
 }
 
 ende();

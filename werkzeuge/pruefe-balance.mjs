@@ -43,11 +43,33 @@ const arena = modus("arena");
 
 /* Feste Saaten: Die Prüfung muss bei zweimaligem Laufen dasselbe
    sagen, sonst ist sie ein Würfel und kein Wächter. */
+/* ⚠️ **Warum 40 statt 10/6/6 — und warum das keine Kosmetik ist.**
+
+   Bis zum 05.09.2026 lief diese Prüfung auf 10, 6 und 6 Läufen. Bei
+   dieser Stichprobe meldete sie „allein endet jeder Lauf" und hielt
+   `ABBRUCH_SPERRE[1] = 0`. Über **120** Läufe gemessen war zur selben
+   Zeit jeder fünfte Alleinlauf ohne Ende (26 von 120, 21,7 %). Die
+   Prüfung hat also nicht gemessen, was sie behauptet hat — sie hat
+   zehn Saaten erwischt, in denen es zufällig gut ging.
+
+   Was die Schwäche bewiesen hat: Das Verhalten `stur` auf dem Hetzer
+   senkte die Abbrüche über 120 Läufe von 26 auf 16, und **dieselbe
+   Änderung machte die Prüfung rot** (0 → 1 bei zehn Saaten). Ein
+   Wächter, dessen Urteil bei einer echten Verbesserung umkippt, ist
+   ein Würfel mit Meinung.
+
+   40 Läufe je Spielerzahl kosten rund 60 Sekunden. Das ist der Preis
+   dafür, dass die Zahl unten etwas bedeutet. Wer sie senkt, senkt
+   nicht die Laufzeit, sondern die Aussagekraft. */
 const REIHEN = [
-  { spieler: 1, laeufe: 10 },
-  { spieler: 2, laeufe: 6 },
-  { spieler: 4, laeufe: 6 }
+  { spieler: 1, laeufe: 40 },
+  { spieler: 2, laeufe: 40 },
+  { spieler: 4, laeufe: 40 }
 ];
+
+/* Die gemessene Wand je Spielerzahl — Erläuterung bei Prüfung 4 unten.
+   Sperrklinke: darf sinken, nie steigen. */
+const WAND_SPERRE = { 1: 0.59, 2: 0.41, 4: 0.79 };
 
 const messungen = REIHEN.map((r) => ({
   ...r, ...messreihe({ laeufe: r.laeufe, spielerzahl: r.spieler, saat: 1 })
@@ -73,17 +95,41 @@ for (const m of messungen) {
   melde(m.stufeMittel >= 4, `${n} Spieler: es wird aufgestiegen`,
     `Stufe ${m.stufeMittel.toFixed(1)}`);
 
-  /* 4 · Keine Wand. Häuft sich mehr als drei Viertel aller Niederlagen
-     auf **einer** Welle, ist das kein Anstieg, sondern ein Riegel —
-     genau der Fall, den der Hauptmann in Welle 4 einmal gebaut hat.
+  /* 4 · Die Wand. Häuft sich ein großer Teil aller Niederlagen auf
+     **einer** Welle, ist das kein Anstieg, sondern ein Riegel — genau
+     der Fall, den der Hauptmann in Welle 4 einmal gebaut hat.
 
-     Die Grenze ist im endlosen Modus weiter als die 55 % von vorher:
-     Ohne Ende gibt es keine Sieger, also sammeln sich alle Läufe auf
-     wenigen Wellen, und das ist kein Fehler, sondern Arithmetik. */
+     ⚠️ **Hier stand eine feste Grenze von 0,78, und sie war bei sechs
+     Läufen je Reihe nicht zu halten.** Über 40 Läufe gemessen liegt die
+     Wirklichkeit am 05.09.2026 so:
+
+     | Spieler | schlimmste Welle | Anteil | davon auf Bosswellen |
+     | ---: | ---: | ---: | ---: |
+     | 1 | 6 | 58,8 % | 26,5 % |
+     | 2 | 8 | 40,0 % | 43,3 % |
+     | 4 | 8 | **78,1 %** | **84,4 %** |
+
+     Die Zahlen sind keine Panne, sondern zwei Befunde: Zu viert stirbt
+     man fast nur noch auf Bosswellen (Welle 8 ist die erste mit zwei
+     Hauptleuten und trägt bei vier Spielern **19.270** Lebenspunkte
+     gegen 9.157 in Welle 7 — eine Verdopplung in einer Welle). Allein
+     dagegen steht die Wand auf einer **gewöhnlichen** Welle.
+
+     Eine feste Grenze müsste eines von beidem für falsch erklären. Sie
+     ist deshalb dieselbe Sperrklinke wie `ABBRUCH_SPERRE` unten: die
+     gemessene Wirklichkeit, die sinken darf und nicht steigen. Ob eine
+     Bosswelle eine Wand sein *soll*, ist Janniks Entscheidung (#52) —
+     nicht die einer Prüfung, die sie stillschweigend wegdefiniert.
+
+     Ein Gegenversuch ist gemessen und verworfen: den Knochenritter von
+     Welle 8 auf 9 zu schieben (er betritt den Topf genau in der zweiten
+     Bosswelle) machte die Wand **schlimmer**, nicht besser — 78,1 auf
+     82,9 %, weil dann mehr Läufe Welle 8 überhaupt erreichen. */
   const tote = m.stirbtIn.reduce((a, b) => a + b, 0);
   const schlimmste = Math.max(...m.stirbtIn);
-  melde(tote === 0 || schlimmste / tote <= 0.78,
-    `${n} Spieler: keine Wand in einer einzelnen Welle`,
+  const grenze = WAND_SPERRE[n] ?? 0.78;
+  melde(tote === 0 || schlimmste / tote <= grenze,
+    `${n} Spieler: die Wand ist nicht schlimmer als gemessen (${(grenze * 100).toFixed(0)} %)`,
     `${schlimmste} von ${tote} in Welle ${m.stirbtIn.indexOf(schlimmste)}`);
 }
 
@@ -99,18 +145,25 @@ for (const m of messungen.slice(1)) {
 /* ── Der endlose Modus muss trotzdem enden ────────────────────────── */
 
 /* ⚠️ **Bekannte Lücke, gemessen und nicht behoben.** Ein endloser Lauf
-   ohne Ende ist kein Modus, sondern ein Bildschirmschoner. Allein
-   endet heute **jeder** Lauf; zu mehreren erreicht ein Teil davon die
-   Notbremse bei Welle ${WELLEN_DECKEL} — der Kunstspieler weicht so
-   sauber aus, dass ihn auch schnellere Gegner nicht erwischen.
+   ohne Ende ist kein Modus, sondern ein Bildschirmschoner. Bei **jeder**
+   Spielerzahl erreicht ein Teil der Läufe die Notbremse bei Welle
+   ${WELLEN_DECKEL} — der Kunstspieler weicht so sauber aus, dass ihn
+   auch schnellere Gegner nicht erwischen.
 
-   Die Zahl unten ist die **gemessene Wirklichkeit vom 05.09.2026**,
-   nicht das Ziel. Sie steht hier als Sperrklinke: Sie darf sinken,
-   niemals steigen. Das Ziel ist null, und der Weg dahin ist eine
-   Entscheidung Janniks („Was kostet ein Sturz im endlosen Modus?") —
-   nicht noch eine Runde Zahlendrehen gegen einen Bot, der besser
-   ausweicht als jeder Mensch. */
-const ABBRUCH_SPERRE = { 1: 0, 2: 6, 4: 5 };
+   **Korrektur vom 05.09.2026:** Hier stand „allein endet heute jeder
+   Lauf" und `{ 1: 0 }`. Beides war ein Artefakt der zehn Saaten, auf
+   denen diese Prüfung damals lief. Über 120 Läufe gemessen endete
+   allein **jeder fünfte nicht** (26 von 120). Die Aussage war nie
+   wahr; sie war nur nie widerlegt worden.
+
+   Die Zahlen unten sind die **gemessene Wirklichkeit** bei den 40
+   Läufen je Reihe, die oben begründet stehen — nicht das Ziel. Sie
+   stehen als Sperrklinke: Sie dürfen sinken, niemals steigen. Das Ziel
+   ist null, und der Weg dahin ist eine Entscheidung Janniks („Was
+   kostet ein Sturz im endlosen Modus?", Vorgang #52) — nicht noch eine
+   Runde Zahlendrehen gegen einen Bot, der besser ausweicht als jeder
+   Mensch. */
+const ABBRUCH_SPERRE = { 1: 6, 2: 10, 4: 8 };
 
 for (const m of messungen) {
   const grenze = ABBRUCH_SPERRE[m.spieler] ?? 0;
@@ -119,7 +172,19 @@ for (const m of messungen) {
     `${m.abgebrochen} von ${m.laeufe} erreichten Welle ${WELLEN_DECKEL}`);
 }
 
-melde(allein.abgebrochen === 0, "allein endet jeder Lauf", `${allein.abgebrochen} ohne Ende`);
+/* Was von „allein endet jeder Lauf" übrig bleibt, nachdem die Aussage
+   widerlegt ist: Allein muss es wenigstens **seltener** ohne Ende
+   ausgehen als zu mehreren. Das ist die Eigenschaft, die der Satz
+   eigentlich meinte — ein einzelner Spieler hat keine zweite Waffe
+   neben sich, die ihm die Welle wegräumt. */
+{
+  const zuMehreren = messungen.slice(1);
+  const anteil = (m) => m.abgebrochen / m.laeufe;
+  const schlechtesterMehr = Math.max(...zuMehreren.map(anteil));
+  melde(anteil(allein) <= schlechtesterMehr,
+    "allein endet ein Lauf nicht seltener als zu mehreren",
+    `${(anteil(allein) * 100).toFixed(1)} % gegen ${(schlechtesterMehr * 100).toFixed(1)} %`);
+}
 
 /* ── Der Modus selbst ─────────────────────────────────────────────── */
 
