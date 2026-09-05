@@ -162,3 +162,53 @@ Fortbewegungsmittel. Über einen Abklingzyklus kommt man springend
 Absicht: Wäre es nicht so, wäre der Sprung nur ein anderes Wort für
 Laufen. Wer es nicht will, senkt die Weite oder hebt die Abklingzeit;
 beide Zahlen stehen an einer Stelle.
+
+## Baustein 4 — die neue Prüfung (05.09.2026)
+
+Neu `werkzeuge/pruefe-werte.mjs`, **133 Zusicherungen**. Sie wird von
+`werkzeuge/pruefe-alles.mjs` selbst gefunden; die Zeile in der
+Wegweiser-Tabelle dort ist die einzige Änderung an dieser Datei.
+
+Geprüft werden: die Tabelle (alle sechs Felder, Formen, Gruppen,
+ASCII-Kennungen, keine doppelte), die Reihenfolge der ersten acht,
+`macheWerte` und `WERT_TEXT`, die Vollzähligkeit der erzeugten Werte,
+die fünf Schadensarten samt Farbabstand und Palettenzugehörigkeit, die
+Zuordnung Merkmal auf Art bei allen zwölf Waffen, die Schadensrechnung
+in ihrer Reihenfolge, Krit, Widerstände, Rüstung und Fluch, die
+Waffenwerte, Beute und Karten, der Sprung als Formel und im laufenden
+Spiel, und zuletzt, dass zwei Läufe mit derselben Saat gleich enden.
+
+### Rot-Beweis: 16 von 16 (05.09.2026)
+
+Jeder Fall baute genau **einen echten Fehler** in den Quelltext ein
+(keine gelöschte Datei, kein leeres Modul), ließ die Prüfung laufen und
+legte die Datei danach **byteweise** zurück.
+
+| eingebauter Fehler | was die Prüfung meldete |
+| --- | --- |
+| Kennung `ruestung` zu `rüstung` | „jede Kennung ist reines ASCII in Kleinbuchstaben - 1 mit Umlaut" |
+| Reihenfolge der Werte umgedreht | „die acht ursprünglichen Werte stehen vorn ... - neigung_karten,neigung_beute,..." |
+| Prozent vor flach gerechnet | „flacher Zuschlag wirkt vor dem Prozentmodifier" |
+| Kritwurf auch ohne Chance | „ohne Kritchance wird nicht gewürfelt - 1 Ziehungen" |
+| Fluch geht doch durch die Rüstung | „Fluch geht an der Rüstung vorbei" |
+| zweite Art ignoriert Rüstung | „genau eine Art geht an der Rüstung vorbei - frost fluch" |
+| zwei Artfarben gleich gesetzt | „die Artfarben liegen mindestens 90 auseinander - kleinster Abstand 0.0" |
+| Pechfackel auf Art `frost` | „jede Waffenart folgt ihrem ersten Merkmal - 1 abweichend" |
+| Sprungdauer auf einen Schritt | „der Sprung dauert mehrere Schritte und ist kein Teleport - 1 Schritte" |
+| letzter Sprungschritt nicht gekürzt | „der Sprung trägt genau seine Reichweite - 46.85 von 46" |
+| Sprung ohne Unverwundbarkeit | „der Sprung macht unverwundbar - 0.000 s" |
+| Sprung auch ohne Tastendruck | „ohne das Feld `ausweichen` wird nie gesprungen" |
+| Abklingzeit des Sprungs auf null | „Dauerdruck ergibt keine Sprungkette - Abklingzeit noch 0.00 s" |
+| ein Wert fehlt in `macheWerte` | „macheWerte legt jede Kennung als Zahl an - gier" |
+| Widerstand nicht gedeckelt | „der Widerstand ist bei 90 % gedeckelt" |
+| Art-Kritchance auf alle Arten | „eine Art-Kritchance gilt nur für ihre Art" |
+
+Zwei Schranken sind **gemessen und nicht geraten**: Der kleinste
+Farbabstand zwischen zwei Schadensarten liegt bei 107,1 (frost gegen
+fluch), die Schranke steht bei 90 und lässt damit knapp ein Fünftel
+Luft. Und die Sprungkette wird nicht über die Strecke gemessen, sondern
+über den **Vorsprung** vor bloßem Laufen: ein Sprung bringt 31,7 px
+mehr, zwei brächten 63,4 — die Grenze bei einer Sprungweite trennt
+beides sauber. Der erste Anlauf maß die Strecke selbst und war
+**fälschlich rot** (109,7 px gegen eine geratene Grenze von 92); die
+Messung war zu grob, nicht das Verhalten falsch.
