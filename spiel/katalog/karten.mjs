@@ -219,6 +219,34 @@ export const KARTEN = [
     wirkung: w("schaden", 2),
     text: "Er ist kein guter Ratgeber, aber ein guter Schmied." },
 
+  /* ── Selten, Gruppe „arten": Schaden einer bestimmten Sorte ────────
+
+     ⚠️ Diese fünf standen im ersten Entwurf **nicht** drin, und
+     `werkzeuge/pruefe-karten.mjs` hat es gemeldet: Die Gruppe `arten`
+     war über Karten gar nicht erreichbar. Damit hätte der Wert
+     `neigung_arten` aus Phase 12 nichts zu verschieben gehabt — ein
+     Regler ohne Regelweg, und wieder einer, den nichts rot macht.
+
+     Sie sind bewusst **bedingt**: Wer keine Feuerwaffe trägt, dem
+     nützt „Brandmal" nichts. Genau das ist die Aufgabe der Gruppe —
+     erst mit `neigung_arten` und einem passenden Gürtel wird daraus
+     ein Bau. */
+  { id: "brandmal", titel: "BRANDMAL", seltenheit: "selten",
+    wirkung: w("schaden_feuer_flach", 3),
+    text: "Was einmal gebrannt hat, brennt leichter wieder." },
+  { id: "frostbiss", titel: "FROSTBISS", seltenheit: "selten",
+    wirkung: w("schaden_frost_flach", 3),
+    text: "Die Kälte findet den Weg zwischen die Rippen." },
+  { id: "schnittfuehrung", titel: "SCHNITTFÜHRUNG", seltenheit: "selten",
+    wirkung: w("schaden_schnitt_prozent", 12),
+    text: "Nicht fester zuschlagen. Besser." },
+  { id: "wuchtschlag", titel: "WUCHTSCHLAG", seltenheit: "selten",
+    wirkung: w("schaden_wucht_prozent", 12),
+    text: "Knochen sind nur Knochen." },
+  { id: "fluchklinge", titel: "FLUCHKLINGE", seltenheit: "grausig",
+    wirkung: w("schaden_fluch_prozent", 12),
+    text: "Sie fragt nicht nach der Rüstung." },
+
   /* ── Grausig: was den Bau umstellt statt ihn zu stärken ─────────── */
   { id: "zweiter_schlag", titel: "ZWEITER SCHLAG", seltenheit: "grausig",
     wirkung: w("zusatzangriffe", 1),
