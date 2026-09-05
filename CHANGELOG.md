@@ -3,6 +3,101 @@
 Oben das Neueste. Jeder Eintrag sagt **was**, **warum** und **womit
 gemessen** — nicht nur, dass etwas anders ist.
 
+## 0.7.0 — Janniks große Liste, einsortiert (05.09.2026)
+
+An einem Tag kamen: eine Werteliste mit fünf Schadensarten, Krit je
+Art, Modifiern, Widerständen, Karten-Chancen, AoE, Zusatzprojektilen ·
+Ausweichen als Sprung · Level-up als Kartenhand mit Seltenheiten und
+Meta-Karten · mehr Partikel · Monster mit Mechaniken · Hauptleute ·
+Beutetruhen · Inventar · schwebende Zahlen mit Krit · bewegte Sprites ·
+Abklingzeit-Anzeige · *„Nur lobby beitritt, kein lokal auf der selben
+tastatur"* · *„Das spiel über github erreichbar machen für freunde!
+also webadresse!"* · *„spielbar auf desktop und handy!!!!!"* · und
+zuletzt *„ein auswertungs protokoll!"*.
+
+Nach Janniks eigener Regel wird ein Wunsch nicht notiert, sondern
+**analysiert, sein Bedarf bestimmt und einsortiert**. Das ist hier
+geschehen: sieben neue Phasen (12 bis 18), 25 Schritte, jeder mit
+einem Fertig-Kriterium, dazu 32 neue Vorgänge (#60 bis #91).
+
+### Der Befund, der die Reihenfolge bestimmt
+
+**Es sind nicht zwanzig Wünsche, sondern zwei Bündel.** Das eine ist
+ein Fundament (Werte, Schadensarten, Krit) mit dem Inhalt darauf
+(Karten, Monster, Optik) — dort hängt alles aneinander, und wer den
+Inhalt zuerst baut, baut ihn zweimal. Das andere ist die Auslieferung
+(Lobby, Webadresse, Handy), und sie hängt an **keinem einzigen Wert**.
+
+Deshalb wird beides gleichzeitig gebaut, auf vier Zweigen, die
+einander nicht berühren.
+
+### Drei Befunde, die den Zuschnitt geändert haben
+
+**Fünfundvierzig Werte sind keine fünfundvierzig Felder.** Heute hat
+`spiel/werte.mjs` acht feste Felder, und jede Anzeige, jede Karte und
+jede Prüfung zählt sie einzeln auf. Bei fünfundvierzig — davon rund
+fünfundzwanzig, die nur Varianten je Schadensart sind — bricht das:
+Wer einen vergisst, merkt es nie. Werte werden eine **Tabelle**, aus
+der Anzeige, Karten und Prüfung entstehen; die Schadensart-Varianten
+werden erzeugt statt abgetippt.
+
+**Die halbe Werteliste ist ohne die Kartenhand wertlos.** „Chance auf
+bestimmte Karten", „seltenere Karten finden" und „Karten-Modifier"
+sind drei Werte, die nichts messen können, solange Karten keine
+Seltenheit haben. Werte-Fundament und Kartenhand sind ein Vorhaben in
+zwei Schritten.
+
+**Das Auswertungsprotokoll braucht keinen Haken im Regelkern.** Fast
+jede Zahl aus Janniks Liste ist von außen sichtbar, wenn man zwei
+aufeinanderfolgende Weltzustände vergleicht — auch die, die nach einem
+Ereignis klingen: Ein Gegner, der eben noch stand und jetzt fehlt, ist
+gestorben, und seine letzte Position kennt man aus der vorigen
+Abtastung. Das erste Mal `leben < lebenMax` ist der erste Treffer.
+Also ein Beobachter statt einer Verdrahtung. Auf Janniks Klarstellung
+— *„das protokoll dient nur der auswertung so das du später die
+schwierigkeit anpassen kannst"* — muss außerdem jede Kennzahl auf eine
+**Stellschraube** zeigen, die es wirklich gibt; eine ohne Schraube
+beschreibt nur.
+
+### Eine Entscheidung ist beantwortet, eine neue steht an
+
+**#46 geschlossen.** *„Nur lobby beitritt, kein lokal auf der selben
+tastatur"* entscheidet die Frage in beide Richtungen: Koop läuft über
+das Netz, und die vier Tastaturbelegungen in `runtime/eingabe.js` sind
+ab jetzt Altlast statt Ausstattung. Ein Rechner steuert eine Figur.
+
+**#92 neu und offen: Wird das Repository öffentlich?** GitHub Pages
+veröffentlicht im kostenlosen Tarif nur aus einem öffentlichen
+Repository. Wer die Webadresse will, macht Quelltext und
+Versionsgeschichte sichtbar. Das ist keine technische Frage, und sie
+ist die einzige in dieser Liste, die niemand außer Jannik beantworten
+kann. Gebaut wird alles unabhängig davon — es fehlt nur der Schalter
+am Ende.
+
+### Der Weg für den Lobbycode, entschieden statt offen
+
+WebRTC zwischen den Browsern, vermittelt über den öffentlichen
+PeerJS-Broker, dessen Protokoll das Spiel **selbst spricht** — kein
+Paket, keine Bibliothek. Der Lobbycode ist die Kennung, unter der sich
+der Wirt beim Broker meldet; danach laufen alle Spieldaten direkt von
+Rechner zu Rechner.
+
+Ehrlich dazu: Der Broker ist ein fremder Dienst und kann ausfallen, und
+hinter manchen Netzen kommt gar keine direkte Verbindung zustande. Das
+lässt sich ohne eigenen Relais-Server nicht heilen, nur melden. Es
+entsteht dabei kein Konto, keine Datenbank und keine laufende Rechnung
+— das ist der kleinste Bruch mit „nur lokal", der die Sache überhaupt
+möglich macht.
+
+### Gemessen
+
+`docs/ROADMAP.md` 599 → 1023 Zeilen · 11 → 18 Phasen · 40 → 65 Schritte
+· 59 → 92 Vorgänge · `pruefe-vorgaenge.mjs` 5 Prüfungen, 0 Fehler ·
+`pruefe-workclaim.mjs` 4 Prüfungen, 0 Fehler bei fünf aktiven
+Ansprüchen.
+
+**Am Spiel selbst wurde in diesem Eintrag keine Zeile geändert.**
+
 ## 0.6.1 — Phase 11: Koop über das Netz (05.09.2026)
 
 Janniks Antwort auf #46: *„Koop über webbrowser zugleich."* — also
