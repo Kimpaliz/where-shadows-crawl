@@ -40,4 +40,52 @@ Pixel-Werkstatt) — einmal groß mit Raster, einmal in echter 9×9-Größe
 auf dem echten Bannkreis-Boden-Ton. Der `wucht`-Kontrastfehler wurde
 so gefunden, nicht durch die Zahlen allein.
 
+## 2 · Zwei Bosse (erledigt)
+
+`GEGNER_BILDER.gebeinfuerst` (23×21, Steigerung des Knochenritters —
+Krone, Eisenreste, glimmender Rune-Riss, Umhang breiter als die
+Schultern mit fünf Zacken am Saum) und `GEGNER_BILDER.vielfrass`
+(21×19, Steigerung des Speiers — bewusst breiter als hoch, Geschwüre,
+gedrungen). Beide direkt in `GEGNER_BILDER`, nicht in einem separaten
+Topf: `runtime/sprites.js` lädt diesen Katalog unverändert, sobald
+`spiel/katalog/gegner.mjs` die beiden IDs bekommt, erscheinen sie ohne
+jede weitere Grafikänderung.
+
+**Gemessen** (mit `dreheRaster`/`pruefeRaster` aus dem echten
+`runtime/sprites.js`, nicht nachgebaut):
+
+| | gebeinfuerst | vielfrass |
+| --- | ---: | ---: |
+| Größe | 23 × 21 | 21 × 19 |
+| Abweichung 0°/180° | 306 Bildpunkte | 178 Bildpunkte |
+| schlimmster Schwund beim Drehen | 0 % (100 % erhalten) | 0 % (100 % erhalten) |
+| größte zusammenhängende Fläche | 311/311 (100 %) | 254/254 (100 %) |
+
+Zum Vergleich: Die Prüfung verlangt nur ≥4 Bildpunkte Abweichung und
+höchstens 30 % Schwund — beide liegen weit darüber bzw. darunter.
+
+**Wirklich angesehen:** alle 16 Richtungen jedes Bosses gerendert
+(PNG, echte Größe, auf Bannkreis-Boden). Beim ersten Entwurf von
+`gebeinfuerst` fiel dabei ein Problem auf, das keine Zahl gezeigt
+hätte: Krone und Umhang liefen beide spitz zu, die ganze Silhouette
+las sich als Raute/Diamant statt als Figur mit Kopf und Umhang. Der
+Umhang bleibt jetzt breit und reißt erst am Saum in Zacken auf, statt
+gleichmäßig zu spitzen — danach liest sich die Figur als „großer
+vermummter Untoter", nicht als Edelstein.
+
+## 3 · Truhen (erledigt)
+
+`DINGE.truheZu` (9×7) und `DINGE.truheAuf` (9×9). Wie jedes `DINGE`
+nicht gedreht und ohne Katalogeintrag ladbar — `runtime/sprites.js`
+baut sie über den bestehenden `dinge`-Zweig in `ladeSprites()`
+automatisch mit, `sprites.dinge.truheZu` / `.truheAuf` sind ab sofort
+verfügbar.
+
+`truheAuf` trägt den ersten wirklichen Gebrauch von `bilder` (siehe
+Abschnitt 4): zwei Bilder, der Goldschein pulsiert zwischen hell
+(`goldHell` im Kern) und gleichmäßig warm (nur `gold`) — das macht die
+Truhe im Dunkeln eher auffindbar als ein stehendes Bild.
+
+---
+
 Rot-Beweis siehe Abschnitt „Geprüft" am Ende dieser Datei.

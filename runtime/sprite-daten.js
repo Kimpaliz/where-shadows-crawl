@@ -242,6 +242,81 @@ export const GEGNER_BILDER = {
       "...kttttttttk......",
       "....kkkkkkkk......."
     ]
+  },
+
+  /* Gebeinfürst — Steigerung des Knochenritters, nicht dessen Ersatz:
+     dieselbe Familie (Knochen unter Eisenresten), aber mit gehörnter
+     Krone, einem gläsern-violett glimmenden Rune-Riss in der Brust und
+     einem Umhang, der breiter ist als die Schultern und am Saum in
+     fünf ungleichen Zacken ausreißt. 23 × 21 (beide ungerade) — spürbar
+     größer als der Hauptmann (20 × 19), bislang die größte Figur.
+     ⚠️ Noch **ohne** Eintrag in `spiel/katalog/gegner.mjs` — das ist
+     Sache des Spiellogik-Agenten. `werkzeuge/pruefe-sprites.mjs` nimmt
+     ihn deshalb befristet von der Gegenrichtungsprüfung aus (siehe
+     dort). Sobald der Katalogeintrag da ist, läuft er ohne weitere
+     Grafikänderung — die Silhouette ist bereits vollständig geprüft. */
+  gebeinfuerst: {
+    zeichen: {
+      k: "kontur", b: "knochen", D: "knochenDunkel", E: "eisenHell",
+      e: "eisenDunkel", l: "lumpen", L: "lumpenHell", g: "bann", G: "bannHell"
+    },
+    bild: [
+      "...........b...........",
+      "........D..b..D........",
+      ".....k..D.bbb.D..k.....",
+      ".....k.DDbbbbbDD.k.....",
+      ".....kbbbbbbbbbbbk.....",
+      "....kbbbbbbbbbbbbbk....",
+      "....kDDDDDDDDDDDDDk....",
+      "....kbbbbbbbbbbbbbk....",
+      ".kEEbbbbbbbbbbbbbbbEEk.",
+      ".kEEEDDDDDDDDDDDDDEEEk.",
+      "..kbbbbbbbbbbbbbbbbbk..",
+      "..kbbbbbbbbbbbbbbbbbk..",
+      "...kbbbbbbbGbbbbbbbk...",
+      "...kbbbbbDDgDDbbbbbk...",
+      "...kbbbbbDDDDDbbbbbk...",
+      ".klllllllllllllllllllk.",
+      "kLLLLLLLLLLLLLLLLLLLLLk",
+      "klllllllllllllllllllllk",
+      ".LLL.LLL..LLL..LLL.LLL.",
+      "..ll..ll..lll..ll..ll..",
+      "....D..l.D.l.D.l..D...."
+    ]
+  },
+
+  /* Vielfraß — Steigerung des Speiers: derselbe aufgedunsene Leib mit
+     offenem Schlund, nur so weit angeschwollen, dass er nicht mehr
+     zurückweicht, sondern die Enge sucht. Bewusst BREITER als hoch
+     (21 × 19, gedrungen) statt hoch aufragend wie der Gebeinfürst —
+     die beiden Bosse sollen sich auch als reine Silhouette nicht
+     verwechseln lassen. Geschwürflecken (seuche/seucheHell) markieren,
+     wo als Nächstes Säure hochkommt — das ist Sache des
+     Spiellogik-Agenten, hier nur die Stelle dafür vorgesehen.
+     ⚠️ Ebenfalls noch ohne Katalogeintrag, siehe `gebeinfuerst`. */
+  vielfrass: {
+    zeichen: { k: "kontur", f: "fleisch", F: "fleischHell", g: "seuche", G: "seucheHell", l: "lumpen", b: "knochen" },
+    bild: [
+      "........bb.bb........",
+      "......kbbbkbbbk......",
+      ".....kGGGkkkGGGk.....",
+      "...kffffkkkkkffffk...",
+      "..kffffffgggffffffk..",
+      ".kfffffffffffffffffk.",
+      "kfffffffFFFFFfffffffk",
+      "kfffffffffffffffffffk",
+      "kfffffffgggggfffffffk",
+      "kfffffffffffffffffffk",
+      "kffffffgggGgggffffffk",
+      "kfffffffffffffffffffk",
+      ".kfffffffffffffffffk.",
+      "..k.lll..lll..lll.k..",
+      "...k.ll..lll..ll.k...",
+      ".....F...F.F...F.....",
+      ".....f...f.f...f.....",
+      ".....k...k.k...k.....",
+      ".........k.k........."
+    ]
   }
 };
 
@@ -295,6 +370,68 @@ export const DINGE = {
       "kkesssssekk",
       ".kkeeeeekk.",
       "...kkkkk..."
+    ]
+  },
+
+  /* Loot-Truhe, geschlossen — liegt in der Welle und wird am Wellenende
+     geöffnet (Janniks Wunsch). Gewölbter Deckel mit Eisenband, dunkle
+     Nahtlinie zur Kiste, Goldschloss. Nicht gedreht, wie jedes `DINGE`. */
+  truheZu: {
+    zeichen: { k: "kontur", l: "leder", L: "lederHell", e: "eisen", E: "eisenHell", g: "gold" },
+    bild: [
+      "..kLLLk..",
+      ".kLLLLLk.",
+      "keeeeeeek",
+      "kkkkkkkkk",
+      "lllllllll",
+      "llllgllll",
+      "eeeeeeeee"
+    ]
+  },
+
+  /* Dieselbe Truhe, offen — der Deckel kippt nach hinten (schmaler
+     Balken oben statt der Wölbung), darunter glüht der Fund. Trägt
+     zusätzlich `bilder`: ein Lichtpuls aus zwei Bildern, damit das
+     Leuchten in der Dunkelheit auffindbar bleibt, statt ein stehendes
+     Bild zu sein — die erste Nutzung der Bildfolgen-Möglichkeit aus
+     dem neuen Format (siehe Dateikopf). `bild` ist wie immer
+     `bilder[0]`. */
+  truheAuf: {
+    zeichen: { k: "kontur", l: "leder", L: "lederHell", e: "eisen", E: "eisenHell", g: "gold", G: "goldHell" },
+    bild: [
+      "klllllllk",
+      "eeeeeeeee",
+      "kkkkkkkkk",
+      "kgggGgggk",
+      "kGGGgGGGk",
+      "kgggggggk",
+      "lllllllll",
+      "llllgllll",
+      "eeeeeeeee"
+    ],
+    bilder: [
+      [
+        "klllllllk",
+        "eeeeeeeee",
+        "kkkkkkkkk",
+        "kgggGgggk",
+        "kGGGgGGGk",
+        "kgggggggk",
+        "lllllllll",
+        "llllgllll",
+        "eeeeeeeee"
+      ],
+      [
+        "klllllllk",
+        "eeeeeeeee",
+        "kkkkkkkkk",
+        "kgggggggk",
+        "kgggggggk",
+        "kgggggggk",
+        "lllllllll",
+        "llllgllll",
+        "eeeeeeeee"
+      ]
     ]
   }
 };
