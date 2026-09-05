@@ -67,6 +67,47 @@ zweite trotzdem versucht, und das Spiel läuft weiter. Eine
 Fehlermeldung sähe aus, als wäre etwas kaputt — kaputt ist aber nur ein
 Browser, der nicht mitmacht.
 
+### Der Fehler, den erst der echte Knopfdruck gezeigt hat
+
+Die 37 Prüfungen waren grün, das Manifest wurde angenommen, der Dienst
+lief. Und im Browser kam beim Klick auf „ALLEIN SPIELEN" nur **ein**
+Aufruf an statt zwei: `requestFullscreen` ja, `orientation.lock` nie.
+
+Gemessen, statt vermutet:
+
+| `requestFullscreen()` | Ausgang |
+| --- | --- |
+| ohne Nutzergeste | abgelehnt nach **0 ms** |
+| **mit** Nutzergeste, von einer Richtlinie gesperrt | **hängt** — 2.503 ms ohne Ergebnis |
+
+Ein Versprechen, das weder erfüllt noch abgelehnt wird, löst **keinen
+`catch` aus** — es hält die Funktion an. Das `await` blieb stehen, und
+die Zeile darunter lief nie. Damit fiel die halbe Ansage still aus: das
+Vollbild kam nicht, und **quer war es auch nicht**.
+
+Behoben mit einem Wettlauf gegen eine Frist von **1200 ms** und einem
+`fullscreenchange`-Horcher, der das Querformat nachholt, falls das
+Vollbild später doch eintrifft. Im Browser nachgemessen: Der Lock kommt
+jetzt **1203 ms** nach dem Vollbild-Aufruf — vorher gar nicht.
+
+**Beinahe für ein Werkzeugproblem gehalten:** Beim direkten Aufruf aus
+der Konsole kamen beide Aufrufe an, beim echten Knopfdruck nur einer.
+Genau dieser Unterschied *war* der Befund. Fehlerbuch **E5**.
+
+### Die Prüfung führt das Modul aus, statt Muster zu suchen
+
+Ein Regex hätte den Fehler nicht gesehen — vorher wie nachher stehen
+dieselben zwei Aufrufe in derselben Reihenfolge in der Datei.
+Abschnitt 7 von `pruefe-app.mjs` baut deshalb einen Browser aus der
+Hand, dessen `requestFullscreen` **absichtlich nie antwortet**, und
+lässt `gehInsVollbild()` wirklich laufen. Der alte Code fällt darin in
+**4 von 41** Prüfungen durch, mit der Meldung „lock wurde nie gerufen".
+
+Der erste Anlauf ließ dabei die ganze Kette hängen (Node brach mit
+„unsettled top-level await" ab, Code 13). Ein Wächter, der genau bei
+dem Fehler hängt, den er sucht, ist ein halber Wächter — er hat jetzt
+sein eigenes Zeitlimit.
+
 ### Nebenbei behoben: die Vorschau lieferte falsche Typen
 
 `werkzeuge/vorschau.mjs` kannte `.webmanifest` und `.png` nicht und gab

@@ -45,6 +45,47 @@ export function alsAppGestartet() {
     || navigator.standalone === true;
 }
 
+/* Wie lange auf das Vollbild gewartet wird, bevor das Querformat
+   trotzdem versucht wird.
+
+   ⚠️ **Gemessen am 05.09.2026, und der Grund für diese ganze
+   Konstruktion:** `requestFullscreen()` löst sein Versprechen nicht
+   immer auf. Ohne Nutzergeste lehnt es in **0 ms** ab — mit Geste, aber
+   von einer Richtlinie gesperrt, **hängt es** (nach 2.503 ms noch kein
+   Ergebnis, im eingebetteten Browser dieser Werkstatt). Ein `await`
+   davor bleibt dann für immer stehen, und die Zeile darunter läuft nie.
+
+   Genau das hat hier die halbe Ansage verschluckt: Das Vollbild war
+   „in Arbeit", und das **Querformat wurde nie festgelegt** — ohne
+   Fehlermeldung, ohne dass irgendetwas rot wird. Ein echtes Vollbild
+   ist ein Layoutvorgang von wenigen Bildern; 1200 ms sind großzügig
+   und trotzdem kein spürbares Warten. */
+const VOLLBILD_FRIST = 1200;
+
+/* Das Querformat festnageln. Geht **nur** im Vollbild oder in der
+   installierten App — außerhalb wirft es, und das ist in Ordnung.
+   Deshalb steht der Aufruf an zwei Stellen: einmal gleich (falls das
+   Vollbild schnell da war) und einmal, sobald der Browser den Wechsel
+   wirklich meldet. */
+async function legeQuerFest() {
+  try {
+    await screen.orientation.lock("landscape");
+    return "quer festgelegt";
+  } catch {
+    return "nicht möglich";
+  }
+}
+
+/* Der zweite Anlauf. Kommt das Vollbild später als die Frist — oder
+   geht der Spieler von Hand hinein —, ist **hier** der Moment, in dem
+   das Querformat erlaubt ist. Ohne diesen Horcher wäre die Frist oben
+   eine Wette darauf, dass der Browser schnell genug ist. */
+if (typeof document !== "undefined") {
+  document.addEventListener("fullscreenchange", () => {
+    if (document.fullscreenElement) legeQuerFest();
+  });
+}
+
 /* Beim Spielstart aufgerufen — im selben Zug wie der Knopfdruck, sonst
    lehnt der Browser ab. Gibt zurück, was wirklich passiert ist; der
    Aufrufer darf es ignorieren, aber eine Prüfung kann es lesen. */
@@ -52,29 +93,33 @@ export async function gehInsVollbild() {
   const bericht = { alsApp: alsAppGestartet(), vollbild: null, lage: null };
 
   if (!bericht.alsApp && document.fullscreenElement === null) {
-    try {
-      /* Auf dem Wurzelelement, nicht auf der Leinwand: Der Daumen-Stick
-         und der Ausweichknopf liegen **neben** der Leinwand im DOM.
-         Wer nur die Leinwand ins Vollbild schickt, verliert genau die
-         Bedienung, um die es hier geht. */
-      await document.documentElement.requestFullscreen({ navigationUI: "hide" });
-      bericht.vollbild = "an";
-    } catch {
-      /* Safari auf dem iPhone kann es nicht, und manche Browser lehnen
-         ab, wenn die Geste zu alt ist. Beides ist kein Fehler. */
-      bericht.vollbild = "abgelehnt";
-    }
+    /* Auf dem Wurzelelement, nicht auf der Leinwand: Der Daumen-Stick
+       und der Ausweichknopf liegen **neben** der Leinwand im DOM. Wer
+       nur die Leinwand ins Vollbild schickt, verliert genau die
+       Bedienung, um die es hier geht. */
+    let ausgang = "haengt";
+    const anfrage = (async () => {
+      try {
+        await document.documentElement.requestFullscreen({ navigationUI: "hide" });
+        ausgang = "an";
+      } catch {
+        /* Safari auf dem iPhone kann es nicht, und manche Browser
+           lehnen ab, wenn die Geste zu alt ist. Beides ist kein
+           Fehler. */
+        ausgang = "abgelehnt";
+      }
+    })();
+
+    /* Nicht `await anfrage`, sondern ein Wettlauf gegen die Frist —
+       siehe die Messung an `VOLLBILD_FRIST`. Das Versprechen läuft
+       weiter; wird es später erfüllt, holt der Horcher oben das
+       Querformat nach. */
+    await Promise.race([anfrage, new Promise((r) => setTimeout(r, VOLLBILD_FRIST))]);
+    bericht.vollbild = ausgang;
   } else {
     bericht.vollbild = bericht.alsApp ? "durch die App" : "schon an";
   }
 
-  /* Querformat festnageln. Geht nur im Vollbild oder in der
-     installierten App — außerhalb wirft es, und das ist in Ordnung. */
-  try {
-    await screen.orientation.lock("landscape");
-    bericht.lage = "quer festgelegt";
-  } catch {
-    bericht.lage = "nicht möglich";
-  }
+  bericht.lage = await legeQuerFest();
   return bericht;
 }

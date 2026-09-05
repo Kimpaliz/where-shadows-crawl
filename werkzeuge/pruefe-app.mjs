@@ -160,6 +160,12 @@ melde(manifest.icons.some((s) => s.purpose === "maskable"),
   melde((v.match(/try\s*\{/g) ?? []).length >= 2,
     "beide Wege sind einzeln abgesichert", `${(v.match(/try\s*\{/g) ?? []).length} try-Blöcke`);
 
+  /* Der zweite Anlauf für das Querformat. Kommt das Vollbild später als
+     die Frist, ist der Wechsel selbst der einzige Moment, in dem der
+     Browser das Sperren erlaubt. */
+  melde(/fullscreenchange/.test(v),
+    "ein Horcher holt das Querformat nach, wenn das Vollbild spät kommt");
+
   const start = liesDatei("runtime/start.js").replace(/\/\*[\s\S]*?\*\//g, "");
   melde(/gehInsVollbild\(\)/.test(start), "der Spielstart ruft es");
   const beiStart = start.indexOf("beiStart(");
@@ -181,6 +187,102 @@ melde(manifest.icons.some((s) => s.purpose === "maskable"),
     melde(v.includes(`"${endung}"`) && v.includes(typ),
       `die Vorschau kennt ${endung}`);
   }
+}
+
+/* ── 7 · Ein hängendes Vollbild verschluckt das Querformat nicht ─────
+
+   **Der Fall, der ohne diese Prüfung still durchkäme**, und der am
+   05.09.2026 wirklich eingetreten ist: `requestFullscreen()` löst sein
+   Versprechen nicht immer auf. Ohne Nutzergeste lehnt es in 0 ms ab —
+   mit Geste, aber von einer Richtlinie gesperrt, **hängt es**
+   (2.503 ms ohne Ergebnis, gemessen). Ein nacktes `await` davor bleibt
+   dann stehen, und `screen.orientation.lock` läuft **nie**. Das
+   Vollbild fehlt, das Querformat auch, und keine Zeile wird rot.
+
+   Deshalb wird hier nicht nach einem Textmuster gesucht, sondern das
+   Modul wirklich ausgeführt — gegen einen Browser aus der Hand, dessen
+   `requestFullscreen` absichtlich nie antwortet. Ein Regex hätte den
+   Fehler nicht gesehen: Vorher wie nachher stehen dieselben zwei
+   Aufrufe in derselben Reihenfolge in der Datei. */
+
+{
+  const bericht = await messeVollbild();
+  melde(bericht.lockGerufen,
+    "ein hängendes Vollbild hält das Querformat nicht auf",
+    bericht.lockGerufen ? `nach ${bericht.abstand} ms` : "lock wurde nie gerufen");
+  melde(bericht.abstand !== null && bericht.abstand < 3000,
+    "und es dauert nicht länger als drei Sekunden", `${bericht.abstand} ms`);
+  melde(bericht.nachzuegler,
+    "kommt das Vollbild später, holt der Horcher das Querformat nach",
+    bericht.nachzuegler ? "ja" : "der fullscreenchange-Horcher greift nicht");
+}
+
+/* Der Browser aus der Hand. Er tut genau zwei Dinge falsch — beide
+   absichtlich: Sein `requestFullscreen` antwortet nie, und sein
+   `orientation.lock` schlägt fehl, solange kein Vollbild aktiv ist
+   (genau wie ein echter Browser es tut). */
+async function messeVollbild() {
+  const spur = [];
+  let imVollbild = false;
+  const horcher = [];
+
+  const wurzel = {
+    tagName: "HTML",
+    requestFullscreen() {
+      spur.push({ was: "vollbild", t: Date.now() });
+      return new Promise(() => {});   /* antwortet nie */
+    }
+  };
+
+  globalThis.document = {
+    documentElement: wurzel,
+    get fullscreenElement() { return imVollbild ? wurzel : null; },
+    addEventListener: (art, fn) => { if (art === "fullscreenchange") horcher.push(fn); }
+  };
+  globalThis.matchMedia = () => ({ matches: false });
+  /* `navigator` hat in Node nur einen Getter — überschreiben geht nur
+     über `defineProperty`. Das Modul fragt `navigator.standalone` ab,
+     also muss der Wert stimmen. */
+  Object.defineProperty(globalThis, "navigator",
+    { value: { standalone: false }, configurable: true });
+  globalThis.screen = {
+    orientation: {
+      lock(lage) {
+        spur.push({ was: "lock", lage, t: Date.now(), imVollbild });
+        return imVollbild ? Promise.resolve() : Promise.reject(new Error("nicht im Vollbild"));
+      }
+    }
+  };
+
+  /* Frisch laden, damit der Horcher auf **diese** Attrappe geht. */
+  const modul = await import(`../runtime/vollbild.js?t=${Date.now()}`);
+  const start = Date.now();
+
+  /* ⚠️ Selbst mit Zeitlimit warten. Genau der Fehler, den diese Prüfung
+     sucht, lässt `gehInsVollbild()` **nie zurückkehren** — ein nacktes
+     `await` hier ließe die Prüfung mitsamt der ganzen Kette hängen
+     statt rot zu melden, und Node bräche mit „unsettled top-level
+     await" ab. Ein Wächter, der beim Fehler hängt, ist ein halber
+     Wächter. */
+  await Promise.race([
+    modul.gehInsVollbild(),
+    new Promise((r) => setTimeout(r, 4000))
+  ]);
+
+  const lock = spur.find((e) => e.was === "lock");
+
+  /* Jetzt kommt das Vollbild verspätet — der Horcher muss anspringen. */
+  const vorher = spur.filter((e) => e.was === "lock").length;
+  imVollbild = true;
+  for (const fn of horcher) fn();
+  await new Promise((r) => setTimeout(r, 20));
+  const nachher = spur.filter((e) => e.was === "lock").length;
+
+  return {
+    lockGerufen: !!lock,
+    abstand: lock ? lock.t - start : null,
+    nachzuegler: nachher > vorher
+  };
 }
 
 ende();

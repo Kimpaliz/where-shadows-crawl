@@ -338,6 +338,57 @@ abgeschwächt, nicht die Stichprobe geglaubt.
 
 ---
 
+### E5 · Ein Versprechen, das nie auflöst, verschluckt alles danach
+
+`runtime/vollbild.js` sollte zwei Dinge tun — ins Vollbild gehen und
+das Querformat festnageln —, und tat beides in der einzig möglichen
+Reihenfolge, weil `screen.orientation.lock` **nur im Vollbild** erlaubt
+ist:
+
+```js
+try { await document.documentElement.requestFullscreen(...); } catch { }
+try { await screen.orientation.lock("landscape"); } catch { }
+```
+
+Sieht richtig aus, und beide Aufrufe sind einzeln abgesichert. Der
+Fehler steckt nicht im `catch`, sondern im `await`: **Ein Versprechen,
+das weder erfüllt noch abgelehnt wird, löst keinen `catch` aus — es
+hält die Funktion einfach an.** Die zweite Zeile lief nie.
+
+Gemessen am 05.09.2026 im Browser:
+
+| `requestFullscreen()` | Ausgang |
+| --- | --- |
+| ohne Nutzergeste | abgelehnt nach **0 ms** |
+| **mit** Nutzergeste, von einer Richtlinie gesperrt | **hängt** — 2.503 ms ohne Ergebnis |
+
+Damit fiel die halbe Ansage des Auftraggebers still aus: Das Vollbild
+kam nicht, und quer war es auch nicht. Keine Fehlermeldung, keine
+Konsolenzeile, keine rote Prüfung.
+
+**Woran es beinahe nicht aufgefallen wäre:** Beim direkten Aufruf aus
+der Konsole kamen **beide** Aufrufe an, beim echten Knopfdruck nur
+einer. Ich hätte den Unterschied für eine Eigenheit des Messwerkzeugs
+halten können. Er war der Befund.
+
+**Woran ich es früher merke:** Ein `await` auf eine fremde Zusage ist
+eine Wette darauf, dass sie überhaupt beantwortet wird. Wo danach noch
+etwas Wichtiges steht, gehört ein Zeitlimit davor
+(`Promise.race([zusage, frist])`) — und wo die Zusage später doch
+eintrifft, ein Horcher, der das Versäumte nachholt
+(`fullscreenchange`). Das gilt für jede Browser-API, die auf eine
+Nutzerentscheidung oder eine Richtlinie warten kann: Vollbild,
+Berechtigungen, Zwischenablage, Geräte.
+
+**Und für die Prüfung dieselbe Regel, eine Ebene höher:** Der erste
+Rot-Beweis ließ `pruefe-app.mjs` mitsamt der Kette hängen — Node brach
+mit „unsettled top-level await" ab (Code 13) statt zu melden, was
+fehlt. Ein Wächter, der genau bei dem Fehler hängt, den er sucht, ist
+ein halber Wächter. Mit eigenem Zeitlimit meldet er jetzt in unter
+einer Sekunde: **„lock wurde nie gerufen"**.
+
+---
+
 ## F · Zu viel Kontext in einer Sitzung
 
 ### F1 · Zwei Besitzer für dieselbe Datei *(Startkapital)*
