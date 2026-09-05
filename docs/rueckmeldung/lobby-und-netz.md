@@ -382,6 +382,22 @@ nachgemessen: `ALLEIN SPIELEN` → Arena erscheint, `D` über 100 Bilder →
 Figur **+80,66** nach rechts, und nach 1800 weiteren Ticks bewegt sich
 das Bild weiterhin (die Welle läuft durch).
 
+**Warum nur waagerecht gemessen wird:** Bei einem Spieler ist der
+Bannkreis 190 breit, die Kamera also waagerecht **festgeklemmt**
+(2 × 230 < 480) und senkrecht **mitlaufend** (2 × 230 > 270). Waagerecht
+misst man deshalb die Figur, senkrecht den Hintergrund — und dessen
+Bewegung ist der Figur entgegengesetzt. `W` ergab folgerichtig **+20,36**
+(der Grund wandert nach unten), was eine Bewegung nach **oben** ist. Als
+Beleg taugen daher die waagerechten Zahlen; die senkrechte steht hier
+nur, damit die Umkehrung nicht später für einen Fehler gehalten wird.
+
+### Ein letzter Wart, vor dem Schluss behoben
+
+Am Endbildschirm reagierte der Netz-Takt auf einen **gehaltenen** Knopf,
+der Allein-Takt dagegen auf das **Drücken** (`knopfFlanke`). Wer den
+Knopf noch in der Hand hatte, wäre nach Ablauf der kurzen Sperre sofort
+in der Lobby gelandet. Jetzt reagieren beide auf die steigende Flanke.
+
 ---
 
 ## Was in `runtime/oberflaeche.js` noch auf die alte Spielerzahlwahl zeigt

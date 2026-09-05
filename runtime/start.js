@@ -76,6 +76,7 @@ let letzteEigene = ruhendeEingabe();
    (netz/lockstep.mjs, NACHHALL). */
 let nachhall = [];
 let blockiertSekunden = 0;
+let endeKnopfVorher = false;
 
 /* Wie lange ein fehlender Mitspieler den Rest aufhält, bevor er
    übersprungen wird. Zwei Sekunden sind lang genug, dass ein kurzer
@@ -241,8 +242,18 @@ function taktImGleichschritt(dt) {
      nach einem Aussetzer in Zeitraffer davon. */
   if (sammler > SCHRITT * MAX_SCHRITTE) sammler = 0;
 
+  /* Auf **Drücken** zurück in die Lobby, nicht auf Gedrückthalten —
+     sonst spränge der Endbildschirm weg, sobald die kurze Sperre
+     abläuft und jemand den Knopf noch in der Hand hat. Allein
+     besorgt das `knopfFlanke`; hier gibt es keine Flanken, weil die
+     Endbildschirm-Eingabe niemanden sonst betrifft. */
   if (welt.phase === "gewonnen" || welt.phase === "verloren") {
-    if (menue.sperre <= 0 && letzteEigene.ausweichen) { heimInDieLobby(); return true; }
+    const gedrueckt = letzteEigene.ausweichen;
+    const frisch = gedrueckt && !endeKnopfVorher;
+    endeKnopfVorher = gedrueckt;
+    if (menue.sperre <= 0 && frisch) { heimInDieLobby(); return true; }
+  } else {
+    endeKnopfVorher = letzteEigene.ausweichen;
   }
   return false;
 }
