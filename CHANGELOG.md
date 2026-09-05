@@ -3,6 +3,23 @@
 Oben das Neueste. Jeder Eintrag sagt **was**, **warum** und **womit
 gemessen** — nicht nur, dass etwas anders ist.
 
+## 0.9.3 — Vier Fälle ins Fehlerbuch (05.09.2026)
+
+Vom Tag der vier Agenten. **F3** stand auf einem eigenen Zweig und ist
+mit übernommen; drei sind neu.
+
+| Fall | Was |
+| --- | --- |
+| **B5** | Die synthetische Tastatur schickte `key` statt `code` — die Figur bewegte sich nie, und zwei Wellen lang sah es so aus, als löste die Truhenphase nicht aus. Der Schluss lag nahe und wäre falsch gewesen. |
+| **C6** | `git checkout -- <datei>` nach einem Rot-Beweis holte die **eigene, noch nicht committete** Arbeit weg. Erst committen, dann Rot-Beweise. |
+| **E4** | `pruefe-balance.mjs` behauptete auf 10 Läufen „allein endet jeder Lauf". Über 120 gemessen: jeder fünfte nicht. Wo eine Prüfung über einen **Anteil** urteilt, muss die Stichprobe zur Aussage passen. |
+| **F3** | Vier Agenten mit angeforderter Isolation, zwei ohne Worktree im Hauptcheckout — 1.215 Zeilen landeten auf einem fremden Zweig. Jeder Agent prüft `git rev-parse --git-dir` als erste Handlung. |
+
+**Die Klammer um alle vier:** Drei davon sind Fälle, in denen die
+*Messung* falsch war und nicht das Programm — bei B5 die Eingabe, bei
+E4 die Stichprobe, bei F3 der Baum, in dem gemessen wurde. Das ist
+inzwischen die häufigste Fehlerklasse dieses Projekts.
+
 ## 0.9.2 — Wer schießen darf, hängt nicht mehr am Namen (05.09.2026)
 
 `spiel/kampf.mjs` entschied über die **Verhaltenskennung**, wer auf

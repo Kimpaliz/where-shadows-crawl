@@ -141,6 +141,26 @@ aufnimmt.
 
 ---
 
+### B5 · Die Eingabe kam nie an — und die Messung sah aus wie ein Befund
+
+Um den Truhen-Moment im Browser zu sehen, wurde die Figur über
+synthetische Tastenereignisse bewegt: `new KeyboardEvent("keydown",
+{ key: "d" })`. Sie bewegte sich nicht. Zwei Wellen lang sah es so aus,
+als würde die Truhenphase gar nicht ausgelöst — der Schluss lag nahe
+und wäre falsch gewesen.
+
+`runtime/eingabe.js` liest `e.code` (`"KeyD"`), nicht `e.key`. Das
+Ereignis kam an, trug aber nichts, was die Eingabe kennt:
+`tasten.add(undefined)`. Kein Fehler, keine Meldung, keine Bewegung.
+
+**Woran ich es früher merke:** Bevor aus dem Ausbleiben einer Wirkung
+ein Befund über das Programm wird, muss die **Ursache** nachgewiesen
+sein — hier: bewegt sich die Figur überhaupt? Ein Steuerweg, den man
+selbst nachbaut, gehört einmal an einer Sache geprüft, die sichtbar
+reagiert, bevor man mit ihm misst.
+
+---
+
 ## C · Werkzeugfallen dieser Umgebung (Windows, Git-Bash, Node)
 
 Nichts davon hat mit einem Projekt zu tun — alles davon hat schon Zeit
@@ -193,6 +213,26 @@ nicht die Klammer darum — ein eingefügtes `*/` machte die Datei zu
 ungültigem JavaScript.
 **Woran ich es früher merke:** Nach jeder Änderung an einem Dateikopf
 `node --check` laufen lassen. Kostet nichts, fängt genau das.
+
+---
+
+### C6 · `git checkout --` holt die eigene, ungespeicherte Arbeit weg
+
+Nach einem Rot-Beweis wurde `spiel/katalog/gegner.mjs` mit
+`git checkout -- <datei>` zurückgesetzt. Der Befehl holt den Stand aus
+dem Index — und dort lagen meine eigenen, noch nicht committeten
+Zuweisungen **nie**. Zwei Gegner standen wieder auf ihrem alten
+Verhalten, die Kopfnotiz war die alte, und die Prüfung sagte plötzlich
+wieder „2 Fehler", wo eben noch 0 standen.
+
+Derselbe Fall ist im Age-of-Beast-Wiki schon einmal passiert. Er trifft
+immer dieselbe Stelle: den Rot-Beweis, weil man dafür absichtlich etwas
+kaputt macht und hinterher zurücklegen will.
+
+**Woran ich es früher merke:** Erst committen, dann Rot-Beweise. Wo das
+nicht geht, die Datei vorher ins Scratchpad kopieren und von dort
+zurücklegen — nicht aus dem Index. Und nach dem Zurücklegen die
+Prüfzahl vergleichen: Sie muss wieder die von vorher sein.
 
 ---
 
@@ -272,6 +312,29 @@ sieht aus wie Arbeit, die andere wie ein Fehler.
 
 Der Beleg ist die Dauer, nicht die Meldung: Derselbe Zustand, der vorher
 297 Minuten lief, wird jetzt in **unter einer Sekunde** rot.
+
+---
+
+### E4 · Eine Prüfung, deren Stichprobe zu klein für ihre Behauptung ist
+
+`werkzeuge/pruefe-balance.mjs` lief auf 10, 6 und 6 Läufen und schrieb
+dazu „allein endet jeder Lauf", abgesichert durch `ABBRUCH_SPERRE[1] =
+0`. Über 120 Läufe gemessen endete zur selben Zeit **jeder fünfte
+Alleinlauf nicht** (26 von 120, 21,7 %). Die Prüfung war jahrelang grün
+und hat nie gemessen, was sie behauptet.
+
+Aufgefallen ist es an einem Widerspruch: Eine Änderung senkte die
+Abbrüche über 120 Läufe von 26 auf 16 — **und machte die Prüfung rot**
+(0 → 1 bei zehn Saaten). Ein Wächter, dessen Urteil bei einer echten
+Verbesserung umkippt, misst Rauschen.
+
+**Woran ich es früher merke:** Wo eine Prüfung über einen **Anteil**
+urteilt (Siegquote, Abbruchquote, Todeshäufung), muss die Stichprobe
+zur Aussage passen. Faustregel aus diesem Fall: Bei zehn Läufen ist
+alles unter 20 % nicht von null zu unterscheiden. Und: Eine Prüfung,
+die eine absolute Aussage macht („jeder", „nie", „immer"), muss sie
+mit ihrer eigenen Stichprobe belegen können — sonst gehört die Aussage
+abgeschwächt, nicht die Stichprobe geglaubt.
 
 ---
 
