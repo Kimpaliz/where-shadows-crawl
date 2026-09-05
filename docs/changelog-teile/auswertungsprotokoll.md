@@ -20,6 +20,12 @@ vergleicht gegen die vorige Abtastung — `welt.mjs`, `kampf.mjs`,
 `bewegung.mjs`, `beute.mjs`, `werte.mjs`, `katalog/waffen.mjs` bleiben
 unverändert.
 
+`werkzeuge/balance.mjs` bekam dafür einen optionalen `beobachter`-Parameter
+in `spieleLauf` (zwei Zeilen, Standardverhalten unverändert, mit
+`pruefe-balance.mjs` gegengeprüft). `werkzeuge/auswertung.mjs` spielt
+darüber einen Lauf und druckt eine Tabelle, JSON oder einen Vergleich
+zweier gespeicherter Stände (`--vergleich`).
+
 (Wird mit jedem Baustein fortgeschrieben — siehe
 `docs/rueckmeldung/auswertungsprotokoll.md` für den Bauverlauf mit
 Messungen und Gegenproben.)

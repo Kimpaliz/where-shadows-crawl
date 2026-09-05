@@ -5,6 +5,30 @@ bei einem Abbruch nichts verloren geht. Ein Baustein je Abschnitt,
 oben das Neueste. Datierte Vermerke, keine Statusbehauptungen — siehe
 `docs/REGELN.md` Regel 14.
 
+## Baustein 2 · `werkzeuge/auswertung.mjs` und der `beobachter`-Haken (05.09.2026)
+
+`balance.mjs`s `spieleLauf` bekam einen optionalen `beobachter`-Parameter
+(Standard `undefined`, `beobachter?.(welt)` nach jedem echten
+`schrittImLauf`-Aufruf — zwei zusätzliche Zeilen). `node
+werkzeuge/pruefe-balance.mjs` am 05.09.2026 danach unverändert grün
+(27 Prüfungen, 0 Fehler) — der Haken ändert am bestehenden Verhalten
+nichts, solange niemand ihn benutzt.
+
+`werkzeuge/auswertung.mjs` spielt darüber genau einen Lauf und druckt
+eine Tabelle (`node werkzeuge/auswertung.mjs --spieler 1 --saat 1`),
+JSON (`--json`) oder einen Vergleich zweier gespeicherter Stände
+(`--vergleich alt.json`). Am 05.09.2026 an Saat 1/1 Spieler geprüft:
+Ausgang „verloren" in Welle 6 nach 170,2 s, 167 erschienene Gegner, 154
+gestorben, 54 % davon beim ersten Treffer, Schadensquelle 0 Berührung
+gegen 7 Fernkampf (die ersten fünf Wellen haben nur Nahkampf-Gegner,
+der Kunstspieler weicht ihnen nach eigener Bauart aus — siehe
+`werkzeuge/balance.mjs` Kopfnotiz „Wer sauber ausweicht, ist
+unsterblich"; erst der Speier ab Welle 6 trifft ihn). An Saat 7/2
+Spieler gegengeprüft: 270 gestorben, 71 am Wellenende überlebt, 66 nie
+getroffen, Gold erschienen 1643 gegen 442 verloren — alle Zahlen intern
+stimmig (Verhältnisse plausibel, keine negativen oder unendlichen
+Werte).
+
 ## Baustein 1 · `spiel/protokoll.mjs` (05.09.2026)
 
 Der Beobachter selbst: `macheProtokoll()` liefert `abtasten(welt)` und

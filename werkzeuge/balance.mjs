@@ -17,11 +17,24 @@
    für **Vergleiche** — „Welle 9 ist härter als Welle 8", „zu viert
    fällt mehr Gold" —, nicht als Vorhersage, wie weit Jannik kommt.
 
+   ── Der `beobachter`-Haken (05.09.2026) ─────────────────────────────
+
+   `spieleLauf` nimmt optional einen `beobachter`-Aufruf entgegen und
+   ruft ihn nach jedem echten `schrittImLauf` mit der Welt auf — genau
+   dort, wo sich Gegner-, Spieler- und Wellenzustand wirklich ändern.
+   Ohne `beobachter` (Standard `undefined`) ist das Verhalten
+   **bytegleich** zu vorher: ein `?.()`-Aufruf auf `undefined` tut
+   nichts. Der Haken existiert für `werkzeuge/auswertung.mjs`
+   (`spiel/protokoll.mjs`), damit Prüfstand und Auswertung denselben
+   Ablauf spielen, statt ihn zweimal zu schreiben und auseinanderlaufen
+   zu lassen.
+
    ── Arbeitet zusammen mit ───────────────────────────────────────────
 
    `spiel/lauf.mjs` (dieselbe Schnittstelle, die auch das Spiel
    benutzt), `werkzeuge/pruefe-balance.mjs` (macht aus diesen Messungen
-   Wächter). */
+   Wächter), `werkzeuge/auswertung.mjs` (hängt sich über `beobachter`
+   ein). */
 
 import { starteLauf, naechsteWelle, oeffneKraemer, schrittImLauf, SCHRITT, WELLEN_JE_LAUF } from "../spiel/lauf.mjs";
 import { kaufe, wuerfleNeu, WAFFEN_PLAETZE } from "../spiel/laden.mjs";
@@ -130,7 +143,7 @@ function botWaehlt(welt, zufall) {
    genau das soll die Messung melden statt ewig zu laufen. */
 export const WELLEN_DECKEL = 200;
 
-export function spieleLauf({ spielerzahl = 1, saat = 1, modusId } = {}) {
+export function spieleLauf({ spielerzahl = 1, saat = 1, modusId, beobachter } = {}) {
   const welt = starteLauf({ spielerzahl, saat, modusId });
   const botZufall = macheZufall(saat ^ 0x5eed);
   const wellenBericht = [];
@@ -152,10 +165,16 @@ export function spieleLauf({ spielerzahl = 1, saat = 1, modusId } = {}) {
       });
       continue;
     }
-    if (welt.phase === "wahl") { botWaehlt(welt, botZufall); schrittImLauf(welt, []); continue; }
+    if (welt.phase === "wahl") {
+      botWaehlt(welt, botZufall);
+      schrittImLauf(welt, []);
+      beobachter?.(welt);
+      continue;
+    }
 
     const eingaben = welt.spieler.map((s) => botEingabe(welt, s));
     schrittImLauf(welt, eingaben);
+    beobachter?.(welt);
     schritte++;
   }
 
