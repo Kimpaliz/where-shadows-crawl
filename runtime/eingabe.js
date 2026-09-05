@@ -20,12 +20,26 @@
    viel, und auf einem Gamepad läge der zweite auf einer Taste, die
    niemand sucht.
 
-   ── Vier Leute an einer Tastatur ───────────────────────────────────
+   ── Ein Rechner, eine Figur ────────────────────────────────────────
 
-   Die Belegungen liegen bewusst weit auseinander, damit sich vier
-   Hände nicht ins Gehege kommen. Ein Gamepad überschreibt die Tastatur
-   für seinen Platz, sobald es etwas meldet — wer eines einsteckt, will
-   es benutzen und nicht erst etwas einstellen.
+   Bis zum 05.09.2026 lagen hier **vier** Tastaturbelegungen für vier
+   Leute an einem Tisch. Janniks Ansage: *„Nur lobby beitritt, kein
+   lokal auf der selben tastatur."* Also gibt es nur noch **eine**
+   Belegung; alle anderen kommen über die Lobby dazu
+   (`runtime/lobby.js`).
+
+   Das ist keine Vereinfachung, sondern die Voraussetzung: Solange ein
+   Rechner vier Figuren steuert, gibt es kein „was schickt dieser
+   Rechner" — mit einer Figur je Rechner sind es zwei Achsen und ein
+   Knopf, und genau das passt über die Leitung.
+
+   Die eine Belegung nimmt **WASD und die Pfeiltasten zugleich** an.
+   Vorher gehörten die Pfeile dem zweiten Spieler; jetzt ist niemand
+   mehr da, dem sie wegzunehmen wären, und wer welche Hand benutzt,
+   soll nicht in einer Einstellung stehen müssen.
+
+   Ein Gamepad überschreibt die Tastatur, sobald es etwas meldet — wer
+   eines einsteckt, will es benutzen und nicht erst etwas einstellen.
 
    ── Der Daumen ─────────────────────────────────────────────────────
 
@@ -46,12 +60,14 @@
    (Menüführung über dieselben Flanken), `index.html` (die Elemente des
    Daumen-Sticks). */
 
-export const BELEGUNGEN = [
-  { name: "WASD",   hoch: "KeyW", runter: "KeyS", links: "KeyA", rechts: "KeyD", knopf: ["Space", "KeyF", "ShiftLeft"] },
-  { name: "Pfeile", hoch: "ArrowUp", runter: "ArrowDown", links: "ArrowLeft", rechts: "ArrowRight", knopf: ["Enter", "ShiftRight"] },
-  { name: "IJKL",   hoch: "KeyI", runter: "KeyK", links: "KeyJ", rechts: "KeyL", knopf: ["KeyU", "KeyO"] },
-  { name: "Ziffernblock", hoch: "Numpad8", runter: "Numpad5", links: "Numpad4", rechts: "Numpad6", knopf: ["Numpad0", "NumpadEnter"] }
-];
+export const BELEGUNG = {
+  name: "WASD oder Pfeile",
+  hoch: ["KeyW", "ArrowUp"],
+  runter: ["KeyS", "ArrowDown"],
+  links: ["KeyA", "ArrowLeft"],
+  rechts: ["KeyD", "ArrowRight"],
+  knopf: ["Space", "ShiftLeft", "ShiftRight", "Enter", "KeyF"]
+};
 
 /* Der Knopf des Daumens läuft als Pseudo-Taste durch dieselben Mengen
    wie die echten. Ein eigener Zustand daneben wäre eine zweite
@@ -77,12 +93,10 @@ export function macheEingabe() {
      das — der Knopf tut dann scheinbar nichts. Gemerkt wird der Druck
      deshalb hier, bis er einmal gelesen wurde. */
   const frisch = new Set();
-  const abgefangen = new Set();
-  for (const b of BELEGUNGEN) {
-    abgefangen.add(b.hoch); abgefangen.add(b.runter);
-    abgefangen.add(b.links); abgefangen.add(b.rechts);
-    for (const k of b.knopf) abgefangen.add(k);
-  }
+  const abgefangen = new Set([
+    ...BELEGUNG.hoch, ...BELEGUNG.runter, ...BELEGUNG.links, ...BELEGUNG.rechts,
+    ...BELEGUNG.knopf
+  ]);
 
   addEventListener("keydown", (e) => {
     if (e.repeat) return;
@@ -208,72 +222,83 @@ export function macheEingabe() {
      Figur, die endlos nach links läuft. */
   addEventListener("blur", () => { tasten.clear(); frisch.clear(); stickLos(); });
 
-  const vorher = [false, false, false, false];
-  const vorherX = [0, 0, 0, 0];
-  const vorherY = [0, 0, 0, 0];
+  /* Liest **die eine** Figur dieses Rechners: Tastatur, Daumen und das
+     erste Gamepad zusammengefasst. Rohwerte, ohne Flanken — die
+     entstehen in `macheFlanken()`, damit sie für die eigene und die
+     ankommenden Eingaben nach derselben Regel entstehen. */
+  function liesEigene() {
+    const liegt = (k) => tasten.has(k) || frisch.has(k);
+    const eine = (liste) => liste.some(liegt);
+    let x = (eine(BELEGUNG.rechts) ? 1 : 0) - (eine(BELEGUNG.links) ? 1 : 0);
+    let y = (eine(BELEGUNG.runter) ? 1 : 0) - (eine(BELEGUNG.hoch) ? 1 : 0);
+    let knopf = eine(BELEGUNG.knopf);
 
-  function lies(spielerzahl) {
+    /* Der Daumen überschreibt die Tastatur nur, wenn er wirklich zieht;
+       sonst stünde die Achse auf null, sobald man ihn loslässt und
+       weiter mit der Tastatur spielt. */
+    if (stick.zeiger !== null && (stick.x !== 0 || stick.y !== 0)) { x = stick.x; y = stick.y; }
+    if (liegt(BERUEHRUNGSKNOPF)) knopf = true;
+
     const pads = navigator.getGamepads ? navigator.getGamepads() : [];
-    const raus = [];
-
-    for (let i = 0; i < spielerzahl; i++) {
-      const b = BELEGUNGEN[i];
-      const liegt = (k) => tasten.has(k) || frisch.has(k);
-      let x = (liegt(b.rechts) ? 1 : 0) - (liegt(b.links) ? 1 : 0);
-      let y = (liegt(b.runter) ? 1 : 0) - (liegt(b.hoch) ? 1 : 0);
-      let knopf = b.knopf.some(liegt);
-
-      /* Der Daumen gehört dem ersten Platz — ein Telefon hat einen
-         Spieler. Er überschreibt die Tastatur nur, wenn er wirklich
-         zieht; sonst stünde die Achse auf null, sobald man ihn loslässt
-         und weiter mit der Tastatur spielt. */
-      if (i === 0) {
-        if (stick.zeiger !== null && (stick.x !== 0 || stick.y !== 0)) { x = stick.x; y = stick.y; }
-        if (liegt(BERUEHRUNGSKNOPF)) knopf = true;
-      }
-
-      const pad = pads[i];
-      if (pad && pad.connected) {
-        const ax = pad.axes[0] ?? 0, ay = pad.axes[1] ?? 0;
-        if (Math.abs(ax) > TOTZONE || Math.abs(ay) > TOTZONE) { x = ax; y = ay; }
-        /* Steuerkreuz gilt auch — viele spielen damit lieber. */
-        if (pad.buttons[14]?.pressed) x = -1;
-        if (pad.buttons[15]?.pressed) x = 1;
-        if (pad.buttons[12]?.pressed) y = -1;
-        if (pad.buttons[13]?.pressed) y = 1;
-        if (pad.buttons[0]?.pressed || pad.buttons[9]?.pressed) knopf = true;
-      }
-
-      /* Flanken: Menüs sollen auf **Drücken** reagieren, nicht auf
-         Gedrückthalten — sonst rast der Auswahlbalken durch. */
-      const stufeX = Math.abs(x) > 0.6 ? Math.sign(x) : 0;
-      const stufeY = Math.abs(y) > 0.6 ? Math.sign(y) : 0;
-      raus.push({
-        /* `ausweichen` ist derselbe Knopf. Der Regelkern fragt ihn im
-           Kampf, die Menüs fragen `knopf` — zwei Namen für eine Taste,
-           weil beide Seiten von der jeweils anderen nichts wissen
-           müssen. */
-        x, y, knopf, ausweichen: knopf,
-        knopfFlanke: knopf && !vorher[i],
-        xFlanke: stufeX !== 0 && stufeX !== vorherX[i] ? stufeX : 0,
-        yFlanke: stufeY !== 0 && stufeY !== vorherY[i] ? stufeY : 0
-      });
-      vorher[i] = knopf;
-      vorherX[i] = stufeX;
-      vorherY[i] = stufeY;
+    const pad = pads[0];
+    if (pad && pad.connected) {
+      const ax = pad.axes[0] ?? 0, ay = pad.axes[1] ?? 0;
+      if (Math.abs(ax) > TOTZONE || Math.abs(ay) > TOTZONE) { x = ax; y = ay; }
+      /* Steuerkreuz gilt auch — viele spielen damit lieber. */
+      if (pad.buttons[14]?.pressed) x = -1;
+      if (pad.buttons[15]?.pressed) x = 1;
+      if (pad.buttons[12]?.pressed) y = -1;
+      if (pad.buttons[13]?.pressed) y = 1;
+      if (pad.buttons[0]?.pressed || pad.buttons[9]?.pressed) knopf = true;
     }
-    /* Erst leeren, wenn alle Spieler gelesen haben — sonst sähe nur
-       der erste den kurzen Druck. */
+
+    /* Der kurze Tipp ist jetzt gelesen. */
     frisch.clear();
-    return raus;
+    return { x, y, ausweichen: knopf };
   }
 
-  /* Wie viele Gamepads angeschlossen sind — nur zur Anzeige im
-     Vorspiel, damit man sieht, dass sie erkannt wurden. */
+  /* Wie viele Gamepads angeschlossen sind — nur zur Anzeige. */
   function pads() {
     const p = navigator.getGamepads ? navigator.getGamepads() : [];
     return [...p].filter((g) => g && g.connected).length;
   }
 
-  return { lies, pads, tasten };
+  return { liesEigene, pads, tasten };
+}
+
+/* ── Flanken ────────────────────────────────────────────────────────
+
+   Menüs sollen auf **Drücken** reagieren, nicht auf Gedrückthalten —
+   sonst rast der Auswahlbalken durch. Dafür muss man wissen, was im
+   Schritt davor anlag.
+
+   Warum das eine eigene Sache ist und nicht mehr in `liesEigene`
+   steckt: Über die Leitung kommen **rohe** Eingaben (zwei Achsen, ein
+   Knopf), keine Flanken. Würde jeder Rechner die Flanken der anderen
+   anders bilden, wählte derselbe Knopfdruck bei zwei Leuten
+   verschiedene Karten — und die Welten liefen auseinander, ohne dass
+   irgendwo ein Fehler erschiene. Deshalb entstehen sie hier, aus
+   denselben Rohwerten, nach derselben Regel, bei allen. */
+export function macheFlanken() {
+  const vorher = [];
+
+  return function leite(rohe) {
+    return rohe.map((e, i) => {
+      const x = e?.x ?? 0, y = e?.y ?? 0;
+      const knopf = !!(e?.ausweichen ?? e?.knopf);
+      const stufeX = Math.abs(x) > 0.6 ? Math.sign(x) : 0;
+      const stufeY = Math.abs(y) > 0.6 ? Math.sign(y) : 0;
+      const alt = vorher[i] ?? { knopf: false, x: 0, y: 0 };
+      vorher[i] = { knopf, x: stufeX, y: stufeY };
+      return {
+        /* `ausweichen` fragt der Regelkern im Kampf, `knopf` fragen die
+           Menüs — zwei Namen für eine Taste, weil beide Seiten von der
+           jeweils anderen nichts wissen müssen. */
+        x, y, knopf, ausweichen: knopf,
+        knopfFlanke: knopf && !alt.knopf,
+        xFlanke: stufeX !== 0 && stufeX !== alt.x ? stufeX : 0,
+        yFlanke: stufeY !== 0 && stufeY !== alt.y ? stufeY : 0
+      };
+    });
+  };
 }

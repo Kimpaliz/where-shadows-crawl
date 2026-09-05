@@ -20,17 +20,21 @@
    ── Arbeitet zusammen mit ───────────────────────────────────────────
 
    `spiel/lauf.mjs` (der ganze Ablauf), `runtime/zeichnen.js`,
-   `runtime/oberflaeche.js`, `runtime/eingabe.js`, `runtime/sprites.js`. */
+   `runtime/oberflaeche.js`, `runtime/eingabe.js`, `runtime/sprites.js`,
+   `runtime/lobby.js` (der Einstieg — sie sagt, mit wie vielen und mit
+   welcher Saat es losgeht). */
 
 import { starteLauf, naechsteWelle, oeffneKraemer, schrittImLauf, SCHRITT } from "../spiel/lauf.mjs";
 import { arenaRadius } from "../spiel/welt.mjs";
 import { ladeSprites } from "./sprites.js";
 import { macheZeichner, zeichne, baueBoden, fackelOrte, BREITE, HOEHE } from "./zeichnen.js";
-import { macheEingabe } from "./eingabe.js";
+import { macheEingabe, macheFlanken } from "./eingabe.js";
 import {
-  macheMenue, zeichneAnzeige, zeichneWahl, zeichneLaden, zeichneVorspiel, zeichneEnde,
+  macheMenue, zeichneAnzeige, zeichneWahl, zeichneLaden, zeichneEnde,
   bedieneWahl, bedieneLaden, SPERRE_SEKUNDEN
 } from "./oberflaeche.js";
+import { macheLobby } from "./lobby.js";
+import { ruhendeEingabe } from "../netz/nachrichten.mjs";
 
 /* Höchstens so viele Weltschritte je Bild. Bei 60 Bildern je Sekunde
    werden nie mehr als vier gebraucht; die Grenze fängt nur den Fall
@@ -46,13 +50,21 @@ const sprites = ladeSprites();
 const eingabe = macheEingabe();
 const menue = macheMenue();
 
+const flanken = macheFlanken();
+
 let welt = null;
 let boden = null;
-let zustand = "vorspiel";
+/* „lobby" statt „vorspiel": Wie viele mitspielen, entscheidet nicht
+   mehr eine Taste an dieser Tastatur, sondern wer beitritt. */
+let zustand = "lobby";
 let sammler = 0;
 let zeit = 0;
 let vorher = performance.now();
 let letztePhase = null;
+/* Der Platz dieses Rechners in der Runde. Allein ist das 0; in einer
+   Lobby vergibt ihn der Wirt (netz/sitzung.mjs). */
+let eigenerPlatz = 0;
+let sitzung = null;
 
 /* Ganzzahlig vergrößern, solange etwas zu vergrößern da ist — und
    verkleinern, wenn der Bildschirm kleiner ist als das Bild.
@@ -94,8 +106,10 @@ addEventListener("orientationchange", () => { passeAn(); setTimeout(passeAn, 250
 window.visualViewport?.addEventListener("resize", passeAn);
 passeAn();
 
-function neuerLauf(spielerzahl) {
-  const saat = (Math.random() * 0xffffffff) >>> 0;
+/* Die Saat kommt jetzt von außen: allein aus der Lobby, in einer Runde
+   vom Wirt. Sie hier zu würfeln hieße, dass jeder Rechner eine andere
+   Nacht bekäme (netz/sitzung.mjs). */
+function neuerLauf(spielerzahl, saat) {
   welt = starteLauf({ spielerzahl, saat });
   /* Die Fackeln gehören zum Bild, nicht zur Regel — deshalb hängen sie
      an der Welt, ohne dass `spiel/` von ihnen weiß. Der Regelkern
@@ -118,21 +132,22 @@ function bild(jetzt) {
   vorher = jetzt;
   zeit += dt;
 
-  const eingaben = eingabe.lies(zustand === "vorspiel" ? 4 : welt.spieler.length);
+  /* Solange die Lobby oben liegt, malt der Browser sie — die Leinwand
+     hat nichts zu tun. */
+  if (zustand === "lobby") return;
+
+  /* Dieser Rechner steuert genau eine Figur. Die übrigen Plätze
+     bekommen eine stehende Figur, bis der Gleichlauf sie füllt. */
+  const rohe = [];
+  for (let i = 0; i < welt.spieler.length; i++) rohe.push(ruhendeEingabe());
+  if (eigenerPlatz < rohe.length) rohe[eigenerPlatz] = eingabe.liesEigene();
+  const eingaben = flanken(rohe);
 
   /* Wechselt der Bildschirm, wird der Knopf kurz nicht gehoert —
      siehe oberflaeche.js. */
-  const phaseJetzt = zustand === "vorspiel" ? "vorspiel" : welt.phase;
+  const phaseJetzt = welt.phase;
   if (phaseJetzt !== letztePhase) { menue.sperre = SPERRE_SEKUNDEN; letztePhase = phaseJetzt; }
   if (menue.sperre > 0) menue.sperre -= dt;
-
-  if (zustand === "vorspiel") {
-    const e = eingaben[0];
-    if (e.xFlanke) menue.spielerzahl = Math.max(1, Math.min(4, menue.spielerzahl + e.xFlanke));
-    if (e.knopfFlanke && menue.sperre <= 0) { neuerLauf(menue.spielerzahl); sammler = 0; }
-    zeichneVorspiel(zeichner.c, menue, eingabe.pads());
-    return;
-  }
 
   if (welt.phase === "welle") {
     sammler += dt;
@@ -154,7 +169,15 @@ function bild(jetzt) {
     }
     if (bedieneLaden(welt, menue, eingaben)) { naechsteWelle(welt); sammler = 0; }
   } else if (welt.phase === "gewonnen" || welt.phase === "verloren") {
-    if (menue.sperre <= 0 && eingaben.some((e) => e.knopfFlanke)) { zustand = "vorspiel"; return; }
+    if (menue.sperre <= 0 && eingaben.some((e) => e.knopfFlanke)) {
+      /* Zurück in die Lobby, nicht in ein Vorspiel: Wer mitspielt,
+         steht dort und nicht an dieser Tastatur. */
+      sitzung?.verlasse();
+      sitzung = null;
+      zustand = "lobby";
+      lobby.zeigeWahl();
+      return;
+    }
   }
 
   /* Die Welt wird immer gezeichnet — auch hinter Laden und Kartenwahl.
@@ -168,5 +191,18 @@ function bild(jetzt) {
   else if (welt.phase === "laden") zeichneLaden(zeichner.c, welt, menue);
   else zeichneEnde(zeichner.c, welt);
 }
+
+/* Die Lobby ist der Einstieg. Sie entscheidet, mit wie vielen und mit
+   welcher Saat der Lauf beginnt — allein, als Wirt oder als Gast. */
+const lobby = macheLobby({
+  beiStart({ saat, spielerzahl, eigenerPlatz: platz, sitzung: s }) {
+    eigenerPlatz = platz ?? 0;
+    sitzung = s ?? null;
+    neuerLauf(spielerzahl, saat);
+    sammler = 0;
+    letztePhase = null;
+  }
+});
+lobby.zeigeWahl();
 
 requestAnimationFrame(bild);

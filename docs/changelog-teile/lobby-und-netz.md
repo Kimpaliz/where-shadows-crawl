@@ -99,3 +99,50 @@ zweiten Anlauf fing ich den Rückruf **meiner eigenen** Zählschleife ein
 statt der des Spiels; auffällig wurde das erst an der Gegenprobe „ändert
 sich das Bild überhaupt?" — Antwort: um 0. **Merksatz:** Bevor man aus
 einer Bildmessung etwas schließt, prüft man, ob sich das Bild bewegt.
+
+---
+
+## Lobby, Lobbycode und der Weg über das Netz (05.09.2026)
+
+**Janniks Ansagen:** *„Nur lobby beitritt, kein lokal auf der selben
+tastatur."* · *„endlich lobbycode."*
+
+**Neu `netz/`** (fünf Module, ohne eine Abhängigkeit): `lobbycode.mjs`,
+`nachrichten.mjs`, `broker.mjs`, `verbindung.mjs`, `sitzung.mjs`. Dazu
+`runtime/lobby.js` als Oberfläche — bewusst HTML statt Leinwand: Hier
+wird ein Code **getippt**, und ein Eingabefeld auf einer Leinwand
+nachzubauen hieße, die Bildschirmtastatur des Telefons selbst zu bauen.
+
+**Der Code** hat sechs Zeichen aus **31** — ohne 0, O, 1, I und L. Das
+ist Rechnung, nicht Vorsicht: Er wird **vorgelesen**, und wer eine Null
+hört und ein O tippt, bekommt dieselbe Meldung wie bei einem echten
+Tippfehler. Fehlen beide ganz, kann die Verwechslung nicht entstehen.
+31^6 = 887.503.681 Möglichkeiten. Groß- und Kleinschreibung sind egal.
+
+**Die vier Tastaturbelegungen sind weg.** Die eine übrige nimmt WASD und
+die Pfeiltasten zugleich. Im Browser gemessen, beide am selben Jäger:
+`A` über 75 Bilder → **−79,56**, `ArrowRight` über 150 Bilder →
+**+175,16**. Neu `macheFlanken()`: Über die Leitung kommen **rohe**
+Eingaben, keine Flanken — bildete jeder Rechner sie anders, wählte
+derselbe Knopfdruck bei zwei Leuten verschiedene Karten, und die Welten
+liefen auseinander, ohne dass irgendwo ein Fehler erschiene.
+
+**Der Befund, der eine Entscheidung braucht:** Die Lobby geht gegen den
+echten öffentlichen Vermittler auf (Codes `HRUCV2`, `JAFG3P`, `8HM9FF`;
+eine zweite Anmeldung auf dieselbe Kennung bekommt korrekt `ID-TAKEN`).
+**Eine Runde kommt trotzdem nicht zustande.** Mit nackten WebSockets
+gemessen, ohne eine Zeile Spielcode: Wer nur dasitzt oder Lebenszeichen
+schickt, bleibt verbunden — wer ein Angebot **weiterreichen** will, wird
+mit Code 1000 geschlossen, und beim Empfänger kommt **nichts** an. Das
+gilt auch für ein Angebot an eine Kennung, die es gar nicht gibt. Das
+Protokoll folgt der Beschreibung; der Dienst hält sie gerade nicht ein.
+
+**Zwei eigene Fehler, beide beim Messen gefunden.** Das Wartebild
+„VERBINDEN" hatte weder Meldungszeile noch Rückweg — und weil jede
+Meldung nach `#lobbymeldung` schreibt, fiel **jeder** Fehler in ein
+Element, das es dort nicht gab; der Gast stand für immer vor „Suche die
+Lobby …". Und für den Gast galt eine Trennung vom Vermittler als
+belanglos, obwohl er noch gar nicht verbunden war. Nach beiden
+Reparaturen erscheint nach acht Sekunden eine Meldung in normaler
+Sprache plus ein Knopf `ABBRECHEN`. Nebenbei: „noch 3 **Platze** frei"
+→ „Plätze".

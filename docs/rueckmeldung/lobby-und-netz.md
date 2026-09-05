@@ -174,3 +174,98 @@ stand, **scrollte die Seite in genau diesem Fall unter dem Daumen weg**.
 Jetzt abgefangen, und abgewehrt wird vor dem Greifen. Gegenprobe mit
 denselben Ereignissen: vorher sechs `Uncaught NotFoundError`, jetzt
 `geworfen: null`.
+
+---
+
+## Baustein 3 · Lobby und Verbindung (05.09.2026)
+
+Janniks Ansagen: *„Nur lobby beitritt, kein lokal auf der selben
+tastatur."* · *„endlich lobbycode."*
+
+### Der Lobbycode
+
+Sechs Zeichen aus **31** — ohne 0, O, 1, I und L. Das ist Rechnung, nicht
+Vorsicht: Der Code wird **vorgelesen**. Wer eine Null hört und ein O
+tippt, landet in einer Lobby, die es nicht gibt, und bekommt dieselbe
+Meldung wie bei einem echten Tippfehler. Fehlen beide Zeichen ganz, kann
+die Verwechslung nicht entstehen. 31^6 = **887.503.681** Möglichkeiten.
+
+Getippt wird ohne Rücksicht auf Groß- und Kleinschreibung: Im Browser mit
+`8hm9ff` beigetreten, gesucht wurde `8HM9FF`.
+
+### Ein Rechner, eine Figur
+
+Die vier Tastaturbelegungen sind weg. Die eine übrige nimmt **WASD und
+die Pfeiltasten zugleich** — vorher gehörten die Pfeile Spieler 2, jetzt
+ist niemand mehr da, dem sie wegzunehmen wären.
+
+Im Browser gemessen, beide am selben Jäger:
+
+| Taste | Wanderung der Figur |
+| --- | ---: |
+| `A` über 75 Bilder | **−79,56** (nach links) |
+| `ArrowRight` über 150 Bilder | **+175,16** (nach rechts) |
+
+Neu ist `macheFlanken()`: Über die Leitung kommen **rohe** Eingaben, keine
+Flanken. Bildete jeder Rechner sie anders, wählte derselbe Knopfdruck bei
+zwei Leuten verschiedene Karten — und die Welten liefen auseinander, ohne
+dass irgendwo ein Fehler erschiene. Deshalb entstehen sie an einer Stelle,
+aus denselben Rohwerten, für die eigene und die fremden Eingaben gleich.
+
+### Der Befund, der Jannik betrifft: der Vermittler leitet nicht weiter
+
+Die Lobby geht auf, gegen den **echten** öffentlichen Vermittler — Code
+`HRUCV2`, dann `JAFG3P`, dann `8HM9FF`. Der Wirt steht in seiner Liste,
+die Kennung ist belegt (eine zweite Anmeldung darauf bekommt korrekt
+`ID-TAKEN`).
+
+**Aber es kommt keine Runde zustande.** Mit nackten WebSockets gemessen,
+ohne eine Zeile Spielcode:
+
+| Fall | Absender danach | Empfänger |
+| --- | --- | --- |
+| nur dasitzen | offen | — |
+| nur Lebenszeichen | offen | — |
+| Angebot an eine Kennung, die es **nicht** gibt | **zu (Code 1000)** | — |
+| Angebot an eine Kennung, die es **gibt** | **zu (Code 1000)** | **nichts** |
+
+Der Vermittler nimmt also die Anmeldung an und beantwortet Lebenszeichen,
+schließt aber jeden, der ein Angebot **weiterreichen** will — und stellt
+nichts zu. Das Protokoll hier folgt der Beschreibung; der Dienst hält sie
+gerade nicht ein. Der Weg ist gebaut und lesbar, die Verbindung kam in
+dieser Umgebung nicht zustande.
+
+**Das ist eine Entscheidung über einen fremden Dienst**, und die trifft
+Jannik: einen anderen Vermittler nehmen, einen eigenen betreiben, oder
+warten. Solange das offen ist, hängt niemand — siehe nächster Absatz.
+
+### Zwei eigene Fehler, beide beim Messen gefunden
+
+**1 · Das Wartebild war eine Sackgasse.** „VERBINDEN" hatte weder eine
+Meldungszeile noch einen Weg zurück. Jede Fehlermeldung schreibt nach
+`#lobbymeldung` — und das Element gab es auf diesem Bild **nicht**. Der
+Gast stand deshalb für immer vor `Suche die Lobby … `, obwohl die
+Verbindung längst aufgegeben hatte. Genau der Fall, den Jannik
+ausdrücklich nicht wollte.
+
+**2 · Für den Gast galt die Trennung als belanglos.** Im Code stand
+wörtlich „nach dem Aufbau belanglos" — richtig, aber der Gast war noch
+gar nicht aufgebaut. Jetzt unterscheidet die Sitzung beides.
+
+Nach beiden Reparaturen im Browser nachgemessen — der Gast bekommt nach
+acht Sekunden:
+
+> Der Vermittler hat die Verbindung abgebrochen, bevor die Lobby gefunden
+> war. Das ist ein fremder Dienst — versuch es gleich noch einmal.
+
+dazu einen Knopf `ABBRECHEN`. Kein Ladebalken ohne Ende.
+
+**Ein Textfehler nebenbei:** „noch 3 **Platze** frei" — der Umlaut wandert
+beim Beugen mit. Jetzt „Plätze".
+
+### Was ich im Browser wirklich geklickt habe
+
+Lobby aufmachen (dreimal, mit echtem Vermittler) · Code abgelesen · in
+einem **zweiten Tab** beigetreten, klein getippt · Wartebild und Meldung
+gelesen · `ABBRECHEN` · `ALLEIN SPIELEN` → die Arena erscheint, Jäger und
+Fackel stehen · mit `A` und `ArrowRight` gelaufen.
