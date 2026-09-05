@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Where Shadows Crawl</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#050409">
+<!-- Apple kennt das Manifest nicht; ohne diese drei Zeilen startet
+     ein iPhone die App mit Adressleiste. -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Shadows">
+<link rel="apple-touch-icon" href="symbole/symbol-192.png">
 <style>
   /* [Aufgabe: Bedienung] Der Rahmen um das Bild und die Bedienung fuer den Daumen.
 
@@ -161,5 +169,18 @@
   <div id="lobby" hidden></div>
 
   <script type="module" src="runtime/start.js"></script>
+
+  <!-- Der Dienst macht die App installierbar und offline spielbar.
+       Bewusst NACH dem Spiel und in einem eigenen Block: Faellt er aus
+       — kein HTTPS, abgeschaltet, alte Browserfassung —, laeuft das
+       Spiel unveraendert weiter. Ein `await` davor haette genau das
+       verhindert. -->
+  <script>
+    if ("serviceWorker" in navigator) {
+      addEventListener("load", () => {
+        navigator.serviceWorker.register("sw.js").catch(() => {});
+      });
+    }
+  </script>
 </body>
 </html>

@@ -3,6 +3,79 @@
 Oben das Neueste. Jeder Eintrag sagt **was**, **warum** und **womit
 gemessen** — nicht nur, dass etwas anders ist.
 
+## 0.9.5 — Als App installierbar, Vollbild und quer (05.09.2026)
+
+Janniks Ansage: *„wenn ich dies spiel aus dem browser im handy
+installiere dann mus die webbrowser leiste komplett weg. und es muss
+von anfang an voll bild horizontal fix sein."*
+
+### Warum das zwei Wege sind und nicht einer
+
+**In der installierten App** erledigt das Manifest alles:
+`display: fullscreen` lässt keine Adressleiste zu,
+`orientation: landscape` legt die Lage fest. Kein Programmcode nötig.
+
+**Im gewöhnlichen Tab wirkt beides nicht.** Vollbild gibt es dort
+ausschließlich über `requestFullscreen()`, und das verlangt eine
+**echte Nutzergeste** — ein Aufruf beim Laden wird abgelehnt, still.
+Deshalb hängt `gehInsVollbild()` am **Spielstart**: Wer „Allein
+spielen" drückt, hat gerade die Geste gemacht, die der Browser
+verlangt. Ein eigener Vollbildknopf wäre ein zweiter Knopf für etwas,
+das man in dem Moment ohnehin will.
+
+### Gebaut
+
+| Datei | was sie tut |
+| --- | --- |
+| `manifest.webmanifest` | `fullscreen` + `landscape`, vier Symbole, Pfade relativ |
+| `sw.js` | Dienstarbeiter, **Netz zuerst, Vorrat als Rückhalt** |
+| `runtime/vollbild.js` | `alsAppGestartet()` und `gehInsVollbild()` |
+| `werkzeuge/png.mjs` | PNG schreiben über `node:zlib`, ohne Abhängigkeit |
+| `werkzeuge/symbole.mjs` | die vier Symbole als Zeichencode, nicht als Bilddatei |
+| `werkzeuge/pruefe-app.mjs` | 37 Prüfungen |
+
+**Die Symbole sind Zeichencode**, wie jedes Sprite des Spiels
+(`runtime/sprite-daten.js`): ein 16×16-Muster, Farben aus
+`runtime/palette.js`. Eine fertige `.png` im Repository könnte niemand
+mehr lesen, ändern oder gegen die Palette prüfen — und sie wäre die
+einzige Bilddatei in einem Spiel, das ausdrücklich ohne auskommt.
+Erzeugt mit `node werkzeuge/symbole.mjs --wirklich`.
+
+### Drei Entscheidungen mit ihrem Grund
+
+**1 · Vollbild auf dem Wurzelelement, nicht auf der Leinwand.** Der
+Daumen-Stick und der Ausweichknopf liegen **neben** der Leinwand im
+DOM. Wer nur die Leinwand ins Vollbild schickt, verliert genau die
+Bedienung, um die es geht.
+
+**2 · Netz zuerst, Vorrat als Rückhalt.** Andersherum zeigt der Dienst
+nach jeder Veröffentlichung tagelang den alten Stand — bei Slay'Em All
+genau so passiert. Der Preis ist eine Netzanfrage je Datei; bei einem
+Spiel, das nur beim Start lädt, ist das nichts.
+
+**3 · Keine vorab gefüllte Dateiliste im Dienst.** Sie müsste jede neue
+Datei kennen und wäre nach dem ersten vergessenen Eintrag still
+unvollständig — man merkt es erst offline. In den Vorrat wandert, was
+wirklich geladen wurde.
+
+### Was still scheitern darf
+
+Safari auf dem iPhone kann `requestFullscreen` bis heute nicht, und
+`screen.orientation.lock` gibt es dort ebenfalls nicht. Beide Aufrufe
+stehen in **eigenen** `try`-Blöcken: Schlägt der erste fehl, wird der
+zweite trotzdem versucht, und das Spiel läuft weiter. Eine
+Fehlermeldung sähe aus, als wäre etwas kaputt — kaputt ist aber nur ein
+Browser, der nicht mitmacht.
+
+### Nebenbei behoben: die Vorschau lieferte falsche Typen
+
+`werkzeuge/vorschau.mjs` kannte `.webmanifest` und `.png` nicht und gab
+beides als `application/octet-stream` aus. Der Browser lehnt ein
+Manifest mit falschem Typ ab — **örtlich wäre die App nicht
+installierbar gewesen, obwohl sie es live ist.** Dann prüft man etwas
+anderes, als man ausliefert. Drei Typen ergänzt, ein Wächter hält es
+fest.
+
 ## 0.9.4 — Mit dem Finger bedienbar (05.09.2026)
 
 Janniks Ansage: *„ich will das auf handy ui mit finger druck benutzt

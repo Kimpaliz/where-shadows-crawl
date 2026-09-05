@@ -1,0 +1,21 @@
+{
+  "name": "Where Shadows Crawl",
+  "short_name": "Shadows",
+  "description": "Koop-Wellenspiel im Dunkeln. Dark Fantasy, exakt von oben, Pixelgrafik.",
+  "id": "/where-shadows-crawl/",
+  "start_url": ".",
+  "scope": ".",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "landscape",
+  "background_color": "#050409",
+  "theme_color": "#050409",
+  "categories": ["games"],
+  "lang": "de",
+  "icons": [
+    { "src": "symbole/symbol-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "symbole/symbol-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "symbole/symbol-maske-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "symbole/symbol-maske-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

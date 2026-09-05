@@ -61,6 +61,15 @@ const TYPEN = {
   ".js": "text/javascript; charset=utf-8",
   ".mjs": "text/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
+  /* Ohne diese drei liefert die Vorschau `application/octet-stream`,
+     und dann lehnt der Browser das Manifest ab und zeigt die Symbole
+     nicht — die App wäre örtlich nicht installierbar, obwohl sie es
+     live wäre. Dann prüfte man etwas anderes, als ausgeliefert wird.
+     Genau dieser Fehler hat in Slay'Em All einen halben Abend
+     gekostet. */
+  ".webmanifest": "application/manifest+json; charset=utf-8",
+  ".png": "image/png",
+  ".svg": "image/svg+xml",
   ".css": "text/css; charset=utf-8"
 };
 

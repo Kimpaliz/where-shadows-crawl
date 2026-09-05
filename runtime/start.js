@@ -36,6 +36,7 @@ import {
 import { macheKartenhand } from "./karten-hand.js";
 import { macheLadenhand } from "./laden-tippen.js";
 import { macheLobby } from "./lobby.js";
+import { gehInsVollbild } from "./vollbild.js";
 import { ruhendeEingabe, packeEingabe, entpackeEingabe } from "../netz/nachrichten.mjs";
 import { macheLockstep, VERZUG, NACHHALL } from "../netz/lockstep.mjs";
 
@@ -351,6 +352,12 @@ function bild(jetzt) {
    welcher Saat der Lauf beginnt — allein, als Wirt oder als Gast. */
 const lobby = macheLobby({
   beiStart({ saat, spielerzahl, eigenerPlatz: platz, sitzung: s }) {
+    /* Der Knopfdruck, der hierher fuehrt, ist die **einzige** Geste,
+       mit der ein Browser Vollbild erlaubt. Deshalb steht es hier und
+       nicht beim Laden — dort wuerde es abgelehnt. In der
+       installierten App tut es nichts, weil das Manifest es schon
+       geregelt hat (`runtime/vollbild.js`). */
+    gehInsVollbild();
     eigenerPlatz = platz ?? 0;
     sitzung = s ?? null;
 
