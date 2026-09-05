@@ -66,3 +66,49 @@ die Hälfte. Nur die Prüfkette sagt, welche Hälfte es war.
 - Auf dem Telefon liegt `#stickfeld` über der ganzen linken Bildhälfte.
   Die Hand horcht deshalb in der **Einfangphase** am Fenster und hält
   ein Zeigerereignis nur an, wenn es wirklich eine Karte trifft.
+
+## Im Browser geklickt (05.09.2026, `node werkzeuge/vorschau.mjs --hafen=8154`)
+
+Nicht „der Knopf ist da", sondern **mit der Maus geklickt** und die
+Leinwand danach **bildpunktweise ausgelesen** (die Rückenfarben `#151021`
+und `#221a33` verraten, wo welche Karte liegt):
+
+| geklickt | Rückenfarbe der grossen Karte vorher | nachher |
+| --- | --- | --- |
+| dritte Karte | x 99–236 (Karte 1) | **x 243–380 (Karte 3)** |
+| dieselbe noch einmal | x 243–380 | **weg** — die Karte ist genommen, die Welle läuft weiter |
+
+Weiter gemessen: Unterkante der Hand bei y 263 von 270 (fünf Bildpunkte
+Luft), keine ungewählte Karte von der grossen verdeckt, Konsole ohne eine
+einzige Meldung des Spiels.
+
+**Der Daumen-Stick wurde übersprungen — live nachgewiesen.** Mit
+sichtbarer `#bedienung` (also so, wie es auf dem Telefon aussieht) deckt
+`#stickfeld` die Fensterhälfte bis x 530 ab; die grosse Karte lag
+vollständig darunter. Ein echter Klick darauf hat sie genommen, und
+`#bedienung` bekam dabei **nie** die Klasse `zieht` — der Stick ist gar
+nicht erst angesprungen. Die Gegenprobe fiel nebenbei ab: Dieselben
+Klicks **ausserhalb** der Kartenwahl liefen dreimal in einen Zeitablauf,
+weil `#stickfeld` sie festhielt. Genau das soll es ja.
+
+**Zwei Befunde, die erst der Browser gezeigt hat:**
+
+1. **Die grosse Karte verschluckte ihre Nachbarin.** Von 88 Bildpunkten
+   blieben 45 sichtbar, der Titel war mitten durchgeschnitten — und
+   „der Title, der schon zeigt worum es geht", ist Janniks Wortlaut.
+   Neu ist `VERSATZ`: Die ungewählten Karten rücken um 42 Bildpunkte
+   nach aussen (halbe Breitendifferenz plus Überlappung), damit die
+   grosse Karte genau an sie stösst statt über sie zu laufen. Ein
+   Wächter hält es fest.
+2. **`werkzeuge/vorschau.mjs` kannte nur Hafen 8144.** Vier Sitzungen
+   gleichzeitig heissen vier Server; der zweite stirbt mit `EADDRINUSE`,
+   und wer das übersieht, prüft die **fremde** Fassung. Jetzt
+   `--hafen=8154`, Standard unverändert 8144.
+
+**Nicht geprüft:** kein echtes Telefon und kein echter Finger. Die
+Bildschirmgrösse 375 × 812 liess sich zwar einstellen, aber in der
+Berührungs-Nachbildung lief **jeder** Klick des Prüfwerkzeugs in einen
+Zeitablauf — auch der auf die Lobby-Knöpfe, also unabhängig von dieser
+Arbeit. Die Hallen-Prüfung oben lief deshalb bei Fenstergrösse 1060 ×
+532 mit von Hand eingeblendeter `#bedienung`; die Überdeckung durch
+`#stickfeld` ist dabei dieselbe.

@@ -110,6 +110,20 @@ export const GRUND_Y = HOEHE - 5;
 /* Der Bogen: die mittlere Karte steht am hoechsten. */
 const BOGEN = 8;
 
+/* Wie weit die uebrigen Karten zur Seite ruecken, wenn eine
+   hervorgehoben wird.
+
+   ⚠️ **Im Browser gemessen und deshalb ueberhaupt da:** Ohne Versatz
+   deckte die grosse Karte ihre linke Nachbarin bis auf 45 von 88
+   Bildpunkten zu — ihr Titel war in der Mitte durchgeschnitten. Genau
+   der soll aber „schon zeigen, worum es geht".
+
+   Die Zahl ist gerechnet, nicht geraten: halbe Breitendifferenz
+   (70 − 44) plus die Ueberlappung (88 − 72). Damit stoesst die grosse
+   Karte genau an ihre Nachbarn, statt sie zu verschlucken — und die
+   ungewaehlten ueberlappen einander weiter wie zuvor. */
+const VERSATZ = GROSS_B / 2 - KARTE_B / 2 + (KARTE_B - SCHRITT_X);
+
 /* Gruen fuer die Zahlen — Janniks „gruenlich hervorgehoben". Aus der
    Palette, nicht frei gemischt. */
 export const ZAHL_FARBE = FARBEN.seucheHell;
@@ -266,7 +280,15 @@ export function felderFuer(anzahl, gewaehlt) {
         Math.round(slotX + KARTE_B / 2 - GROSS_B / 2)));
       felder.push({ i, x, y: GRUND_Y - GROSS_H, b: GROSS_B, h: GROSS_H, gross: true });
     } else {
-      felder.push({ i, x: slotX, y: GRUND_Y - bogen - KARTE_H, b: KARTE_B, h: KARTE_H, gross: false });
+      /* Nach aussen ruecken, damit die grosse Karte niemanden
+         verschluckt. Ist gar keine gewaehlt (`gewaehlt` ausserhalb),
+         bleibt die Reihe, wie sie ist. */
+      const versatz = gewaehlt < 0 || gewaehlt >= anzahl ? 0
+        : (i < gewaehlt ? -VERSATZ : VERSATZ);
+      felder.push({
+        i, x: Math.round(slotX + versatz), y: GRUND_Y - bogen - KARTE_H,
+        b: KARTE_B, h: KARTE_H, gross: false
+      });
     }
   }
   return felder;

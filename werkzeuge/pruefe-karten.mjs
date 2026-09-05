@@ -597,6 +597,17 @@ function macheAufnahme() {
       melde(gross[0].b > KARTE_B && gross[0].h > KARTE_H,
         "und wirklich grösser als die anderen",
         `${gross[0].b}x${gross[0].h} gegen ${KARTE_B}x${KARTE_H}`);
+
+      /* Im Browser gemessen: Ohne Versatz deckte die grosse Karte ihre
+         Nachbarin bis auf 45 von 88 Bildpunkten zu und schnitt deren
+         Titel mitten durch. Genau der soll aber „schon zeigen, worum es
+         geht". Die grosse Karte darf keine andere überlagern. */
+      const g = gross[0];
+      const verdeckt = felder.filter((f) => !f.gross
+        && f.x < g.x + g.b && f.x + f.b > g.x && f.y < g.y + g.h && f.y + f.h > g.y);
+      melde(verdeckt.length === 0,
+        `${n} Karten, ${gewaehlt} gewählt: die grosse verdeckt keine andere`,
+        verdeckt.map((f) => `#${f.i}`).join(" "));
     }
   }
 
