@@ -318,3 +318,72 @@ Die Falle aus dem Auftrag wurde geprüft, bevor gemessen wurde: beide
 Tabs meldeten `document.visibilityState === "visible"` und **720 bzw.
 721 Bilder in 3 Sekunden** (~240 fps). Ein gedrosselter Hintergrundtab
 hätte den Gleichschritt für beide angehalten — das lag hier nicht vor.
+
+---
+
+## Schritt 4 · Wenn einer wegbricht (05.09.2026)
+
+Neue Lobby (`25PVC3`), beide drin, Nacht 1 gestartet — und dann der
+Tab des Gastes **geschlossen**, mitten in der laufenden Welle.
+
+### In der Welle: der andere läuft weiter ✔
+
+Gemessen am Bild selbst, fünf Aufnahmen im Sekundentakt direkt nach dem
+Wegbrechen: **fünf verschiedene** Bilder. Die Welle lief weiter, und
+ANKA konnte sich danach noch bewegen (Bild vor und nach dem Laufen
+verschieden). Der Endbildschirm kam nicht, die Lobby kam nicht zurück
+— es lief einfach weiter. Auch die Aufstiegskarten danach ließen sich
+nehmen.
+
+Das ist die Mechanik aus `runtime/start.js`: Wer länger als
+`WEG_NACH_SEKUNDEN = 2` fehlt, wird über `gleichschritt.meldeWeg()`
+übersprungen. Sie greift.
+
+### Im Krämer: die Runde hängt ✗ — ein echter Befund
+
+Sobald der Lauf in ein **Menü** kommt, ist Schluss. `bedieneLaden` in
+`runtime/oberflaeche.js` endet mit
+
+```
+return welt.spieler.every((s) => s.bereit);
+```
+
+Ein weggebrochener Spieler bekommt vom Gleichschritt die **ruhende**
+Eingabe eingesetzt — er drückt also nie, und `s.bereit` wird nie wahr.
+
+Am Bildschirm nachgestellt: ANKA ging auf `LOS` und drückte; ihre
+Spalte zeigt **BEREIT** in Grün, die Spalte des längst geschlossenen
+J2 zeigt weiter `LOS`. Sechs Aufnahmen im Sekundentakt danach:
+**alle sechs gleich** — das Bild steht. Vorher, in derselben Sitzung,
+waren fünf Aufnahmen fünfmal verschieden. Dieselbe Sperre gilt beim
+Aufstiegsmenü, wo unten „J2 WARTET" für einen Spieler steht, den es
+nicht mehr gibt.
+
+**Damit ist die Antwort auf Schritt 4 zweigeteilt:** In der Welle läuft
+der andere weiter statt einzufrieren — im Krämer nicht, dort ist die
+Runde zu Ende, ohne dass es jemand sagt.
+
+### Dieser Befund gehört nicht zu dieser Reparatur
+
+Er ist **älter** als sie und war bis heute nur nicht sichtbar: Vor dem
+Einpacken des Angebots kam nie eine Verbindung zustande, also konnte
+auch nie eine wegbrechen. Behoben wird er hier **nicht** —
+`runtime/oberflaeche.js` und `spiel/` gehören nicht zu diesem Auftrag,
+und die saubere Lösung ist eine Regelentscheidung, keine Reparatur:
+Ein weggebrochener Spieler müsste im Menü als „zählt nicht mit" gelten
+(etwa `every((s) => s.bereit || s.weg)`), und dafür braucht die Welt
+eine Marke, die sie heute nicht hat. Wer das entscheidet, sollte
+gleich mitentscheiden, was mit seiner Beute und seinem Platz geschieht.
+
+### Ein eigener Messfehler, unterwegs gefunden
+
+Der erste Fortschrittsmesser zählte `RTCDataChannel.send`. Nach dem
+Wegbrechen des **letzten** Gastes gibt es aber gar keinen Kanal mehr —
+der Zähler stand auf 0, und ich hätte um ein Haar „der Wirt friert
+ein" gemeldet. Tatsächlich lief das Spiel; nur die Post hatte keinen
+Empfänger mehr. Aufgefallen daran, dass der Auswahlbalken im Krämer
+auf Tastendruck **trotzdem** wanderte.
+
+**Merksatz:** Ein Zähler am Ausgang misst nicht, ob das Spiel läuft —
+er misst, ob jemand zuhört. Was das Bild tut, fragt man das Bild.
+Der zweite Messer nimmt deshalb die Leinwand selbst.

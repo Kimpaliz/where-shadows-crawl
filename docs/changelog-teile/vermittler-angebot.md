@@ -66,3 +66,24 @@ fremden Dienst hängt, ist ab dessen nächster Störung rot; sie prüft,
 dass die Hülle die gemessenen Pflichtfelder trägt. **Rot-Beweis** mit
 zehn einzelnen Mutationen, alle mit Rückgabewert 1, Datei danach
 bytegleich (SHA-256).
+
+**Nachgewiesen, nicht behauptet.** Im Browser mit den echten Modulen
+über den echten Vermittler: `RTCDataChannel` `readyState: open` auf
+beiden Seiten, ICE-Paar nominiert, **200 von 200** Nachrichten
+angekommen, 19 102 Byte hin und 14 212 Byte zurück, Umlauf Median
+**0,6 ms**. Danach eine ganze Runde zu zweit in zwei Tabs: Lobby
+aufgemacht, Code abgelesen, beigetreten, angefangen, gespielt bis zum
+Endbildschirm — beide Bildschirme zeichengleich (J1 Stufe 2, 23
+erschlagen; J2 Stufe 2, 22 erschlagen), 60 Nachrichten je Sekunde in
+jede Richtung. Ehrlich dazu: Beide Gegenstellen liefen auf demselben
+Rechner, das ICE-Paar ist host ↔ host. Die Durchquerung zweier fremder
+Adressumsetzungen ist damit **nicht** bewiesen.
+
+**Nebenbefund, nicht behoben:** Bricht ein Spieler weg, läuft die
+laufende Welle korrekt weiter (`WEG_NACH_SEKUNDEN` greift) — aber im
+**Krämer** hängt die Runde für immer, weil
+`welt.spieler.every((s) => s.bereit)` auf einen Spieler wartet, den es
+nicht mehr gibt. Am Bildschirm nachgestellt. Der Befund ist älter als
+diese Änderung und war nur nie sichtbar, weil vorher nie eine
+Verbindung zustande kam; die Behebung ist eine Regelentscheidung und
+liegt in `runtime/oberflaeche.js`.
