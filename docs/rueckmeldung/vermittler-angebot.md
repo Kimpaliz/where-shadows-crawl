@@ -387,3 +387,43 @@ auf Tastendruck **trotzdem** wanderte.
 **Merksatz:** Ein Zähler am Ausgang misst nicht, ob das Spiel läuft —
 er misst, ob jemand zuhört. Was das Bild tut, fragt man das Bild.
 Der zweite Messer nimmt deshalb die Leinwand selbst.
+
+---
+
+## Was ich nicht prüfen konnte
+
+1. **Zwei Rechner in zwei Netzen.** Alles lief auf einem Rechner; das
+   nominierte ICE-Paar ist host ↔ host. Bewiesen ist die Vermittlung
+   und der Kanal — **nicht**, dass zwei fremde Adressumsetzungen
+   durchquert werden. Bei einer symmetrischen Adressumsetzung hilft
+   STUN nachweislich nicht, und einen TURN-Server hat das Projekt
+   nicht (`netz/verbindung.mjs`).
+2. **Kein Telefon.** Die Handy-Bedienung wurde nicht angefasst.
+3. **Keine echte Tastatur.** Die Tasten kamen aus `dispatchEvent`,
+   weil beide Automatisierungswege kein brauchbares `e.code` liefern.
+   Die Mausklicks waren echt.
+4. **Nur zu zweit.** Drei oder vier Gäste am selben Wirt sind
+   ungeprüft; der freie Platz und die Sternform (`netz/sitzung.mjs`)
+   sind damit nur zur Hälfte belegt.
+5. **Der Wert der Hüllenfelder.** Gemessen ist, dass `label`,
+   `serialization` und `connectionId` **da sein** müssen — nicht, dass
+   ein anderer Wert als der eingesetzte durchkäme.
+6. **Was der Vermittler morgen tut.** Er ist ein fremder Dienst ohne
+   Zusage. Die Prüfkette hängt bewusst nicht an ihm; sie prüft die
+   Form, nicht die Erreichbarkeit.
+7. **Der Krämer-Befund ist nicht behoben**, nur belegt — siehe
+   Schritt 4.
+
+## Nicht angefasst
+
+`spiel/`, `runtime/zeichnen.js`, `runtime/oberflaeche.js`,
+`runtime/sprites.js`, `runtime/sprite-daten.js`, `runtime/palette.js`,
+`runtime/eingabe.js`, `runtime/start.js`, `index.html`, `CHANGELOG.md`,
+`docs/ROADMAP.md`, `docs/SPIEL.md`, `WORKCLAIM.md`,
+`werkzeuge/pruefe-alles.mjs`, `werkzeuge/vorschau.mjs`.
+
+Geändert wurden nur `netz/vermittler-format.mjs` (neu),
+`netz/verbindung.mjs`, `netz/broker.mjs`, `netz/sitzung.mjs`,
+`werkzeuge/pruefe-netz.mjs` und die beiden Dokumente dieses Auftrags.
+`runtime/lobby.js` brauchte keine Änderung — der Fehler saß eine Ebene
+tiefer.
