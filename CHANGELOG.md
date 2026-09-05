@@ -3,6 +3,143 @@
 Oben das Neueste. Jeder Eintrag sagt **was**, **warum** und **womit
 gemessen** — nicht nur, dass etwas anders ist.
 
+## 0.8.0 — Janniks große Liste, gebaut (05.09.2026)
+
+Fünf Zweige, parallel gebaut, hier zusammengeführt. Die ausführlichen
+Belege je Paket stehen in `docs/rueckmeldung/`.
+
+### Das Werte-Fundament — 55 Werte statt acht
+
+`spiel/werte.mjs` trägt jetzt eine **Tabelle** statt fester Felder:
+`{ id, name, text, grund, gruppe, form }`, sieben Gruppen, drei Formen.
+**32 der 55 Einträge werden erzeugt**, nicht getippt — fünf
+Schadensarten mal vier Achsen, ihre Widerstände, und je Gruppe eine
+Kartenneigung. Eine sechste Schadensart wäre ein Eintrag in
+`spiel/schadensarten.mjs` und keine Zeile in der Werteliste.
+
+Neu: fünf Schadensarten (`schnitt`, `wucht`, `feuer`, `frost`, `fluch`);
+genau eine geht an der Rüstung vorbei. **Eine** Schadensrechnung in
+`berechneSchaden()`, gerechnet beim **Einschlag** statt beim Abschuss —
+der Widerstand gehört dem Ziel, ein Geschoss mit vorberechnetem Schaden
+träfe zwei verschieden gepanzerte Gegner gleich hart. Dazu Ausweichen
+als Sprung über elf Schritte mit kurzer Unverwundbarkeit.
+
+**Der Umbau ist bewiesen neutral:** Balancelauf vor und nach dem Umbau
+liefert zeichengleich `6,100 · 104,167 · 103,333` bei 1/2/4 Spielern.
+
+**Zwei Befunde, die den Entwurf korrigiert haben.** `WERTE` durfte
+**nicht** selbst zur Tabelle werden: `spiel/stufen.mjs` liest
+`GEWICHT[w]`, und mit einem Objekt als Schlüssel wäre der Kartentopf
+leer geblieben und der erste Aufstieg an `WERT_TEXT[undefined][0]`
+gestorben — ohne dass eine Prüfung angeschlagen hätte. Und **die
+Reihenfolge der ersten acht Werte ist Balance**: nach Gruppen sortiert
+sprang der Vier-Spieler-Lauf von 103,3 auf 201,0, weil `stufen.mjs`
+daraus mit dem gesäten Strom zieht.
+
+### Das Auswertungsprotokoll — Janniks Werkzeug zum Schrauben
+
+Über 60 Kennzahlen je Lauf, **ohne einen einzigen Haken im Regelkern**:
+`spiel/protokoll.mjs` tastet nach jedem Schritt den Weltzustand ab und
+vergleicht mit dem Schritt davor. Ein Gegner, der eben noch stand und
+jetzt fehlt, ist tot — seine letzte Position ist die Sterbeentfernung;
+das erste `leben < lebenMax` ist der erste Treffer.
+
+Wo nach „in der Regel" gefragt war, steht ein **Median mit Spanne** und
+kein Mittelwert: Ein Mittelwert kann von zwei Ausreißern erfunden sein.
+
+Der erste vollständige Lauf (Saat 1, ein Spieler) zeigt das
+Powerscaling — Verhältnis von Leistung zu Bedarf: 0,95 · **1,26** ·
+0,93 · **0,66** über die Wellen 3 bis 6. Daneben die Ursache: Welle 4
+schickt 19 Gegner, Welle 5 dann **51**. Und: 17 % des Goldes bleiben
+liegen, 54 % der Gegner sterben beim ersten Treffer (Balg 75 %,
+Hauptmann 0 %).
+
+**Vier Gegenproben** belegen, dass die Zahlen messen statt zu behaupten:
+Waffenschaden verdoppelt → Zeit bis zum Tod 0,461 → 0,144 s;
+Gegnerleben verdoppelt → Sofort-Tote 76 % → 3 %.
+
+### Die Sprites
+
+Fünf **Trefferzeichen**, eines je Schadensart, an der Silhouette
+unterscheidbar — `fluch` ist das einzige mit einem Loch, und die einzige
+Art, die an der Rüstung vorbeigeht. Zwei **Hauptleute** (`gebeinfuerst`
+23×21, `vielfrass` 21×19), **Truhen** zu und offen. Das Sprite-Format
+kennt jetzt optional `bilder: [...]` für Einzelbilder; `bild` bleibt
+Pflicht und ist immer `bilder[0]`, kein bestehender Aufrufer bricht.
+
+**Zwei Fehler fand nur das gerenderte Bild, keine Zahl:** Der erste
+Wuchtschlag in Steintönen hatte gegen den Boden einen Abstand von
+**21,4 von 255** — fast unsichtbar; mit Eisentönen sind es **83,2**. Und
+der Gebeinfürst las sich als Silhouette wie eine Raute statt einer
+Figur. `pruefe-sprites.mjs` 110 → **146 Prüfungen**.
+
+### Lobby, Handy, Webadresse
+
+`netz/` spricht das Vermittlungsprotokoll **selbst** — kein Paket, keine
+Bibliothek. Über die Leitung gehen nur Eingaben: zwei Achsen und ein
+Knopf je Spieler, Lockstep mit **50 ms** Verzögerung. Der Prüfstand
+belegt beides: gleiche Eingaben ergeben dieselbe Welt, und eine um einen
+Tick verschobene Folge eine **andere** — ohne die zweite Hälfte bewiese
+die erste nichts.
+
+**Die vier Tastaturbelegungen sind entfallen.** Ein Rechner steuert eine
+Figur (Entscheidung Janniks, #46).
+
+**Handy:** Hochkant war das Bild **lautlos beschnitten** — 480 Bildpunkte
+auf 375 px Fenster sind 128 %, je 53 Punkte fielen weg. Jetzt 375 × 211
+mit Hinweis aufs Querhalten; quer bleibt der Faktor 1.
+
+**Die Verbindung steht, und der erste Befund dazu war falsch.** Der
+Vermittler galt als kaputt, weil er ein Angebot annimmt und die
+Verbindung dann mit Code 1000 schließt — ein Ablehnen, das aussieht wie
+ein Auflegen. Gemessen ist er in Ordnung: Er verwirft nur, was nicht
+aussieht wie eine echte Gegenstelle. Was er wirklich verlangt, je Art
+gemessen:
+
+| Art | verlangt | entbehrlich |
+| --- | --- | --- |
+| `OFFER` | `sdp`, `type`, `connectionId`, `label`, `serialization` | `reliable`, `browser` |
+| `ANSWER` | `sdp`, `type`, `connectionId` | die übrigen vier |
+| `CANDIDATE` | `candidate`, `type`, `connectionId` | die übrigen vier |
+
+`OFFER` ist die strengste Art — wer an `ANSWER` prüft, hält die schmale
+Form für ausreichend und sucht den Fehler an der falschen Stelle.
+
+**Nachgewiesen, nicht behauptet:** Datenkanal beidseitig offen,
+**200/200 Nachrichten**, 19.102 Byte hin und 14.212 zurück, Umlauf im
+Median **0,6 ms**. Dazu eine echte Runde zu zweit über zwei Browser-Tabs
+mit echten Mausklicks, gespielt bis zum Endbildschirm — beide Seiten
+zeichengleich, 21.393 Nachrichten über die Runde.
+
+⚠️ **Beide Gegenstellen liefen auf einem Rechner.** Die 0,6 ms sind eine
+Schleife, keine zwei Router. Zwei echte Geräte sind ungeprüft.
+
+### Neuer Fehler, gefunden und nicht behoben
+
+Bricht ein Spieler weg, läuft die Welle korrekt weiter — im **Krämer**
+hängt die Runde für immer, weil `welt.spieler.every((s) => s.bereit)`
+auf jemanden wartet, den es nicht mehr gibt. Der Fehler ist **älter als
+das Netz-Koop** und war nur nie sichtbar: An einer Tastatur kann kein
+Spieler verschwinden. Vorgang **#93**, mit drei Möglichkeiten und einer
+Empfehlung — die Antwort ist eine Regelentscheidung, keine Reparatur.
+
+### Der Fahrplan
+
+Sieben neue Phasen (12 bis 18), 25 Schritte, 32 Vorgänge (#60–#91).
+Entscheidung #46 geschlossen; #92 (Repository öffentlich?) und #93 neu
+und offen.
+
+### Gemessen
+
+Kette auf dem integrierten Stand **18 Prüfläufe grün** (vorher 15) ·
+`docs/ROADMAP.md` 599 → 1023 Zeilen · 59 → 93 Vorgänge · neu in der
+Kette: `pruefe-werte.mjs`, `pruefe-protokoll.mjs`, `pruefe-netz.mjs`.
+
+`.claude/worktrees/` steht jetzt in `.gitignore` — die Worktrees der
+Unteragenten gehören dem Werkzeug und nicht dem Projekt, und der
+Arbeitsweise-Wächter zählte sie sonst bei jedem parallelen Bau als
+offene Änderung.
+
 ## 0.7.0 — Janniks große Liste, einsortiert (05.09.2026)
 
 An einem Tag kamen: eine Werteliste mit fünf Schadensarten, Krit je

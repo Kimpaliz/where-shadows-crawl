@@ -3,3 +3,9 @@
 # vollständig in runtime/sprite-daten.js und runtime/palette.js und
 # würden hier nur doppelt liegen und veralten.
 werkstatt-auftraege/
+
+# Die Worktrees der Unteragenten. Sie entstehen bei jedem verteilten
+# Auftrag neu, gehoeren dem Werkzeug und nicht dem Projekt — und der
+# Arbeitsweise-Waechter zaehlt sie sonst als offene Aenderung, was bei
+# jedem parallelen Bau die ganze Kette rot macht.
+.claude/worktrees/

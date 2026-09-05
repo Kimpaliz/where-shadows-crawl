@@ -12,11 +12,7 @@ einzige Stelle, an der sich zwei Sitzungen sehen.
 
 | Bereich | Besitzer | Ziel | Seit |
 | --- | --- | --- | --- |
-| `spiel/werte.mjs`, `schadensarten.mjs`, `ausweichen.mjs`, `kampf.mjs`, `bewegung.mjs`, `welt.mjs`, `katalog/waffen.mjs`, `werkzeuge/pruefe-werte.mjs`, `pruefe-kern.mjs` | Claude (Agent A) | Werte-Fundament: fünf Schadensarten, Krit, Modifier, Widerstände, Ausweichen | 05.09.2026 |
-| `netz/`, `runtime/lobby.js`, `eingabe.js`, `start.js`, `index.html`, `.github/`, `werkzeuge/pruefe-netz.mjs` | Claude (Agent B) | Lobbycode über das Netz, Handy-Bedienung, Webadresse über GitHub Pages | 05.09.2026 |
-| `runtime/sprite-daten.js`, `werkzeuge/pruefe-sprites.mjs` | Claude (Agent D) | Trefferzeichen je Schadensart, zwei Hauptleute, Truhen, Animation | 05.09.2026 |
-| `spiel/protokoll.mjs`, `werkzeuge/auswertung.mjs`, `pruefe-protokoll.mjs`, `balance.mjs` | Claude (Agent E) | Auswertungsprotokoll als Werkzeug für die Schwierigkeitsauslegung | 05.09.2026 |
-| `docs/`, `CHANGELOG.md`, `WORKCLAIM.md` | Claude (Leitstand) | Fahrplan, Vorgänge, Zusammenführung der vier Zweige | 05.09.2026 |
+| frei | frei | – | – |
 
 ## Format
 
