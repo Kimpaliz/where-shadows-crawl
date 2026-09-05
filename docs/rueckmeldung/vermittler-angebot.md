@@ -142,3 +142,82 @@ fremden Dienst hängt, ist ab dessen nächster Störung rot. Sie prüft
 stattdessen, dass die Hülle die gemessenen Pflichtfelder **trägt** —
 fällt eines wieder heraus, ist die Verbindung wieder tot, und das
 merkte man sonst erst im Browser an einem Wartebild ohne Grund.
+
+---
+
+## Schritt 2 · Die Leitung steht wirklich (05.09.2026)
+
+„Das Angebot kam an" ist nicht dasselbe wie „die Leitung steht". Der
+Briefträger nimmt den Brief an; ob ihn jemand liest, ist eine zweite
+Frage. Deshalb hier der Nachweis **am geöffneten Datenkanal**, nicht am
+weitergereichten Angebot.
+
+Gemessen in einem echten Browser (Chromium) auf einer vom
+Vorschau-Server ausgelieferten Seite. Getrieben wurden die **echten**
+Module — `netz/sitzung.mjs` mit `eroeffne()` und `tritteBei()` — über
+den **echten** öffentlichen Vermittler; nichts nachgebaut, nichts
+abgekürzt.
+
+⚠️ **Der Vorschau-Server lief auf Port 8151, nicht 8144.** Auf 8144
+lief bereits ein Server einer anderen Sitzung, der einen **anderen
+Zweig** ausliefert — dort zu messen hätte fremden Code gemessen.
+`werkzeuge/vorschau.mjs` gehört nicht zu den Dateien dieses Auftrags
+und wurde deshalb nicht geändert, sondern für die Messung daneben
+nachgebaut (gleiche Typen, gleiches `no-store`).
+
+### Was direkt am Browser-Objekt abgelesen wurde
+
+`RTCPeerConnection` wurde mitgeschnitten, damit die Zahlen vom Browser
+kommen und nicht aus unserer eigenen Hülle:
+
+| | Wirt | Gast |
+| --- | --- | --- |
+| `connectionState` | `connected` | `connected` |
+| `iceConnectionState` | `connected` | `connected` |
+| Datenkanal | `spiel` | `spiel` |
+| `readyState` | **`open`** | **`open`** |
+| `ordered` / `maxRetransmits` | `false` / `0` | `false` / `0` |
+| ICE-Paar (`nominated`, `succeeded`) | host ↔ host, UDP | host ↔ host, UDP |
+| Bytes auf dem Paar (gesendet / empfangen) | 1267 / 1543 | 1543 / 1267 |
+
+Der Datenkanal ist also **offen**, und er ist der, den
+`netz/verbindung.mjs` bestellt (unzuverlässig und ungeordnet — genau
+die zwei Eigenschaften, die dort begründet stehen).
+
+### Und er trägt Daten — in beide Richtungen
+
+Erstens von selbst, noch ohne Zutun: Der Gast bekam **Platz 1**
+zugeteilt, und diese Zahl reist ausschließlich über den Datenkanal
+(`{art:"platz"}`). Umgekehrt stand beim Wirt der Name **„Gast"** in der
+Platzliste — der kam über dieselbe Leitung (`{art:"hallo"}`). Beide
+Seiten meldeten `verbunden: true`, und dieser Wert ist im Code direkt
+`kanal.readyState === "open"`.
+
+Zweitens gezählt, mit 200 Nachrichten Wirt → Gast, die der Gast
+jeweils zurückschickte:
+
+| | |
+| --- | ---: |
+| gesendet Wirt → Gast | **200** |
+| angekommen beim Gast | **200** (Verlust 0,0 %) |
+| Nutzdaten beim Gast | **19 102 Byte** |
+| zurück beim Wirt | **200** |
+| Nutzdaten beim Wirt | **14 212 Byte** |
+| Umlauf Median | **0,6 ms** |
+| Umlauf min / p95 / max | 0,2 / 0,8 / 1,0 ms |
+
+⚠️ **Was diese Verzögerung ist und was nicht.** Sie ist an der echten
+Verbindung gemessen, nicht gerechnet — aber das gewählte ICE-Paar ist
+**host ↔ host**: Beide Gegenstellen liefen auf demselben Rechner. Die
+0,6 ms sind die Kosten von WebRTC und der Schleife, **nicht** die eines
+Weges über zwei Router. Was hier bewiesen ist: Der Vermittler stellt
+die Angebote zu, der Aufbau läuft durch, der Kanal öffnet und trägt
+Daten. Was **nicht** bewiesen ist: dass die Durchquerung zweier
+fremder Adressumsetzungen gelingt — dafür bräuchte es zwei Rechner in
+zwei Netzen. Bei einer symmetrischen Adressumsetzung hilft STUN
+nachweislich nicht, und ein TURN-Server gehört nicht zum Projekt
+(siehe `netz/verbindung.mjs`).
+
+Danach wurden alle vier Sitzungen ordentlich beendet
+(`connectionState: closed`), damit am fremden Dienst nichts offen
+stehen bleibt.
