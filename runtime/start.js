@@ -54,14 +54,44 @@ let zeit = 0;
 let vorher = performance.now();
 let letztePhase = null;
 
+/* Ganzzahlig vergrößern, solange etwas zu vergrößern da ist — und
+   verkleinern, wenn der Bildschirm kleiner ist als das Bild.
+
+   Der zweite Fall ist neu und war ein Fehler: `Math.max(1, …)` hielt
+   den Faktor auch dann bei 1, wenn gar kein Platz für 480 Bildpunkte
+   war. Am 05.09.2026 auf einem Telefon hochkant gemessen — 375 x 812
+   Bildpunkte Fenster: Die Leinwand stand mit 480 Bildpunkten Breite da,
+   also auf **128 %** des Fensters, und `overflow: hidden` schnitt links
+   und rechts je **53** Bildpunkte ab. Man sah den Bannkreis nicht mehr
+   ganz, ohne dass irgendwo ein Fehler erschien.
+
+   Hochkant gibt es **keinen** ganzzahligen Faktor: 480 passt schlicht
+   nicht in 375. Die Wahl steht also nicht zwischen „ganz" und „krumm",
+   sondern zwischen „krumm" und „abgeschnitten" — und ein vollständiges
+   Bild mit ungleichen Bildpunkten ist besser als ein sauberes Raster,
+   von dem ein Fünftel fehlt.
+
+   Quer bleibt alles beim Alten: 812 x 375 ergibt gemessen Faktor 1
+   (59,1 % der Breite, 72,0 % der Höhe). Auf einem Telefon mit
+   dreifacher Bildpunktdichte sind das genau 3 Gerätepunkte je
+   Spielpunkt — sauberer geht es nicht. Deshalb der Hinweis „quer
+   halten" statt eines krummen Faktors, wo ein ganzer möglich ist. */
 function passeAn() {
-  const faktor = Math.max(1, Math.floor(Math.min(
-    window.innerWidth / BREITE, window.innerHeight / HOEHE
-  )));
+  const passt = Math.min(window.innerWidth / BREITE, window.innerHeight / HOEHE);
+  const faktor = passt >= 1 ? Math.floor(passt) : passt;
   leinwand.style.width = `${BREITE * faktor}px`;
   leinwand.style.height = `${HOEHE * faktor}px`;
 }
 addEventListener("resize", passeAn);
+/* Beim Drehen des Telefons meldet `orientationchange` die neue Lage,
+   bevor `innerWidth` und `innerHeight` sie kennen — man rechnet dann
+   mit den Maßen von vorher und bekommt ein Bild in der falschen Größe,
+   das erst bei der nächsten Berührung springt. Deshalb ein zweiter
+   Anlauf nach dem Umbruch, und zusätzlich das sichtbare Sichtfenster:
+   Es ist die einzige Größe, die auf einem Telefon auch dann stimmt,
+   wenn die Adressleiste ein- oder ausfährt. */
+addEventListener("orientationchange", () => { passeAn(); setTimeout(passeAn, 250); });
+window.visualViewport?.addEventListener("resize", passeAn);
 passeAn();
 
 function neuerLauf(spielerzahl) {

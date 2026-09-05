@@ -5,13 +5,25 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Where Shadows Crawl</title>
 <style>
-  /* Der Hintergrund ist der Rand um das Bild — er muss dunkler sein als
+  /* [Aufgabe: Bedienung] Der Rahmen um das Bild und die Bedienung fuer den Daumen.
+
+     Der Hintergrund ist der Rand um das Bild — er muss dunkler sein als
      die dunkelste Stelle im Spiel, sonst wirkt das Bild grau. */
   html, body {
     margin: 0; height: 100%;
     background: #050409;
     display: flex; align-items: center; justify-content: center;
     overflow: hidden;
+    /* Ohne das scrollt und zoomt die Seite unter dem Daumen weg, sobald
+       jemand den Stick zieht: Der Browser deutet den Zug als Wischen.
+       `none` sagt ihm, dass diese Seite ihre Gesten selbst auswertet. */
+    touch-action: none;
+    /* Ein langer Druck markierte sonst Text oder oeffnete das
+       Nachschlagen-Menue — mitten im Ausweichen. */
+    -webkit-user-select: none; user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    font-family: system-ui, sans-serif;
   }
   /* `pixelated` ist der eine Schalter, ohne den die ganze Mühe mit dem
      Bildpunktraster umsonst wäre: Der Browser würde beim Vergrößern
@@ -20,11 +32,134 @@
     image-rendering: pixelated;
     image-rendering: crisp-edges;
     display: block;
+    touch-action: none;
   }
+
+  /* ── Bedienung fuer den Daumen ──────────────────────────────────────
+
+     Liegt ueber dem Bild und wird nur eingeblendet, wenn das Geraet
+     wirklich Beruehrung meldet — auf dem Schreibtisch soll nichts im
+     Bild stehen. Geschaltet wird ueber `hidden`, nicht ueber `style`. */
+  #bedienung {
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: 10;
+  }
+  #bedienung[hidden] { display: none !important; }
+
+  /* Die ganze linke Haelfte nimmt den Stick an. Ein kleines festes Feld
+     waere auf einem Telefon zu treffen schwer; so setzt der Daumen die
+     Mitte dort, wo er zuerst aufkommt. */
+  #stickfeld {
+    position: absolute; left: 0; top: 0; bottom: 0; width: 50%;
+    pointer-events: auto; touch-action: none;
+  }
+  #stickring, #stickknopf {
+    position: absolute; border-radius: 50%;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    opacity: 0; transition: opacity .12s;
+  }
+  #stickring {
+    width: 116px; height: 116px;
+    border: 2px solid rgba(214,178,102,.45);
+    background: rgba(10,8,18,.35);
+  }
+  #stickknopf {
+    width: 52px; height: 52px;
+    background: rgba(214,178,102,.72);
+    box-shadow: 0 0 12px rgba(214,178,102,.35);
+  }
+  #bedienung.zieht #stickring, #bedienung.zieht #stickknopf { opacity: 1; }
+
+  /* Der Knopf: ausweichen im Kampf, bestaetigen im Menue — derselbe
+     Knopf, weil das Spiel nur einen kennt (runtime/eingabe.js). */
+  #knopf {
+    position: absolute; right: 22px; bottom: 26px;
+    width: 96px; height: 96px; border-radius: 50%;
+    pointer-events: auto; touch-action: none;
+    border: 2px solid rgba(214,178,102,.5);
+    background: rgba(28,20,44,.55);
+    color: rgba(214,178,102,.9);
+    font-size: 13px; letter-spacing: 1px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #knopf.gedrueckt {
+    background: rgba(214,178,102,.35);
+    color: #14101f;
+  }
+
+  /* Hochkant bleibt vom Bild wenig uebrig — der Hinweis sagt, warum. */
+  #querhinweis {
+    position: absolute; left: 0; right: 0; top: 12px;
+    text-align: center;
+    color: rgba(214,178,102,.85);
+    font-size: 13px; letter-spacing: 2px;
+    text-shadow: 0 1px 3px #000;
+  }
+  #querhinweis[hidden] { display: none !important; }
+
+  /* ── Lobby ──────────────────────────────────────────────────────────
+
+     Bewusst HTML statt Leinwand: Hier wird ein Code getippt, und ein
+     Eingabefeld auf einer Leinwand nachzubauen hiesse, Tastatur,
+     Einfuegen und die Bildschirmtastatur des Telefons selbst zu
+     bauen. Der Browser kann das alles schon. */
+  #lobby {
+    position: fixed; inset: 0; z-index: 20;
+    background: #07060c;
+    color: #cfc6de;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 14px; padding: 20px;
+    overflow-y: auto;
+    text-align: center;
+  }
+  #lobby[hidden] { display: none !important; }
+  #lobby h1 {
+    margin: 0 0 4px; font-size: 22px; letter-spacing: 3px;
+    color: #e8b661; font-weight: 600;
+  }
+  #lobby p { margin: 0; font-size: 13px; line-height: 1.5; max-width: 30em; }
+  .matt { color: #7d7391; }
+  #lobby button {
+    min-width: 220px; min-height: 48px;
+    border: 1px solid rgba(214,178,102,.45);
+    background: rgba(28,20,44,.7); color: #e8b661;
+    font-size: 14px; letter-spacing: 1px; border-radius: 4px;
+  }
+  #lobby button:disabled { opacity: .4; }
+  #lobby input {
+    min-height: 48px; width: 220px;
+    text-align: center; font-size: 22px; letter-spacing: 6px;
+    text-transform: uppercase;
+    border: 1px solid rgba(214,178,102,.45); border-radius: 4px;
+    background: #100c1a; color: #e8b661;
+  }
+  #lobbycode {
+    font-size: 34px; letter-spacing: 10px; color: #e8b661;
+    padding: 10px 4px 10px 14px;
+    border: 1px dashed rgba(214,178,102,.4); border-radius: 6px;
+  }
+  #lobbyliste { list-style: none; padding: 0; margin: 0; font-size: 13px; }
+  #lobbyliste li { padding: 3px 0; }
+  #lobbymeldung { color: #c2607a; font-size: 13px; min-height: 1.2em; max-width: 30em; }
+  .reihe { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 </style>
 </head>
 <body>
   <canvas id="bild"></canvas>
+
+  <div id="bedienung" hidden>
+    <div id="stickfeld"></div>
+    <div id="stickring"></div>
+    <div id="stickknopf"></div>
+    <div id="knopf">AUSWEICHEN</div>
+    <div id="querhinweis" hidden>BITTE QUER HALTEN</div>
+  </div>
+
+  <div id="lobby" hidden></div>
+
   <script type="module" src="runtime/start.js"></script>
 </body>
 </html>
