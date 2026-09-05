@@ -63,3 +63,54 @@ auf 0 und dürfen nichts bewegen.
 durch zwei Zusicherungen, die den echten Regressionsschutz behalten
 (die acht ursprünglichen Werte gibt es noch, keine Kennung doppelt).
 Sonst nichts geändert. Alles Weitere prüft `werkzeuge/pruefe-werte.mjs`.
+
+## Baustein 2 — Krit, Modifier, Widerstände, Schadensart je Waffe (05.09.2026)
+
+- Alle zwölf Waffen tragen jetzt eine `schadensart`, zugeordnet über
+  ihr **erstes** Merkmal nach `MERKMAL_ART`. Verteilung: `schnitt` 5,
+  `fluch` 3, `wucht` 2, `feuer` 1, `frost` 1.
+- `spiel/kampf.mjs` rechnet den Schaden nicht mehr selbst. Es sammelt
+  nur noch, was **nicht** vom Ziel abhängt (Waffe, Stufe, Gruppenbonus,
+  Art, Fläche) und reicht das an `berechneSchaden()` weiter.
+  **Gerechnet wird beim Einschlag, nicht beim Abschuss** — der
+  Widerstand gehört dem Ziel, ein Geschoss mit fertigem Schaden träfe
+  zwei verschieden gepanzerte Gegner gleich hart.
+- Neu wirksam: Kritchance und Kritschaden (global und je Art),
+  Schadensart-Modifier flach und in Prozent, Widerstände des Ziels,
+  Flächenschaden und Flächenreichweite, Reichweite, Zusatzangriffe,
+  Zusatzgeschosse (gefächert), Durchdringung, Regeneration je Sekunde,
+  Goldfund und Erfahrung.
+- Brand zählt als `feuer`, Gift als `fluch`. Beide tragen den
+  Widerstand des Ziels — sonst wäre ein Feuerwiderstand gegen die
+  Pechfackel nur ein Sechstel wert, weil ihr Schaden im Brand steckt.
+
+### Gemessen (05.09.2026)
+
+| Probe | Ergebnis |
+| --- | --- |
+| Grund 10, +5 flach, +100 % | **30** (vertauscht wären es 25 - 20 % daneben) |
+| 100 % Kritchance, +50 Kritschaden | 20 statt 10, `krit` wahr |
+| Kritchance nur Feuer, Treffer Frost | kein Krit |
+| Grund 10 gegen 50 % Feuerwiderstand | 5 |
+| Widerstand 100 gesetzt | wirkt als 90 %, gedeckelt |
+| fehlendes `widerstaende`-Feld | zählt als 0, Schaden unverändert |
+| 30 Rüstung gegen 100 Schnitt / 100 Fluch | 50 / **100** |
+| Reichweite +10 % / Flächenwaffe +10 +50 % | 110 / 160 |
+| Durchschläge Armbrust bei +1 Durchdringung | 4 |
+| Goldfaktor bei 50 Gier und 20 Goldfund | 1,7 |
+
+Balancezahlen weiterhin **zeichengleich** zum Ausgangsstand — alle
+neuen Achsen stehen auf 0, also darf sich nichts bewegen.
+
+### Zwei Fallen, in die ich fast gelaufen wäre
+
+**Richtung eines Geschosses.** Für den Fächer lag es nahe, die Richtung
+über `atan2` und `cos`/`sin` zu rechnen. Das ist **nicht bitgleich** zu
+`x / hypot(x, y)`, und der Unterschied im letzten Bit verschiebt über
+tausend Schritte die ganze Nacht. Bei genau einem Geschoss wird deshalb
+weiter wie bisher normiert; gedreht wird nur ab dem zweiten.
+
+**Ein zweiter Zufall im Kern.** Der Kritwurf würfelt **nur**, wenn eine
+Chance über null besteht. Ein Wurf ohne Chance würde den gesäten Strom
+verschieben und jede bisherige Messung entwerten, obwohl sich am Spiel
+nichts geändert hat.
