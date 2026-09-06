@@ -121,6 +121,23 @@ aus, wenn der Daumen in der unteren linken Ecke aufsetzt — nach unten
 bleiben 42 %, nach links 31 % des Tempos. Das ist Bedienung, nicht
 Installation, und gehört in einen eigenen Vorgang.
 
+### Nachtrag: zwei Zeilen in der Liste „Ausdrücklich nicht gefordert"
+
+Janniks Antwort auf den offenen Punkt: *„iphone erst mal ignorieren"*.
+Der Weg über Safari steht damit in `CLAUDE.md` — nach dem Muster von
+**Ton**, also **geparkt und nicht verworfen**. Ohne den Eintrag meldet
+ihn die nächste Sitzung wieder als Lücke, und dieselbe Frage wird ein
+zweites Mal gestellt.
+
+Dabei aufgefallen: Die **letzte Zeile derselben Liste war falsch**. Sie
+verbot Online-Koop, *„solange Janniks Entscheidung aus `docs/SPIEL.md`
+11 aussteht"* — die steht seit **#46** nicht mehr aus, und Phase 11 ist
+gebaut und geschlossen. Eine Regel, die das Gegenteil des Standes
+behauptet, ist schlimmer als keine: Sie hätte die nächste Sitzung von
+genau der Arbeit abgehalten, die schon live ist. An ihre Stelle tritt,
+was #46 wirklich entschieden hat — keine vier Tastaturbelegungen an
+einem Rechner.
+
 ## 0.9.7 — Das Spiel bietet sich selbst zur Installation an (06.09.2026)
 
 Janniks Ansage: *„mach es auch zu einer app die msn aus dem browser

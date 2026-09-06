@@ -33,8 +33,15 @@ Sein Wortlaut ist die Quelle: Wünsche werden
 - **Bilddateien.** Alle Sprites stehen als Text im Repository und werden
   gezeichnet — das hält sie diffbar und prüfbar.
 - **Ton** — bis Jannik ihn ausdrücklich möchte.
-- **Online-Koop über das Internet**, solange Janniks Entscheidung aus
-  `docs/SPIEL.md` 11 aussteht. Koop auf **einem** Rechner ist gefordert.
+- **Der iPhone-Weg zur Installation** — bis Jannik ihn ausdrücklich
+  möchte. Am 06.09.2026 wörtlich: *„iphone erst mal ignorieren"*.
+  Safari kennt `beforeinstallprompt` nicht; dort ginge es nur über
+  „Teilen → Zum Home-Bildschirm", und das müsste das Spiel selbst
+  erklären. Der Auftrag lautete **Android**. Die Angaben im Kopf von
+  `index.html` bleiben, wo sie sind — sie kosten nichts.
+- **Vier Tastaturbelegungen an einem Rechner.** Mit #46 entschieden:
+  *„Nur lobby beitritt, kein lokal auf der selben tastatur."* Ein
+  Rechner steuert eine Figur.
 
 ---
 
