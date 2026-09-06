@@ -62,6 +62,24 @@ melde(Array.isArray(manifest.display_override) && manifest.display_override[0] =
 melde(manifest.display_override?.includes("standalone"),
   "es gibt einen Rückfall auf standalone");
 
+/* ⚠️ **Die Pflichtfelder, die bis zum 06.09.2026 niemand geprüft hat.**
+   Gemessen an einer Kopie: `name` und `short_name` gelöscht → 55
+   Zusicherungen, 0 Fehler. `start_url` gelöscht → ebenfalls 0 Fehler.
+   Genau ohne diese drei verweigert Chrome die Installation — ohne
+   Namen hat die App keine Beschriftung für den Startbildschirm, ohne
+   `start_url` weiß der Browser nicht, was er beim Antippen öffnen
+   soll. Und er sagt dazu nichts; er bietet es einfach nicht an. */
+melde(typeof manifest.name === "string" && manifest.name.length > 0,
+  "das Manifest hat einen Namen — ohne ihn verweigert Chrome die Installation", manifest.name);
+melde(typeof manifest.short_name === "string" && manifest.short_name.length > 0
+  && manifest.short_name.length <= 12,
+  "und einen kurzen Namen, der unter das Symbol passt", manifest.short_name);
+melde(typeof manifest.start_url === "string" && manifest.start_url.length > 0,
+  "und eine Startadresse — sonst weiß der Browser nicht, was er beim Antippen öffnen soll",
+  manifest.start_url);
+melde(typeof manifest.scope === "string" && manifest.scope.length > 0,
+  "und einen Geltungsbereich", manifest.scope);
+
 /* ── 2 · Jedes genannte Symbol liegt wirklich da ────────────────────
 
    Ein fehlendes Symbol verwirft das **ganze** Manifest — die App wäre
@@ -116,10 +134,41 @@ melde(manifest.icons.some((s) => s.purpose === "maskable"),
   const html = liesDatei("index.html");
   const treffer = [...html.matchAll(/(?:href|src)="(\/[^"]*)"/g)].map((m) => m[1]);
   melde(treffer.length === 0, "kein absoluter Pfad in index.html", treffer.join(" "));
-  melde(/rel="manifest"/.test(html), "index.html verweist auf das Manifest");
+
+  /* ⚠️ **Nicht nur, dass verwiesen wird — sondern wohin.** Gemessen an
+     einer Kopie: `href="manifest.webmanifest"` auf `href="manifest.json"`
+     geändert, eine Datei, die es nicht gibt → 55 Zusicherungen, 0
+     Fehler. Die Prüfung las ihr Manifest weiter selbst über den festen
+     Namen und merkte darum nie, dass die Seite ein ganz anderes
+     anfordert. Live wäre das ein 404 aufs Manifest: kein Name, keine
+     Symbole, kein Vollbild, keine Installation — wieder ohne Meldung. */
+  const mref = html.match(/<link[^>]+rel="manifest"[^>]+href="([^"]+)"/);
+  melde(!!mref, "index.html verweist auf ein Manifest");
+  melde(mref && existsSync(join(WURZEL, mref[1])),
+    "und die Datei, auf die der Verweis zeigt, liegt wirklich da", mref?.[1]);
+  melde(mref?.[1] === "manifest.webmanifest",
+    "und es ist dieselbe, die diese Prüfung liest", mref?.[1]);
+
   melde(/apple-mobile-web-app-capable/.test(html),
     "iPhone bekommt seine eigene Angabe — es kennt das Manifest nicht");
-  melde(/apple-touch-icon/.test(html), "iPhone bekommt ein Symbol");
+  melde(/name="mobile-web-app-capable"/.test(html),
+    "und Chrome die seine — sonst schreibt es bei jedem Laden eine Verfallswarnung in die Konsole");
+
+  const aref = html.match(/rel="apple-touch-icon"[^>]*href="([^"]+)"/);
+  melde(!!aref, "iPhone bekommt ein Symbol");
+  melde(aref && existsSync(join(WURZEL, aref[1])),
+    "und auch dieses Symbol liegt wirklich da", aref?.[1]);
+
+  /* ⚠️ **Ohne diese Zeile ist `sw.js` toter Quelltext.** Nimmt sie
+     jemand beim Aufräumen oder beim Zusammenführen zweier Zweige
+     heraus, meldet die ganze Kette weiter „alles grün" — gemessen: 55
+     Zusicherungen, 0 Fehler, bei null Vorkommen von `serviceWorker` in
+     index.html. Auf dem Telefon hieße das: kein Vorrat, kein Offline,
+     und nach Chromes Bedingungen kein Installationsangebot mehr. */
+  melde(/navigator\.serviceWorker\.register\(\s*["']sw\.js["']/.test(html),
+    "index.html meldet den Dienstarbeiter wirklich an");
+  melde(/["']serviceWorker["']\s+in\s+navigator/.test(html),
+    "und nur, wenn der Browser ihn überhaupt kennt");
 }
 
 /* ── 4 · Der Dienst fragt das Netz zuerst ───────────────────────────
@@ -127,19 +176,53 @@ melde(manifest.icons.some((s) => s.purpose === "maskable"),
    Die Falle aus Slay'Em All: Ein Vorrat vor dem Netz zeigt nach jeder
    Veröffentlichung den alten Stand, und niemand merkt es. */
 
+/* ⚠️ **Hier wurde bis zum 06.09.2026 nur Text gesucht** — und das war
+   nachweislich wertlos. Gemessen an einer Kopie außerhalb des
+   Repositorys: ein `sw.js`, das nichts einlagert, keinen
+   Startseiten-Rückfall hat und dessen Vorratsblick in einem toten
+   `if (false)` steht — offline also ein schwarzer Bildschirm —,
+   bestand **alle 41 Prüfungen, 0 Fehler**, Wort für Wort dieselbe
+   Ausgabe wie der echte Stand. Die fünf Zeilen suchten `await fetch(`,
+   `caches.match(`, `skipWaiting()`, `.ok` und `method !== "GET"`
+   irgendwo in der Datei; in welcher Reihenfolge sie wirken und ob sie
+   überhaupt erreicht werden, sah keine davon.
+
+   Deshalb derselbe Weg wie in Abschnitt 7: ein Browser aus der Hand,
+   und der Dienst wird wirklich ausgeführt. */
+
 {
-  const sw = liesDatei("sw.js").replace(/\/\*[\s\S]*?\*\//g, "");
-  const netzZuerst = sw.indexOf("await fetch(");
-  const vorratDanach = sw.indexOf("caches.match(");
-  melde(netzZuerst > 0 && vorratDanach > netzZuerst,
-    "der Dienst fragt erst das Netz und den Vorrat nur als Rückhalt",
-    `fetch bei ${netzZuerst}, Vorrat bei ${vorratDanach}`);
-  melde(/skipWaiting\(\)/.test(sw),
-    "eine neue Fassung übernimmt sofort statt erst nach dem Schließen");
-  melde(/antwort\.ok/.test(sw) || /\.ok\b/.test(sw),
-    "nur gelungene Antworten wandern in den Vorrat — eine 404 im Vorrat bliebe für immer");
-  melde(/caches\.delete/.test(sw), "alte Vorräte werden weggeräumt");
-  melde(/method !== "GET"/.test(sw), "nur Lesezugriffe werden angefasst");
+  const b = await messeDienstarbeiter();
+
+  melde(b.einstiegVorab.length === 2,
+    "nach dem Einbau liegt die Startseite schon im Vorrat — sonst endet der erste Start im Funkloch auf der Fehlerseite",
+    b.einstiegVorab.join(" "));
+  melde(b.einstiegVorab.some((u) => u.endsWith("/")) && b.einstiegVorab.some((u) => u.endsWith("index.html")),
+    "und zwar unter beiden Adressen, unter denen sie erreichbar ist");
+
+  melde(b.netzGewinnt,
+    "online gewinnt das Netz — ein Vorrat davor zeigte tagelang den alten Stand",
+    b.netzGewinnt ? "die frische Fassung kam an" : "es kam die Vorratsfassung");
+  melde(b.eingelagert,
+    "und was ankam, liegt danach im Vorrat");
+
+  melde(b.offlineAusDemVorrat,
+    "ohne Netz kommt dieselbe Datei aus dem Vorrat");
+  melde(b.offlineNavigationAufDieStartseite,
+    "ohne Netz und ohne passenden Eintrag zeigt eine Navigation die Startseite statt der Fehlerseite des Browsers");
+
+  melde(b.schlechteAntwortFaelltZurueck,
+    "eine 404 vom Server holt die gute Fassung aus dem Vorrat — sie ist kein Netzfehler und fiel früher nicht in den catch");
+  melde(!b.schlechteEingelagert,
+    "und wandert selbst nicht in den Vorrat — eine 404 dort bliebe für immer");
+
+  melde(b.fristGreift,
+    "ein hängendes Netz wartet nicht länger als die Frist, wenn der Vorrat liefern kann",
+    b.fristMs === null ? "es kam nie etwas zurück" : `${b.fristMs} ms`);
+
+  melde(b.schreibenUnangetastet, "ein Schreibzugriff wird nicht angefasst");
+  melde(b.fremdeUnangetastet, "fremde Herkunft bleibt unangetastet — der Vermittler fürs Netz-Koop geht hier nicht durch");
+  melde(b.alteVorraeteWeg, "alte Vorräte werden beim Aktivieren weggeräumt");
+  melde(b.uebernimmtSofort, "eine neue Fassung übernimmt sofort statt erst nach dem Schließen aller Tabs");
 }
 
 /* ── 5 · Vollbild hängt an der Geste, nicht am Laden ────────────────
@@ -181,11 +264,24 @@ melde(manifest.icons.some((s) => s.purpose === "maskable"),
    die Symbole nicht — örtlich wäre die App nicht installierbar, obwohl
    sie es live wäre. Dann prüft man etwas anderes, als man ausliefert. */
 
+/* ⚠️ **Die alte Bedingung konnte nicht fehlschlagen.** Sie lautete
+   `v.includes('".webmanifest"') && v.includes("manifest")` — und das
+   Wort „manifest" steckt bereits in „.webmanifest". Geprüft wurde also
+   nur, ob die Endung irgendwo vorkommt; welcher Typ danebensteht, war
+   der Prüfung gleichgültig. Gemessen an einer Kopie: den Typ auf
+   `"text/plain"` gesetzt → 55 Zusicherungen, 0 Fehler. Genau das,
+   wovor der Absatz darüber warnt.
+
+   Jetzt wird das **Paar** gesucht, nicht zwei Wörter irgendwo. */
 {
   const v = liesDatei("werkzeuge/vorschau.mjs");
-  for (const [endung, typ] of [[".webmanifest", "manifest"], [".png", "image/png"]]) {
-    melde(v.includes(`"${endung}"`) && v.includes(typ),
-      `die Vorschau kennt ${endung}`);
+  for (const [endung, typ] of [
+    [".webmanifest", "application/manifest+json"],
+    [".png", "image/png"],
+    [".js", "text/javascript"]
+  ]) {
+    const paar = new RegExp(`"\\${endung}"\\s*:\\s*"${typ.replace(/[/+]/g, "\\$&")}`);
+    melde(paar.test(v), `die Vorschau liefert ${endung} als ${typ} aus`);
   }
 }
 
@@ -344,6 +440,278 @@ async function messeVollbild() {
     lockGerufen: !!lock,
     abstand: lock ? lock.t - start : null,
     nachzuegler: nachher > vorher
+  };
+}
+
+/* ── 9 · Das Bild füllt den Bildschirm, und zwar im ganzen Raster ───
+
+   **Der Fall, der ohne diese Prüfung still durchkäme:** Bis zum
+   06.09.2026 deckte *nichts* in `werkzeuge/` die Skalierung ab —
+   `passeAn`, `devicePixelRatio`, `viewport-fit` und `innerWidth` kamen
+   dort kein einziges Mal vor. Man konnte den Faktor auf 0,5 setzen
+   oder `viewport-fit` entfernen, und die Kette blieb grün. Genau
+   deshalb stand das Bild auf einem Pixel 7 als Fleck über 34,4 % der
+   Fläche, mit 2,625 Punkten je Spielpunkt.
+
+   Geprüft wird **dieselbe** Funktion, die im Browser läuft
+   (`runtime/bildmass.js`), gegen echte Gerätemaße — keine Kopie der
+   Formel, die man mitändern müsste. */
+
+{
+  const { bildLage } = await import("../runtime/bildmass.js");
+  const B = 480, H = 270;
+
+  /* Vier Geräte quer, an denen zu viert gespielt werden soll. Die Maße
+     sind CSS-Punkte im Querformat plus die Bildpunktdichte. */
+  const QUER = [
+    { name: "Pixel 7", w: 915, h: 412, dpr: 2.625 },
+    { name: "iPhone 14", w: 844, h: 390, dpr: 3 },
+    { name: "Galaxy S21", w: 800, h: 360, dpr: 3 },
+    { name: "Laptop 1920", w: 1920, h: 1080, dpr: 1 }
+  ];
+
+  for (const g of QUER) {
+    const l = bildLage({ breite: B, hoehe: H, fensterBreite: g.w, fensterHoehe: g.h, dpr: g.dpr });
+    const ganz = Math.abs(l.punkteJeSpielpunkt - Math.round(l.punkteJeSpielpunkt)) < 1e-9;
+    melde(ganz,
+      `${g.name} quer: ein Spielpunkt ist eine ganze Zahl echter Bildpunkte`,
+      l.punkteJeSpielpunkt.toFixed(3));
+    melde(l.anteil >= 0.5,
+      `${g.name} quer: das Bild belegt mindestens die halbe Fläche`,
+      `${(l.anteil * 100).toFixed(1)} %`);
+  }
+
+  /* Hochkant gibt es keinen ganzen Faktor — dort ist krumm richtig, und
+     das muss die Prüfung aushalten, statt es zu verbieten. */
+  const hoch = bildLage({ breite: B, hoehe: H, fensterBreite: 412, fensterHoehe: 915, dpr: 2.625 });
+  melde(hoch.faktor > 0 && hoch.faktor * B <= 412 + 1e-9,
+    "hochkant passt das Bild ins Fenster, statt abgeschnitten zu werden",
+    `Faktor ${hoch.faktor.toFixed(3)}`);
+
+  /* Und ein Bildschirm, der kleiner ist als das Bild, bekommt lieber
+     ein krummes Bild als gar keins. */
+  const winzig = bildLage({ breite: B, hoehe: H, fensterBreite: 320, fensterHoehe: 240, dpr: 1 });
+  melde(winzig.faktor > 0 && winzig.faktor < 1,
+    "ein zu kleiner Bildschirm bekommt ein verkleinertes Bild statt eines abgeschnittenen",
+    `Faktor ${winzig.faktor.toFixed(3)}`);
+
+  const html = liesDatei("index.html");
+  melde(/viewport-fit=cover/.test(html),
+    "die Seite darf bis unter Aussparung und Gestenleiste zeichnen");
+  melde((html.match(/env\(safe-area-inset-/g) ?? []).length >= 4,
+    "und nimmt sich dafür den sicheren Bereich — sonst liegt der Ausweichknopf auf der Gestenleiste",
+    `${(html.match(/env\(safe-area-inset-/g) ?? []).length} Stellen`);
+}
+
+/* ── 10 · Jeder der drei Startwege kommt ins Vollbild ───────────────
+
+   **Der Fall, der ohne diese Prüfung still durchkam** — und der bis
+   zum 06.09.2026 wirklich eintrat: `gehInsVollbild()` hing allein am
+   Spielstart. Für „ALLEIN SPIELEN" und für das „ANFANGEN" des Wirts
+   ist das ein Klick und damit eine Nutzergeste. Beim **Gast** kommt
+   der Start aus einer Netznachricht: Sein letzter Klick war
+   „BEITRETEN", danach hat er im Warteraum gewartet, und Chrome gibt
+   einer Geste rund fünf Sekunden. Er spielte die ganze Nacht mit
+   Adressleiste und in der Lage, in der er das Telefon gerade hielt.
+
+   Die alte Prüfung verglich zwei Byte-Positionen in `start.js`
+   (`indexOf("beiStart(")` gegen `indexOf("gehInsVollbild()")`) —
+   nachgerechnet 6513 gegen 6589. Position 6513 ist aber die
+   **Erklärung** von `beiStart`, nicht ein Aufruf davon; wer `beiStart`
+   ruft und ob dabei eine Geste vorliegt, konnte sie gar nicht sehen. */
+
+{
+  const lobby = liesDatei("runtime/lobby.js").replace(/\/\*[\s\S]*?\*\//g, "");
+  const eingabe = liesDatei("runtime/eingabe.js").replace(/\/\*[\s\S]*?\*\//g, "");
+  const vollbild = liesDatei("runtime/vollbild.js").replace(/\/\*[\s\S]*?\*\//g, "");
+
+  /* Der Gast: im Klick auf BEITRETEN, nicht in der Nachricht des Wirts. */
+  const beitritt = lobby.slice(lobby.indexOf("const los = ()"), lobby.indexOf("knopf.addEventListener"));
+  melde(beitritt.includes("gehInsVollbild()"),
+    "der Gast geht im Klick auf BEITRETEN ins Vollbild — sein Spielstart kommt aus einer Nachricht und trägt keine Geste");
+
+  /* Und der Nachzügler, der beides rettet: den Gast, der zu lange
+     gewartet hat, und jeden, der aus dem Vollbild gefallen ist. */
+  melde(/vollbildNachholen\(/.test(eingabe),
+    "die erste Berührung im Spiel holt das Vollbild nach");
+  melde((eingabe.match(/vollbildNachholen\(/g) ?? []).length >= 2,
+    "und zwar am Stick wie am Ausweichknopf",
+    `${(eingabe.match(/vollbildNachholen\(/g) ?? []).length} Stellen`);
+  melde(/export function vollbildNachholen/.test(vollbild),
+    "der Nachzügler steht bei den anderen Vollbildwegen");
+  melde(/NACHHOL_SPERRE/.test(vollbild),
+    "mit einer Sperre — sonst fragte jede Berührung des Sticks neu");
+
+  /* Und die Trennung, ohne die eine App im Rückfall `standalone` mit
+     Android-Statusleiste dasteht und niemand etwas dagegen versucht. */
+  melde(/export function randlosGestartet/.test(vollbild),
+    "randlos und als App gestartet sind zwei Fragen — standalone ist nicht fullscreen");
+}
+
+/* Der Browser aus der Hand für den Dienstarbeiter.
+
+   Er ist nicht viel mehr als drei Landkarten und ein `fetch`, dessen
+   Antwort man von außen bestimmt: einmal gut, einmal 404, einmal
+   hängend, einmal geworfen. Genau diese vier Fälle unterscheidet keine
+   Textsuche. */
+async function messeDienstarbeiter() {
+  const HERKUNFT = "https://kimpaliz.github.io";
+  const BASIS = `${HERKUNFT}/where-shadows-crawl/`;
+
+  /* Ein Vorrat ist eine Landkarte von Adresse auf Antwort. Mehr braucht
+     der Dienst von `caches` nicht. */
+  const vorraete = new Map();
+  const macheVorrat = (name) => {
+    if (!vorraete.has(name)) vorraete.set(name, new Map());
+    const m = vorraete.get(name);
+    return {
+      put: async (a, r) => { m.set(new URL(a.url, BASIS).href, r); },
+      match: async (a) => m.get(new URL(typeof a === "string" ? a : a.url, BASIS).href) ?? undefined,
+      addAll: async (liste) => {
+        for (const u of liste) {
+          const antwort = await globalThis.fetch({ url: new URL(u, BASIS).href, method: "GET" });
+          if (!antwort || !antwort.ok) throw new Error("addAll: nicht ok");
+          m.set(new URL(u, BASIS).href, antwort);
+        }
+      }
+    };
+  };
+
+  globalThis.caches = {
+    open: async (name) => macheVorrat(name),
+    keys: async () => [...vorraete.keys()],
+    delete: async (name) => vorraete.delete(name),
+    match: async (a) => {
+      const schluessel = new URL(typeof a === "string" ? a : a.url, BASIS).href;
+      for (const m of vorraete.values()) if (m.has(schluessel)) return m.get(schluessel);
+      return undefined;
+    }
+  };
+
+  /* Was das Netz gerade tut, und womit es sich meldet. Beides von außen
+     umgeschaltet: Die **Marke** ist der Trick, mit dem sich „das kam
+     frisch aus dem Netz" von „das kam aus dem Vorrat" unterscheiden
+     lässt, ohne raten zu müssen. */
+  let netzArt = "gut";
+  let netzMarke = "netz";
+  const antwortAus = (marke, ok = true) => ({ ok, marke, clone() { return { ...this, clone: this.clone }; } });
+  globalThis.fetch = () => {
+    if (netzArt === "gut") return Promise.resolve(antwortAus(netzMarke));
+    if (netzArt === "vierhundertvier") return Promise.resolve(antwortAus("404", false));
+    if (netzArt === "haengt") return new Promise(() => {});
+    return Promise.reject(new Error("offline"));
+  };
+
+  const horcher = new Map();
+  let uebernimmtSofort = false, beansprucht = false;
+  globalThis.self = {
+    addEventListener: (art, fn) => {
+      if (!horcher.has(art)) horcher.set(art, []);
+      horcher.get(art).push(fn);
+    },
+    skipWaiting: () => { uebernimmtSofort = true; },
+    clients: { claim: async () => { beansprucht = true; } },
+    location: { origin: HERKUNFT, href: `${BASIS}sw.js` }
+  };
+
+  await import(`../sw.js?t=${Date.now()}`);
+
+  /* Ein Ereignis, das mitschreibt, was der Dienst damit macht. */
+  const feuere = async (art, zusatz = {}) => {
+    const e = { ...zusatz, warten: [], antwort: undefined,
+      waitUntil(p) { e.warten.push(p); },
+      respondWith(p) { e.antwort = p; } };
+    for (const fn of horcher.get(art) ?? []) fn(e);
+    await Promise.all(e.warten);
+    return e;
+  };
+
+  /* ⚠️ **Das `catch` ist der Unterschied zwischen rot und abgestürzt.**
+     Nimmt man dem Dienst seinen Rückhalt weg, wirft er den Netzfehler
+     weiter — im Browser landet der auf der Fehlerseite, hier als
+     unbehandelte Ablehnung, die Node mitsamt der ganzen Prüfkette
+     beendet. Beim ersten Anlauf ist genau das passiert: drei Sabotagen
+     rissen die Kette ab, statt eine rote Zeile zu erzeugen. Ein
+     Wächter, der bei dem Fehler abstürzt, den er sucht, ist keiner —
+     dieselbe Lehre wie in Abschnitt 7 (Fehlerbuch E5). */
+  const hole = async (pfad, art = "gut", zusatz = {}) => {
+    netzArt = art;
+    const e = await feuere("fetch", {
+      request: { url: new URL(pfad, BASIS).href, method: "GET", mode: "no-cors", ...zusatz }
+    });
+    if (e.antwort === undefined) return "nicht angefasst";
+    try { return await e.antwort; } catch { return "geworfen"; }
+  };
+
+  /* ── 1 · Einbau: liegt die Startseite vorab im Vorrat? ── */
+  netzArt = "gut";
+  /* Eigene Marke, damit sich die vorab eingelagerte Startseite spaeter
+     von jeder anderen Antwort unterscheiden laesst. */
+  netzMarke = "einstieg";
+  await feuere("install");
+  const einstiegVorab = [...(vorraete.values().next().value ?? new Map()).keys()];
+
+  /* ── 2 · Online: gewinnt das Netz, und wird eingelagert? ──
+
+     ⚠️ **Zwei Abrufe, nicht einer.** Der erste füllt den Vorrat, erst
+     der zweite kann die Slay'Em-All-Falle überhaupt zeigen: Ein Dienst,
+     der den Vorrat zuerst fragt, fällt bei einem Abruf auf eine noch
+     **leere** Landkarte durch und sieht dabei völlig richtig aus.
+     Beim ersten Anlauf war es genau ein Abruf — und die eingebaute
+     Falle blieb grün. Deshalb wechselt die Marke dazwischen: Was jetzt
+     ankommt, muss die **neue** sein. */
+  netzMarke = "netz-alt";
+  await hole("runtime/start.js", "gut");
+  const eingelagert = (await globalThis.caches.match({ url: `${BASIS}runtime/start.js` }))?.marke === "netz-alt";
+
+  netzMarke = "netz-neu";
+  const frisch = await hole("runtime/start.js", "gut");
+  const netzGewinnt = frisch?.marke === "netz-neu";
+
+  /* ── 3 · Offline: kommt dieselbe Datei aus dem Vorrat? ── */
+  const ausVorrat = await hole("runtime/start.js", "offline");
+  const offlineAusDemVorrat = ausVorrat?.marke === "netz-neu";
+
+  /* ── 4 · Offline und keine passende Datei: die Startseite ── */
+  const nav = await hole("welle/gibtesnicht", "offline", { mode: "navigate" });
+  const offlineNavigationAufDieStartseite = !!nav && typeof nav === "object" && nav.marke === "einstieg";
+
+  /* ── 5 · Schlechte Antwort: gewinnt der Vorrat? ── */
+  const beiVierhundertvier = await hole("runtime/start.js", "vierhundertvier");
+  const schlechteAntwortFaelltZurueck = beiVierhundertvier?.marke === "netz-neu";
+  const schlechteEingelagert = (await globalThis.caches.match({ url: `${BASIS}runtime/start.js` }))?.marke === "404";
+
+  /* ── 6 · Hängendes Netz: greift die Frist? ── */
+  const beginn = Date.now();
+  const gehaengt = await Promise.race([
+    hole("runtime/start.js", "haengt"),
+    new Promise((r) => setTimeout(() => r("nie zurückgekommen"), 6000))
+  ]);
+  const fristGreift = gehaengt !== "nie zurückgekommen" && gehaengt?.marke === "netz-neu";
+  const fristMs = fristGreift ? Date.now() - beginn : null;
+
+  /* ── 7 · Was gar nicht angefasst werden darf ── */
+  netzArt = "gut";
+  const schreiben = await feuere("fetch", {
+    request: { url: `${BASIS}irgendwas`, method: "POST", mode: "cors" }
+  });
+  const schreibenUnangetastet = schreiben.antwort === undefined;
+
+  const fremd = await feuere("fetch", {
+    request: { url: "https://0.peerjs.com/peerjs/id", method: "GET", mode: "cors" }
+  });
+  const fremdeUnangetastet = fremd.antwort === undefined;
+
+  /* ── 8 · Aktivieren räumt alte Vorräte weg ── */
+  vorraete.set("wsc-uralt", new Map());
+  await feuere("activate");
+  const alteVorraeteWeg = !vorraete.has("wsc-uralt") && beansprucht;
+
+  return {
+    einstiegVorab, netzGewinnt, eingelagert, offlineAusDemVorrat,
+    offlineNavigationAufDieStartseite, schlechteAntwortFaelltZurueck,
+    schlechteEingelagert, fristGreift, fristMs,
+    schreibenUnangetastet, fremdeUnangetastet, alteVorraeteWeg, uebernimmtSofort
   };
 }
 

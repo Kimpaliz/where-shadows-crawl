@@ -3,6 +3,124 @@
 Oben das Neueste. Jeder Eintrag sagt **was**, **warum** und **womit
 gemessen** — nicht nur, dass etwas anders ist.
 
+## 0.9.8 — Die App trägt wirklich (06.09.2026)
+
+Nachtrag zu 0.9.7. Eine unabhängige Gegenprüfung mit 34 Agenten hat den
+Android-Weg in fünf Linsen zerlegt — Manifest, Dienstarbeiter, Vollbild,
+Querlage, Wächter — und **20 Mängel** gefunden, die eine
+Widerlegungsprüfung überlebt haben. Kein einziger blockierte die
+Installation; zwei trafen dafür Janniks Wortlaut *„vollbild"* mitten
+ins Herz.
+
+### Der Gast hat nie ein Vollbild gesehen
+
+`gehInsVollbild()` hing am Spielstart, und für zwei der drei Startwege
+war das richtig: „ALLEIN SPIELEN" und das „ANFANGEN" des Wirts sind
+Klicks, also Nutzergesten. Beim **Gast** kommt der Start aus einer
+Netznachricht (`netz/sitzung.mjs`) — sein letzter Klick war
+„BEITRETEN", danach hat er im Warteraum gewartet, und Chrome gibt einer
+Geste rund fünf Sekunden. Der Browser lehnte still ab, und weil die
+Lagensperre am Vollbild hängt, war **quer auch weg**.
+
+Zwei Stellen beheben das: der Klick auf „BEITRETEN" selbst, und ein
+Nachzügler an der ersten Berührung des Daumen-Sticks. Der Nachzügler
+löst zugleich den zweiten Fall — wer mit der Zurück-Geste aus dem
+Vollbild fällt, kam vorher nie zurück, denn der `fullscreenchange`-
+Horcher prüft `if (document.fullscreenElement)` und tut beim
+**Verlassen** nichts.
+
+### Das Bild war ein Fleck in der Mitte
+
+Der ganze Faktor wurde in **CSS-Punkten** gesucht. Auf einem Telefon
+ist ein CSS-Punkt aber längst kein Bildpunkt mehr:
+
+| quer, gemessen | vorher | jetzt |
+| --- | ---: | ---: |
+| Pixel 7 · echte Punkte je Spielpunkt | **2,625** | **4,000** |
+| Pixel 7 · Anteil der Bildschirmfläche | **34,4 %** | **79,8 %** |
+| iPhone 14 | 3,000 · 39,4 % | 4,000 · **70,0 %** |
+| Galaxy S21 | 3,000 · 45,0 % | 4,000 · **80,0 %** |
+
+2,625 heißt: **jede dritte Bildpunktreihe war einen Punkt breiter als
+ihre Nachbarn** — genau die unechte Pixelgrafik, gegen die der
+Kommentar über der Funktion seit jeher argumentiert. Die Rechnung steht
+jetzt in `runtime/bildmass.js`, weil ein Wächter sie dort ohne Browser
+nachrechnen kann, statt eine Kopie zu prüfen.
+
+Dazu der **sichere Bereich**: `viewport-fit=cover` stand seit 0.9.5 im
+Kopf und erlaubte der Seite, bis unter Kamera-Aussparung und
+Gestenleiste zu zeichnen — `env(safe-area-inset-*)` kam im ganzen
+Repository **null Mal** vor. Am härtesten traf es „BITTE QUER HALTEN":
+das einzige Element, das je hochkant erscheint, also genau dort, wo die
+Loch-Kamera sitzt. Jetzt an 8 Stellen berücksichtigt.
+
+### Vier Löcher im Dienstarbeiter
+
+| Fall | was passierte |
+| --- | --- |
+| **Erster Start im Funkloch** | Der erste Besuch lief noch ohne den Dienst, der Vorrat war leer, der Rückfall fand nichts — in der App ohne Adressleiste eine Fehlerseite ohne Ausweg |
+| **Schwaches Netz** | `await fetch()` ohne Frist; der Vorrat wurde erst im `catch` gefragt. Beim Start sind das **47 Anfragen** — schwarzer Bildschirm auf unbestimmte Zeit, obwohl alles eingelagert war |
+| **404 oder 503** | Eine schlechte Antwort ist kein Netzfehler und fiel nicht in den `catch`: sie wurde durchgereicht, obwohl die gute Fassung im Vorrat lag |
+| **Zwei Adressen, ein Schlüssel** | Der Rückfall kannte nur `./`. Wer die Seite immer über `…/index.html` geöffnet hatte, stand ohne Netz vor der Fehlerseite |
+
+### Der Wächter, der einen wertlosen Dienst durchwinkte
+
+Abschnitt 4 suchte fünf Zeichenketten. **Gemessen an einer Kopie:** ein
+`sw.js`, das nichts einlagert, keinen Rückfall hat und dessen
+Vorratsblick in einem toten `if (false)` steht — offline also ein
+schwarzer Bildschirm — bestand **alle 41 Prüfungen, 0 Fehler**, Wort
+für Wort dieselbe Ausgabe wie der echte Stand.
+
+Dasselbe Muster an drei weiteren Stellen, jedes Mal an einer Kopie
+belegt:
+
+| Sabotage | alte Kette |
+| --- | --- |
+| `name` und `short_name` aus dem Manifest gelöscht | grün |
+| `start_url` gelöscht | grün |
+| Manifest-Verweis auf eine Datei gebogen, die es nicht gibt | grün |
+| Anmeldung des Dienstarbeiters aus `index.html` entfernt | grün |
+| Inhaltstyp der Vorschau auf `text/plain` gesetzt | grün |
+
+Der letzte Fall war besonders hübsch: Die Bedingung lautete
+`v.includes(".webmanifest") && v.includes("manifest")` — und „manifest"
+steckt bereits in „.webmanifest". Sie **konnte** gar nicht fehlschlagen.
+
+### 41 → 92 Prüfungen, und 29-mal absichtlich rot
+
+`pruefe-app.mjs` führt jetzt aus, statt zu suchen: ein zweiter Browser
+aus der Hand für den Dienstarbeiter (Landkarten statt `caches`, ein
+`fetch`, dessen Antwort man von außen bestimmt — gut, 404, hängend,
+geworfen).
+
+Nach Projektregel wurde jede neue Prüfung absichtlich rot gemacht.
+**29 Sabotagen, und vier davon deckten die Prüfung selbst auf:**
+
+| Sabotage | erster Anlauf | die eigentliche Ursache |
+| --- | --- | --- |
+| Vorrat vor dem Netz (die Slay'Em-All-Falle) | **grün** | Es wurde **ein** Abruf gemessen — auf eine noch leere Landkarte fällt auch ein Vorrat-zuerst-Dienst durch. Jetzt zwei Abrufe mit wechselnder Marke |
+| Vorab-Einlagerung entfernt | **Absturz** | Der Dienst wirft den Netzfehler weiter; die unbehandelte Ablehnung riss die ganze Kette ab, statt rot zu melden |
+| Rückfall auf die Startseite entfernt | **Absturz** | dieselbe Ursache |
+| Einlagern entfernt | **Absturz** | dieselbe Ursache |
+
+Ein Wächter, der bei dem Fehler abstürzt, den er sucht, ist keiner —
+dieselbe Lehre wie im Fehlerbuch **E5**. Nach der Nachbesserung
+schlagen alle 29 an, und keine reißt die Kette ab.
+
+### Ehrlich vermerkt
+
+Gemessen wurde gegen Browser aus der Hand und gegen Gerätemaße aus der
+Tabelle, **nicht gegen ein Telefon** — das Netz nach außen ist in
+dieser Werkstatt gesperrt, die Live-Seite ist von hier aus nicht
+abrufbar. Die Zahlen zur Skalierung sind Rechnungen mit echten Maßen
+und stimmen; ob Chrome auf Janniks Gerät die Installation anbietet,
+zeigt erst sein Startbildschirm.
+
+**Nicht gebaut**, obwohl bestätigt: Der Daumen-Stick schlägt nicht voll
+aus, wenn der Daumen in der unteren linken Ecke aufsetzt — nach unten
+bleiben 42 %, nach links 31 % des Tempos. Das ist Bedienung, nicht
+Installation, und gehört in einen eigenen Vorgang.
+
 ## 0.9.7 — Das Spiel bietet sich selbst zur Installation an (06.09.2026)
 
 Janniks Ansage: *„mach es auch zu einer app die msn aus dem browser

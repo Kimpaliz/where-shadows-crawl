@@ -29,6 +29,7 @@
 import { eroeffne, tritteBei, MAX_SPIELER } from "../netz/sitzung.mjs";
 import { pruefeCode } from "../netz/lobbycode.mjs";
 import { installierbar, beiAenderung as beiInstallAenderung, biteInstallieren } from "./installieren.js";
+import { gehInsVollbild } from "./vollbild.js";
 
 const NAME_SPEICHER = "wsc.name";
 
@@ -159,6 +160,15 @@ export function macheLobby({ beiStart }) {
       if (!gepruef.gut) { meldungsfeld.textContent = gepruef.grund; return; }
       knopf.disabled = true;
       meldungsfeld.textContent = "";
+      /* ⚠️ **Die letzte echte Geste des Gastes.** Sein Spiel startet
+         später aus einer Netznachricht des Wirts (`netz/sitzung.mjs`),
+         und ein Vollbild aus einer Nachricht heraus lehnt der Browser
+         ab — die Geste vom Beitreten ist bis dahin längst verfallen
+         (Chrome gibt ihr rund fünf Sekunden, der Warteraum dauert
+         Minuten). Also **hier**, im Klick, und nicht erst beim Start.
+         Der Daumen-Stick holt es später notfalls nach
+         (`runtime/vollbild.js`). */
+      gehInsVollbild();
       starteGast(gepruef.code, name);
     };
     knopf.addEventListener("click", los);

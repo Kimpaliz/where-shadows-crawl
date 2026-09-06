@@ -36,13 +36,25 @@
    `runtime/start.js` (ruft `gehInsVollbild()` beim Spielstart),
    `index.html` (`#querhinweis`, wenn es hochkant bleibt). */
 
-/* Läuft das Spiel als installierte App? Dann ist alles schon geregelt,
-   und ein `requestFullscreen` obendrauf wäre bestenfalls wirkungslos. */
+/* Läuft das Spiel als installierte App? Dann ist die Adressleiste schon
+   weg — genau Janniks Wortlaut. */
 export function alsAppGestartet() {
-  return matchMedia("(display-mode: fullscreen)").matches
+  return randlosGestartet()
     || matchMedia("(display-mode: standalone)").matches
     /* Der Weg, den Safari als einziger kennt. */
     || navigator.standalone === true;
+}
+
+/* Und läuft sie wirklich **randlos**? Das ist nicht dasselbe.
+
+   Das Manifest bittet mit `display_override` zuerst um `fullscreen` und
+   nimmt `standalone` als Rückfall. Landet die App im Rückfall — ein
+   anderer Browser, ein älterer Starter —, ist zwar die Adressleiste
+   weg, aber die Statusleiste mit Uhr und Akku bleibt oben stehen.
+   Vorher galt beides als „schon geregelt", und dann versuchte niemand
+   mehr etwas dagegen. */
+export function randlosGestartet() {
+  return matchMedia("(display-mode: fullscreen)").matches;
 }
 
 /* Wie lange auf das Vollbild gewartet wird, bevor das Querformat
@@ -90,7 +102,12 @@ if (typeof document !== "undefined") {
    lehnt der Browser ab. Gibt zurück, was wirklich passiert ist; der
    Aufrufer darf es ignorieren, aber eine Prüfung kann es lesen. */
 export async function gehInsVollbild() {
-  const bericht = { alsApp: alsAppGestartet(), vollbild: null, lage: null };
+  /* ⚠️ Gefragt wird nach **randlos**, nicht nach „als App gestartet".
+     Wer im Rückfall `standalone` läuft, hat die Adressleiste los, aber
+     nicht die Statusleiste — dort ist ein `requestFullscreen` an der
+     Geste genau richtig und kostet nichts, wenn der Browser ohnehin
+     schon randlos zeigt. */
+  const bericht = { alsApp: randlosGestartet(), vollbild: null, lage: null };
 
   if (!bericht.alsApp && document.fullscreenElement === null) {
     /* Auf dem Wurzelelement, nicht auf der Leinwand: Der Daumen-Stick
@@ -122,4 +139,45 @@ export async function gehInsVollbild() {
 
   bericht.lage = await legeQuerFest();
   return bericht;
+}
+
+/* Wie lange nach einem Anlauf nicht wieder gefragt wird. Ohne diese
+   Sperre stellte jede Berührung des Daumen-Sticks eine neue Anfrage —
+   sechzigmal in der Sekunde, während man ausweicht. */
+const NACHHOL_SPERRE = 3000;
+let zuletztVersucht = -Infinity;
+
+/* Der Nachzügler an der Berührung.
+
+   ── Zwei Fälle, die ohne ihn verloren gehen ────────────────────────
+
+   **1 · Der Gast bekommt nie ein Vollbild.** `gehInsVollbild()` hängt
+   am Spielstart, und das trägt für „ALLEIN SPIELEN" und für das
+   „ANFANGEN" des Wirts — beides sind Klicks. Beim **Gast** kommt der
+   Start aus einer Netznachricht (`netz/sitzung.mjs`), also aus keiner
+   Geste: Sein letzter Klick war „BEITRETEN", und dann hat er im
+   Warteraum gewartet. Chrome gibt einer Geste rund fünf Sekunden; die
+   war längst abgelaufen. Er spielte die ganze Nacht mit Adressleiste
+   und in der Lage, in der er das Telefon gerade hielt.
+
+   **2 · Wer aus dem Vollbild fällt, kommt nicht zurück.** Ein
+   versehentlicher Wisch vom Rand — die Zurück-Geste von Android —
+   beendet das Vollbild. Der `fullscreenchange`-Horcher oben prüft
+   `if (document.fullscreenElement)` und tut beim **Verlassen** nichts.
+   Adressleiste zurück, Lagensperre weg, und mitten in der Welle legt
+   sich „BITTE QUER HALTEN" über das Bild.
+
+   Beide Male ist die nächste Berührung des Daumen-Sticks eine echte
+   Nutzergeste — und damit der Moment, in dem der Browser es erlaubt.
+   Deshalb hängt es dort und braucht keinen zusätzlichen Knopf im Bild.
+
+   ⚠️ Absichtlich **ohne `await`** aufgerufen: Es darf die Eingabe
+   nicht um ein einziges Bild aufhalten. */
+export function vollbildNachholen(jetzt) {
+  if (randlosGestartet()) return "schon randlos";
+  if (document.fullscreenElement) return "schon an";
+  if (jetzt - zuletztVersucht < NACHHOL_SPERRE) return "zu früh";
+  zuletztVersucht = jetzt;
+  gehInsVollbild();
+  return "versucht";
 }

@@ -37,6 +37,7 @@ import { macheKartenhand } from "./karten-hand.js";
 import { macheLadenhand } from "./laden-tippen.js";
 import { macheLobby } from "./lobby.js";
 import { gehInsVollbild } from "./vollbild.js";
+import { bildFaktor } from "./bildmass.js";
 import { ruhendeEingabe, packeEingabe, entpackeEingabe } from "../netz/nachrichten.mjs";
 import { macheLockstep, VERZUG, NACHHALL } from "../netz/lockstep.mjs";
 
@@ -97,31 +98,33 @@ let endeKnopfVorher = false;
    niemand glaubt, das Spiel sei abgestürzt. */
 const WEG_NACH_SEKUNDEN = 2;
 
-/* Ganzzahlig vergrößern, solange etwas zu vergrößern da ist — und
-   verkleinern, wenn der Bildschirm kleiner ist als das Bild.
+/* Wie groß das Bild auf dem Glas wird. Die Rechnung selbst steht in
+   `runtime/bildmass.js` — dort, wo ein Wächter sie ohne Browser
+   nachrechnen kann; hier wird sie nur auf die Leinwand geschrieben.
 
-   Der zweite Fall ist neu und war ein Fehler: `Math.max(1, …)` hielt
-   den Faktor auch dann bei 1, wenn gar kein Platz für 480 Bildpunkte
-   war. Am 05.09.2026 auf einem Telefon hochkant gemessen — 375 x 812
-   Bildpunkte Fenster: Die Leinwand stand mit 480 Bildpunkten Breite da,
-   also auf **128 %** des Fensters, und `overflow: hidden` schnitt links
-   und rechts je **53** Bildpunkte ab. Man sah den Bannkreis nicht mehr
-   ganz, ohne dass irgendwo ein Fehler erschien.
+   Zwei Messungen stecken darin, beide am Gerät gemacht:
 
-   Hochkant gibt es **keinen** ganzzahligen Faktor: 480 passt schlicht
-   nicht in 375. Die Wahl steht also nicht zwischen „ganz" und „krumm",
-   sondern zwischen „krumm" und „abgeschnitten" — und ein vollständiges
-   Bild mit ungleichen Bildpunkten ist besser als ein sauberes Raster,
-   von dem ein Fünftel fehlt.
+   **05.09.2026, hochkant.** `Math.max(1, …)` hielt den Faktor auch
+   dann bei 1, wenn gar kein Platz für 480 Bildpunkte war: Bei 375 x 812
+   stand die Leinwand auf **128 %** des Fensters, und `overflow: hidden`
+   schnitt links und rechts je 53 Bildpunkte ab. Hochkant gibt es keinen
+   ganzen Faktor — die Wahl steht zwischen „krumm" und „abgeschnitten",
+   und ein vollständiges Bild ist besser als ein sauberes Raster, von
+   dem ein Fünftel fehlt.
 
-   Quer bleibt alles beim Alten: 812 x 375 ergibt gemessen Faktor 1
-   (59,1 % der Breite, 72,0 % der Höhe). Auf einem Telefon mit
-   dreifacher Bildpunktdichte sind das genau 3 Gerätepunkte je
-   Spielpunkt — sauberer geht es nicht. Deshalb der Hinweis „quer
-   halten" statt eines krummen Faktors, wo ein ganzer möglich ist. */
+   **06.09.2026, quer auf einem Pixel 7** (915 x 412 CSS-Punkte,
+   `devicePixelRatio` 2,625). Der ganze Faktor wurde in **CSS-Punkten**
+   gesucht und war 1 — auf dem Glas also 2,625 echte Punkte je
+   Spielpunkt, jede dritte Reihe einen Punkt breiter als ihre Nachbarn.
+   Genau die unechte Pixelgrafik, gegen die der ganze Aufwand geht, und
+   das Bild belegte dabei 34,4 % der Fläche. In echten Bildpunkten
+   gerechnet kommen **4,000** heraus und **79,8 %** der Fläche. */
 function passeAn() {
-  const passt = Math.min(window.innerWidth / BREITE, window.innerHeight / HOEHE);
-  const faktor = passt >= 1 ? Math.floor(passt) : passt;
+  const faktor = bildFaktor({
+    breite: BREITE, hoehe: HOEHE,
+    fensterBreite: window.innerWidth, fensterHoehe: window.innerHeight,
+    dpr: window.devicePixelRatio || 1
+  });
   leinwand.style.width = `${BREITE * faktor}px`;
   leinwand.style.height = `${HOEHE * faktor}px`;
 }

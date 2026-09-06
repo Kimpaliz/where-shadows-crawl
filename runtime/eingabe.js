@@ -60,6 +60,8 @@
    (Menüführung über dieselben Flanken), `index.html` (die Elemente des
    Daumen-Sticks). */
 
+import { vollbildNachholen } from "./vollbild.js";
+
 export const BELEGUNG = {
   name: "WASD oder Pfeile",
   hoch: ["KeyW", "ArrowUp"],
@@ -142,6 +144,14 @@ export function macheEingabe() {
 
   if (feld && ring && knopfPunkt) {
     feld.addEventListener("pointerdown", (e) => {
+      /* Die einzige echte Nutzergeste, die es im laufenden Spiel gibt —
+         und damit der einzige Moment, in dem der Browser ein Vollbild
+         erlaubt. Der Gast startet aus einer Netznachricht heraus und
+         käme sonst nie hinein; wer aus Versehen mit der Zurück-Geste
+         herausfällt, käme nie zurück. Siehe `runtime/vollbild.js`.
+         Bewusst ohne `await`: Die Eingabe darf darauf nicht warten. */
+      vollbildNachholen(e.timeStamp);
+
       stick.zeiger = e.pointerId;
       stick.mitteX = e.clientX; stick.mitteY = e.clientY;
       ring.style.left = knopfPunkt.style.left = `${e.clientX}px`;
@@ -171,6 +181,9 @@ export function macheEingabe() {
 
   if (knopfFlaeche) {
     knopfFlaeche.addEventListener("pointerdown", (e) => {
+      /* Derselbe Nachzügler wie am Stick — wer nur ausweicht, ohne zu
+         laufen, muss genauso ins Vollbild kommen. */
+      vollbildNachholen(e.timeStamp);
       tasten.add(BERUEHRUNGSKNOPF); frisch.add(BERUEHRUNGSKNOPF);
       knopfFlaeche.classList.add("gedrueckt");
       e.preventDefault();

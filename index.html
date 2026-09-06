@@ -8,6 +8,11 @@
 <meta name="theme-color" content="#050409">
 <!-- Apple kennt das Manifest nicht; ohne diese drei Zeilen startet
      ein iPhone die App mit Adressleiste. -->
+<!-- Chrome meldet die Apple-Zeile als veraltet in die Konsole und
+     moechte diese hier daneben. Sichtbar aendert sich nichts — das
+     Verhalten steuert das Manifest —, aber wer spaeter mit offener
+     Konsole sucht, faende sonst zuerst eine Warnung, die keine ist. -->
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Shadows">
@@ -82,8 +87,16 @@
 
   /* Der Knopf: ausweichen im Kampf, bestaetigen im Menue — derselbe
      Knopf, weil das Spiel nur einen kennt (runtime/eingabe.js). */
+  /* ⚠️ Die Abstaende kommen aus dem **sicheren Bereich**, nicht aus
+     festen Zahlen. Zeile 5 erlaubt der Seite mit `viewport-fit=cover`
+     ausdruecklich, bis unter Kamera-Aussparung, runde Ecken und
+     Gestenleiste zu zeichnen — ohne `env(safe-area-inset-*)` waere das
+     eine Erlaubnis ohne Gegenstueck. Auf einem quer gehaltenen Pixel
+     liegt der Knopf sonst halb auf der Gestenleiste. */
   #knopf {
-    position: absolute; right: 22px; bottom: 26px;
+    position: absolute;
+    right: calc(22px + env(safe-area-inset-right));
+    bottom: calc(26px + env(safe-area-inset-bottom));
     width: 96px; height: 96px; border-radius: 50%;
     pointer-events: auto; touch-action: none;
     border: 2px solid rgba(214,178,102,.5);
@@ -98,8 +111,13 @@
   }
 
   /* Hochkant bleibt vom Bild wenig uebrig — der Hinweis sagt, warum. */
+  /* Der Hinweis ist das **einzige** Element, das ueberhaupt jemals
+     hochkant erscheint — also genau in der Lage, in der die
+     Loch-Kamera oben mittig sitzt. Ohne den sicheren Bereich stand
+     „BITTE QUER HALTEN" auf einem Pixel hinter der Kamera. */
   #querhinweis {
-    position: absolute; left: 0; right: 0; top: 12px;
+    position: absolute; left: 0; right: 0;
+    top: calc(12px + env(safe-area-inset-top));
     text-align: center;
     color: rgba(214,178,102,.85);
     font-size: 13px; letter-spacing: 2px;
@@ -119,7 +137,12 @@
     color: #cfc6de;
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
-    gap: 14px; padding: 20px;
+    gap: 14px;
+    padding:
+      calc(20px + env(safe-area-inset-top))
+      calc(20px + env(safe-area-inset-right))
+      calc(20px + env(safe-area-inset-bottom))
+      calc(20px + env(safe-area-inset-left));
     overflow-y: auto;
     text-align: center;
   }

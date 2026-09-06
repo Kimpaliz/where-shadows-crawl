@@ -134,6 +134,19 @@ server.listen(HAFEN, adresse ?? "127.0.0.1", () => {
     console.log(`Where Shadows Crawl laeuft auf http://${adresse}:${HAFEN}/`);
     console.log("Dieselbe Adresse gilt fuer das Handy im selben WLAN.");
     console.log("Beim ersten Mal fragt die Windows-Firewall — 'Privates Netzwerk' erlauben.");
+    /* ⚠️ Ohne diesen Satz prueft man hier etwas anderes, als man
+       ausliefert. Ein Browser meldet einen Dienstarbeiter nur in einem
+       sicheren Zusammenhang an — https oder localhost. Ueber
+       http://192.168.x.x tut `index.html` das also **nicht**, und zwar
+       ohne jede Fehlermeldung: kein Vorrat, kein Offline, und kein
+       Installieren-Knopf. Wer das nicht weiss, testet 'die App auf dem
+       Handy', sieht ein gewoehnliches Browserfenster und schliesst
+       daraus auf einen Fehler, den es live nicht gibt. */
+    console.log("");
+    console.log("Achtung: Ueber http gibt es keinen Dienstarbeiter.");
+    console.log("Installieren und Offline lassen sich hier NICHT testen —");
+    console.log("dafuer die Live-Adresse benutzen:");
+    console.log("https://kimpaliz.github.io/where-shadows-crawl/");
   } else {
     console.log(`Where Shadows Crawl laeuft auf http://127.0.0.1:${HAFEN}/`);
   }
