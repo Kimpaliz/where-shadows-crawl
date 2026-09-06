@@ -472,6 +472,45 @@ einer Sekunde: **„lock wurde nie gerufen"**.
 
 ---
 
+### E6 · Dieselbe Prüfung, dieselbe Lücke — zwei Monate später
+
+`pruefe-balance.mjs` urteilt über die **Wand**: den Anteil aller Tode,
+der in eine einzige Welle fällt. Gemessen wird das an **einer**
+Saatreihe (`saat: 1`), vierzig Läufe.
+
+Am 06.09.2026 schlug sie zu viert an: 80,0 % gegen eine Sperrklinke von
+79 %. Die naheliegende Deutung — „die neuen Waffen haben den Boss zur
+Wand gemacht" — war falsch. Über **fünf** Saatreihen gemessen:
+
+| Saatreihe | 1 | 2 | 3 | 4 | 5 |
+| --- | --- | --- | --- | --- | --- |
+| Wand | **80,0 %** | 73,1 % | 78,6 % | 76,0 % | 75,0 % |
+
+Spanne 73,1 bis 80,0, Mittel **76,5 %**. Vier von fünf Reihen sind
+grün; ausgerechnet die eine, die die Prüfung benutzt, ist es nicht. Der
+Ausgangsstand vorher lag — ebenfalls auf Saatreihe 1 gemessen — bei
+75,0 %, also innerhalb derselben Spanne.
+
+Das ist **E4 noch einmal**, an derselben Datei und an einer anderen
+Zusicherung: Am 05.09.2026 war es die Abbruchquote, gemessen an zehn
+Läufen; heute die Wand, gemessen an einer Saatreihe. Die Lehre von
+damals — *„Wo eine Prüfung über einen Anteil urteilt, muss die
+Stichprobe zur Aussage passen"* — war aufgeschrieben und für die eine
+Zusicherung angewendet, aber nicht für die Datei.
+
+**Woran ich es früher merke:** Wenn eine Prüfung über einen Anteil
+urteilt und **knapp** anschlägt (80,0 gegen 79), ist die erste Frage
+nicht „was habe ich kaputt gemacht", sondern **„wie stabil ist diese
+Zahl überhaupt"**. Eine Saatreihe mehr kostet eine Minute und
+entscheidet, ob man eine Waffe umbaut oder eine Stichprobe.
+
+Und die Regel eine Ebene höher: **Wer eine Lehre aufschreibt, prüft
+sie gegen alle Zusicherungen derselben Datei**, nicht nur gegen die,
+die sie ausgelöst hat. Nachrechnen lässt sich das jetzt mit
+`node werkzeuge/balance.mjs --wand`.
+
+---
+
 ## F · Zu viel Kontext in einer Sitzung
 
 ### F1 · Zwei Besitzer für dieselbe Datei *(Startkapital)*

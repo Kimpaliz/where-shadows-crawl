@@ -223,6 +223,51 @@ export function messreihe({ laeufe = 40, spielerzahl = 1, saat = 1 } = {}) {
   };
 }
 
+/* ── Die Wand über mehrere Saatreihen ────────────────────────────────
+
+   Die „Wand" ist der Anteil aller Tode, der in **eine** Welle fällt —
+   `pruefe-balance.mjs` urteilt darüber gegen `WAND_SPERRE`. Sie misst
+   dafür **eine** Saatreihe (`saat: 1`).
+
+   ⚠️ **Fehlerbuch E4 sagt, dass das zu wenig sein kann**, und am
+   06.09.2026 war es das: Über fünf Saatreihen gemessen schwankte die
+   Zahl zu viert zwischen 73,1 % und 80,0 %. Die Sperrklinke steht bei
+   79 % — vier der fünf Reihen sind grün, ausgerechnet die eine, die
+   die Prüfung benutzt, ist es nicht. Die Prüfung urteilte damit über
+   **einen Lauf von vierzig**, nicht über das Spiel.
+
+   Diese Funktion ist die Gegenprobe dazu. Sie steht hier und nicht in
+   der Prüfkette, weil sie fünfmal so lange läuft wie die Prüfung
+   selbst — wer eine Wand-Zahl vor sich hat, soll sie nachrechnen
+   können, ohne dass jeder Lauf der Kette es tut:
+
+       node werkzeuge/balance.mjs --wand
+       node werkzeuge/balance.mjs --wand --spieler 4 --reihen 5
+
+   Was sie **nicht** tut: die Sperrklinke ändern. Die steht in
+   `pruefe-balance.mjs` und ist eine Entscheidung des Auftraggebers
+   (`docs/REGELN.md` 3). */
+export function wandStreuung({ spielerzahl = 4, reihen = 5, laeufe = 40 } = {}) {
+  const raus = [];
+  for (let saat = 1; saat <= reihen; saat++) {
+    const m = messreihe({ laeufe, spielerzahl, saat });
+    const tote = m.stirbtIn.reduce((a, b) => a + b, 0);
+    const schlimmste = Math.max(...m.stirbtIn);
+    raus.push({
+      saat, tote, schlimmste,
+      welle: m.stirbtIn.indexOf(schlimmste),
+      wand: tote ? schlimmste / tote : 0
+    });
+  }
+  const werte = raus.map((r) => r.wand);
+  return {
+    spielerzahl, reihen, laeufe, zeilen: raus,
+    kleinste: Math.min(...werte),
+    groesste: Math.max(...werte),
+    mittel: werte.reduce((a, b) => a + b, 0) / werte.length
+  };
+}
+
 /* ── Aufruf von der Kommandozeile ───────────────────────────────── */
 const wert = (name, standard) => {
   const i = process.argv.indexOf("--" + name);
@@ -235,7 +280,23 @@ const wert = (name, standard) => {
    Pruefkette. Verglichen wird deshalb der Dateiname als Ganzes. */
 const selbstAufgerufen = process.argv[1] && basename(process.argv[1]) === "balance.mjs";
 if (selbstAufgerufen) {
-  if (process.argv.includes("--tabelle")) {
+  if (process.argv.includes("--wand")) {
+    const r = wandStreuung({
+      spielerzahl: wert("spieler", 4),
+      reihen: wert("reihen", 5),
+      laeufe: wert("laeufe", 40)
+    });
+    console.log(`\n  Die Wand ueber ${r.reihen} Saatreihen, ${r.spielerzahl} Spieler,`
+      + ` ${r.laeufe} Laeufe je Reihe\n`);
+    console.log("  Saat    Wand   Tode  in Welle");
+    console.log("  " + "-".repeat(34));
+    for (const z of r.zeilen) {
+      console.log(`  ${String(z.saat).padStart(4)}  ${(z.wand * 100).toFixed(1).padStart(5)} %`
+        + `  ${String(z.tote).padStart(5)}  ${String(z.welle).padStart(8)}`);
+    }
+    console.log(`\n  Spanne ${(r.kleinste * 100).toFixed(1)} % bis ${(r.groesste * 100).toFixed(1)} %,`
+      + ` Mittel ${(r.mittel * 100).toFixed(1)} %\n`);
+  } else if (process.argv.includes("--tabelle")) {
     const laeufe = wert("laeufe", 24);
     console.log(`\n  Spieler  Siege  Welle Mittel  Median  schlechteste  Stufe`);
     console.log("  " + "-".repeat(60));

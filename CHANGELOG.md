@@ -133,9 +133,33 @@ ist im endlosen Modus fast nur eine Umrechnung der Zahl der Läufe, die
 den Deckel bei Welle 200 erreichen (8 von 40 allein, 10 zu viert). Die
 Zusicherung „zu viert nicht schwerer als allein" entscheidet damit über
 **zwei Läufe von vierzig** — eine grobe Zahl für eine feine Aussage.
-Sie ist heute grün mit Abstand; wer sie das nächste Mal knapp reißen
-sieht, sollte zuerst die Stichprobe ansehen und nicht die Waffe
-(`docs/FEHLERBUCH.md` E4).
+
+### Die zweite rote Zusicherung war die Prüfung, nicht das Spiel
+
+Nach dem Ausgleich meldete dieselbe Datei die **Wand**: 80,0 % aller
+Vierspieler-Tode in der Bosswelle 8, gegen eine Sperrklinke von 79 %.
+Die naheliegende Deutung — „die neuen Waffen haben den Boss zur Wand
+gemacht" — hält der Messung nicht stand. Über fünf Saatreihen:
+
+| Saatreihe | 1 | 2 | 3 | 4 | 5 |
+| --- | --- | --- | --- | --- | --- |
+| Wand | **80,0 %** | 73,1 % | 78,6 % | 76,0 % | 75,0 % |
+
+Spanne 73,1 bis 80,0, **Mittel 76,5 %**. Vier von fünf Reihen liegen
+unter der Sperrklinke; ausgerechnet die eine, die `pruefe-balance.mjs`
+benutzt, nicht. Der Ausgangsstand lag — auf derselben Saatreihe 1 —
+bei 75,0 %, also **innerhalb derselben Spanne**.
+
+Nachrechnen: `node werkzeuge/balance.mjs --wand` (neu).
+
+**Was hier bewusst nicht getan wurde:** die Sperrklinke anheben. Sie
+trägt die Notiz „darf sinken, nie steigen", und das ist eine
+Entscheidung des Auftraggebers (`docs/REGELN.md` 3), nicht eine, die
+sich aus einer Messung ergibt. Ebenso wenig wurde die Stichprobe der
+Prüfung vergrößert: Das verdreifachte die Laufzeit der Kette, und auch
+das ist seine Entscheidung. Der Fall steht als **E6** im Fehlerbuch —
+es ist E4 ein zweites Mal, an derselben Datei und einer anderen
+Zusicherung.
 
 ### Nachrechnen
 
