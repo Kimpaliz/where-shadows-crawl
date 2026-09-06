@@ -32,7 +32,7 @@ import { macheEingabe, macheFlanken } from "./eingabe.js";
 import {
   macheMenue, zeichneAnzeige, zeichneLaden, zeichneEnde, zeichneTruhen,
   bedieneWahl, bedieneLaden, SPERRE_SEKUNDEN,
-  zeichnePause, zeichnePauseKnopf, PAUSE_FELD
+  zeichnePause, zeichnePauseKnopf, pauseGetroffen
 } from "./oberflaeche.js";
 import { macheKartenhand } from "./karten-hand.js";
 import { macheLadenhand } from "./laden-tippen.js";
@@ -89,12 +89,20 @@ let letztePhase = null;
    die Gegner weiterlaufen, ohne dass es dasteht, wäre eine Falle. */
 let pause = false;
 
-/* Umschalten. Nur im Lauf, und nicht auf dem Endbildschirm: Dort
-   wartet das Spiel ohnehin auf einen Knopfdruck, und eine Pause davor
-   wäre ein Schalter, der nichts tut. */
+/* In welchen Phasen es überhaupt etwas anzuhalten gibt.
+
+   ⚠️ **Nur die beiden, in denen die Uhr läuft.** Bei „wahl" und „laden"
+   wartet die Welt ohnehin auf den Spieler, und der Endbildschirm wartet
+   auf einen Knopfdruck. Im Browser gemessen sah man, warum das mehr als
+   eine Feinheit ist: Über der Kartenwahl lag das Pausenbild, und
+   darunter schimmerten Karten und Überschrift durch — zwei Bildschirme
+   übereinander, von denen keiner mehr zu lesen war. Ein Schalter, der
+   in einer Lage nichts anzuhalten hat, gehört dort nicht hin. */
+const PAUSE_PHASEN = ["welle", "truhen"];
+
 function schaltePause() {
   if (zustand !== "spiel" || !welt) return;
-  if (welt.phase === "gewonnen" || welt.phase === "verloren") return;
+  if (!PAUSE_PHASEN.includes(welt.phase)) return;
   pause = !pause;
   /* Der aufgelaufene Rest wird verworfen. Ohne diese Zeile rechnete
      die Welt beim Fortsetzen alles nach, was während der Pause
@@ -131,8 +139,11 @@ addEventListener("pointerdown", (e) => {
   if (!(r.width > 0) || !(r.height > 0)) return;
   const x = (e.clientX - r.left) / r.width * BREITE;
   const y = (e.clientY - r.top) / r.height * HOEHE;
-  if (x < PAUSE_FELD.x || x >= PAUSE_FELD.x + PAUSE_FELD.b) return;
-  if (y < PAUSE_FELD.y || y >= PAUSE_FELD.y + PAUSE_FELD.h) return;
+  /* Gefragt wird dort, wo auch gemalt wird — `pauseGetroffen()` kennt
+     den Rand, den ein Finger braucht (`runtime/oberflaeche.js`). Hier
+     selbst zu rechnen waere die zweite Wahrheit, um die man dann
+     danebentippt. */
+  if (!pauseGetroffen(x, y)) return;
   e.stopPropagation();
   e.preventDefault();
   schaltePause();
@@ -387,7 +398,7 @@ function bild(jetzt) {
      alle anderen weiter, und ein Rechner, der seine Ticks nicht mehr
      abholt, brächte sie nach `WEG_NACH_SEKUNDEN` zum Stehen — die
      Pause eines Einzelnen wäre dann ein Aussetzer für alle. */
-  const haelt = pause && !gleichschritt;
+  const haelt = pause && !gleichschritt && PAUSE_PHASEN.includes(welt.phase);
   const zurLobby = haelt ? false
     : (gleichschritt ? taktImGleichschritt(dt) : taktAllein(dt, eingaben));
   if (zurLobby) return;
@@ -400,8 +411,13 @@ function bild(jetzt) {
      (`runtime/partikel.js`). Ohne sie haetten die Teilchen keine
      eigene Uhr und muessten sich an die Bildrate haengen — auf
      einem 144-Hz-Bildschirm flogen sie dann zweieinhalbmal so
-     schnell. */
-  zeichne(zeichner, welt, boden, sprites, zeit, dt);
+     schnell.
+
+     Steht die Welt (`haelt`), steht auch der Schwarm: eine Null
+     statt `dt`. Sonst flogen die Teilchen hinter dem Pausenbild
+     weiter und waeren nach dem Fortsetzen verschwunden — ein
+     Standbild, das sich beim Weiterspielen als falsch herausstellt. */
+  zeichne(zeichner, welt, boden, sprites, zeit, haelt ? 0 : dt);
 
   if (welt.phase === "welle") zeichneAnzeige(zeichner.c, welt);
   else if (welt.phase === "wahl") {
@@ -423,9 +439,17 @@ function bild(jetzt) {
   /* Zuletzt und über allem: die Pause. Der kleine Knopf steht nur da,
      solange man ihn auch drücken kann — auf dem Endbildschirm tut er
      nichts, und ein Knopf, der nichts tut, ist schlimmer als keiner. */
-  const imLauf = welt.phase !== "gewonnen" && welt.phase !== "verloren";
-  if (imLauf) zeichnePauseKnopf(zeichner.c, !pause);
-  if (pause && imLauf) zeichnePause(zeichner.c, welt, eigenerPlatz, !!gleichschritt);
+  /* Der Knopf steht nur da, wo er auch etwas tut. Ein Knopf, der
+     nichts tut, ist schlimmer als keiner: Man drückt ihn und hält das
+     Spiel für kaputt. */
+  const anhaltbar = PAUSE_PHASEN.includes(welt.phase);
+  if (anhaltbar) zeichnePauseKnopf(zeichner.c, !pause);
+  if (pause && anhaltbar) zeichnePause(zeichner.c, welt, eigenerPlatz, !!gleichschritt);
+  /* Wechselt die Phase, während angehalten ist — etwa weil ein
+     Aufstieg fällig wird —, endet die Pause von selbst. Sonst bliebe
+     der Schalter gesetzt und die nächste Welle stünde still, ohne dass
+     jemand etwas gedrückt hätte. */
+  if (pause && !anhaltbar) { pause = false; sammler = 0; }
 }
 
 /* Die Lobby ist der Einstieg. Sie entscheidet, mit wie vielen und mit

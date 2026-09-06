@@ -26,7 +26,9 @@
    (`schritteZu`, geteilt), `spiel/laden.mjs` (`ANGEBOTE`). */
 
 import { macheMelder, liesDatei } from "./helfer.mjs";
-import { ladenFelder, LADEN_FELDER, TIPP_MINDESTHOEHE } from "../runtime/oberflaeche.js";
+import {
+  ladenFelder, LADEN_FELDER, TIPP_MINDESTHOEHE, LADEN_OBEN, KACHEL_H, KACHEL_LUFT
+} from "../runtime/oberflaeche.js";
 import { schritteZu } from "../runtime/karten-hand.js";
 import { ANGEBOTE } from "../spiel/laden.mjs";
 
@@ -44,50 +46,97 @@ function welt(spielerzahl = 1) {
   };
 }
 
-/* ── 1 · Die Geometrie ist die, die vorher gemalt wurde ─────────────
+/* ── 1 · Die Geometrie ist die, die auch gemalt wird ────────────────
 
-   Die Zahlen stammen aus dem Code, wie er vor dem Umbau stand:
-   `y = 26`, je Angebot ein Kasten von 30 und danach `y += 32`; dann
-   „NEU" (12 hoch), `y += 14`, dann „LOS". Sie sind hier abgeschrieben,
-   **damit ein Verrutschen auffällt** — das ist der ganze Zweck. */
+   Die Zahlen stammen aus `ladenFelder()` und sind hier **abgeschrieben,
+   damit ein Verrutschen auffällt** — das ist der ganze Zweck.
+
+   ⚠️ **Am 06.09.2026 nachgezogen.** Bis dahin standen hier vier Kästen
+   von 30 Bildpunkten untereinander. Seit Janniks Ansage „im shop haben
+   alle items item bilder/icons und werden in kacheln angezeigt" sind
+   es zwei mal zwei Kacheln von 46. Die Prüfung hat den Umbau gefangen
+   und zehn Zeilen rot gemeldet, bevor irgendjemand danebengetippt
+   hat — genau dafür ist sie da. */
 
 {
   const felder = ladenFelder(welt(1)).get(0).felder;
   melde(felder.length === LADEN_FELDER,
     "der Krämer hat so viele Felder, wie sein Zeiger kennt", `${felder.length} von ${LADEN_FELDER}`);
 
-  let y = 26;
+  const reihen = Math.ceil(ANGEBOTE / 2);
   const erwartet = [];
-  for (let k = 0; k < ANGEBOTE; k++) { erwartet.push({ i: k, y, h: 30 }); y += 32; }
-  erwartet.push({ i: ANGEBOTE, y, h: 12 });
-  y += 14;
-  erwartet.push({ i: ANGEBOTE + 1, y, h: 12 });
+  for (let k = 0; k < ANGEBOTE; k++) {
+    erwartet.push({
+      i: k,
+      y: LADEN_OBEN + Math.floor(k / 2) * (KACHEL_H + KACHEL_LUFT),
+      h: KACHEL_H,
+      spalte: k % 2
+    });
+  }
+  const nachKacheln = LADEN_OBEN + reihen * (KACHEL_H + KACHEL_LUFT);
+  erwartet.push({ i: ANGEBOTE, y: nachKacheln + 18, h: 14, spalte: 0 });
+  erwartet.push({ i: ANGEBOTE + 1, y: nachKacheln + 46, h: 14, spalte: 0 });
 
   for (const e of erwartet) {
     const f = felder.find((x) => x.i === e.i);
     melde(f && f.y === e.y && f.h === e.h,
-      `Feld ${e.i} liegt wie vor dem Umbau`, f ? `y ${f.y} h ${f.h} statt y ${e.y} h ${e.h}` : "fehlt");
+      `Feld ${e.i} liegt, wo es gemalt wird`, f ? `y ${f.y} h ${f.h} statt y ${e.y} h ${e.h}` : "fehlt");
   }
+
+  /* Die Kacheln stehen wirklich **nebeneinander**: gerade Nummern
+     links, ungerade rechts, und zwei in einer Reihe auf derselben
+     Höhe. Ohne diese Zeile wäre „in Kacheln" auch dann grün, wenn
+     alles wieder untereinander stünde. */
+  const links = felder.filter((f) => f.i < ANGEBOTE && f.i % 2 === 0);
+  const rechts = felder.filter((f) => f.i < ANGEBOTE && f.i % 2 === 1);
+  melde(rechts.every((f) => f.x > links[0].x),
+    "die ungeraden Kacheln stehen rechts neben den geraden");
+  melde(links.length === rechts.length
+    && links.every((f, i) => f.y === rechts[i].y),
+    "und je zwei stehen auf derselben Höhe");
+  melde(felder[0].b < ladenFelder(welt(1)).get(0).breite,
+    "eine Kachel ist schmaler als die Spalte — sonst wäre sie keine",
+    `${felder[0].b} von ${ladenFelder(welt(1)).get(0).breite}`);
+
+  /* Und alles bleibt im Bild. */
+  const raus = felder.filter((f) => f.y + f.tippH > 270 || f.x < 0);
+  melde(raus.length === 0, "keine Trefferfläche ragt aus dem Bild",
+    raus.map((f) => `#${f.i}`).join(" "));
 }
 
-/* ── 2 · Keine Trefferfläche überlappt die nächste ──────────────────
+/* ── 2 · Keine Trefferfläche überlappt eine andere ──────────────────
 
-   Der teuerste Fehlgriff dieses Bildschirms, siehe Kopfnotiz. Geprüft
-   für eine bis vier Spielzahlen, weil die Spaltenbreite mit der
-   Spielerzahl wechselt und ein Fehler dort erst bei vieren aufträte. */
+   Der teuerste Fehlgriff dieses Bildschirms, siehe Kopfnotiz.
+
+   ⚠️ **Rechteck gegen Rechteck, nicht mehr Zeile gegen Zeile.** Vorher
+   lagen die Felder in einer Spalte, und es genügte zu fragen, ob eines
+   nach unten in das nächste wächst. Mit Kacheln nebeneinander sagt
+   diese Frage nichts mehr: Feld 0 und Feld 1 haben dieselbe Höhe und
+   verschiedene x, und die alte Rechnung meldete −46 Bildpunkte
+   „Abstand" für einen Fall, der völlig in Ordnung ist.
+
+   Jetzt wird **jedes Paar** verglichen, und zwar in beiden Achsen. Das
+   ist strenger als vorher, nicht schwächer: Es fängt auch den Fall, den
+   die alte Fassung gar nicht sehen konnte — zwei Felder, die sich
+   seitlich überlappen. */
 
 for (const n of [1, 2, 3, 4]) {
   const spalten = ladenFelder(welt(n));
-  let sauber = true, engste = Infinity;
-  for (const { felder } of spalten.values()) {
-    felder.forEach((f, k) => {
-      const naechstes = felder[k + 1];
-      if (!naechstes) return;
-      if (f.y + f.tippH > naechstes.y) sauber = false;
-      engste = Math.min(engste, naechstes.y - (f.y + f.tippH));
-    });
+  const alle = [];
+  for (const [id, { felder }] of spalten) for (const f of felder) alle.push({ id, f });
+
+  const ueberlappt = [];
+  for (let a = 0; a < alle.length; a++) {
+    for (let b = a + 1; b < alle.length; b++) {
+      const p = alle[a].f, q = alle[b].f;
+      const x = p.x < q.x + q.tippB && p.x + p.tippB > q.x;
+      const y = p.y < q.y + q.tippH && p.y + p.tippH > q.y;
+      if (x && y) ueberlappt.push(`J${alle[a].id}#${p.i} × J${alle[b].id}#${q.i}`);
+    }
   }
-  melde(sauber, `${n} Spieler: keine Trefferfläche ragt in die nächste`, `engster Abstand ${engste}`);
+  melde(ueberlappt.length === 0,
+    `${n} Spieler: keine zwei Trefferflächen überlappen sich`,
+    ueberlappt.slice(0, 3).join(" · "));
 }
 
 /* Und die Gegenrichtung: Die Flächen müssen auch wirklich größer

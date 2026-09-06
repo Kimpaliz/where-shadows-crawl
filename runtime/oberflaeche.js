@@ -29,10 +29,12 @@ import { BREITE, HOEHE } from "./zeichnen.js";
 import { WELLEN_JE_LAUF } from "../spiel/katalog/wellen.mjs";
 import { neuwuerfelnPreis, kaufe, wuerfleNeu, ANGEBOTE } from "../spiel/laden.mjs";
 import { nimmKarte } from "../spiel/stufen.mjs";
-import { abklingzeit } from "../spiel/werte.mjs";
+import { abklingzeit, WERT_NACH_ID } from "../spiel/werte.mjs";
 import { ART_NACH_ID, STANDARD_ART } from "../spiel/schadensarten.mjs";
 import { SCHRITT } from "../spiel/welt.mjs";
 import { zeilenFuer, breiteFuer, zeichneWerteliste, ZEILENHOEHE } from "./werteliste.js";
+import { bildFuerWare, maleWare, WARE_KANTE } from "./ladenbilder.js";
+import { WAFFE_NACH_ID } from "../spiel/katalog/waffen.mjs";
 
 /* Der Laden hat je Spieler sechs Felder: vier Angebote, neu würfeln,
    bereit. Eine Reihe statt eines Rasters — mit einer Achse ist eine
@@ -283,46 +285,214 @@ export function zeichneTruhen(c, welt) {
    gedrückt würde. Bei 1,69 ergibt das 44 physische Bildpunkte. */
 export const TIPP_MINDESTHOEHE = 26;
 
+/* ── Der Krämer in Kacheln ───────────────────────────────────────────
+
+   Janniks Ansage: *„im shop haben alle items item bilder/icons und
+   werden in kacheln angezeigt. schön verziert."*
+
+   ── Was vorher war ─────────────────────────────────────────────────
+
+   Vier Kästen von 30 Bildpunkten Höhe untereinander, in jedem drei
+   Zeilen Text: Name, Preis, Wirkung. Kein Bild — man las, was man
+   kaufte, statt es zu sehen. Bei vier Spielern standen sechzehn
+   solcher Kästen nebeneinander, und der Bildschirm war eine Textwand.
+
+   ── Die Kachel ─────────────────────────────────────────────────────
+
+   Zwei mal zwei je Spieler statt vier untereinander. Das ist nicht nur
+   hübscher, es ist auch **kürzer**: Die Angebote brauchen jetzt 98
+   statt 128 Bildpunkte Höhe, und darunter ist Platz für eine Zeile,
+   die das **angewählte** Angebot ausschreibt.
+
+   Genau die braucht es, weil eine Kachel schmal ist: Zu viert sind es
+   56 Bildpunkte, also elf Zeichen. „KNOCHENPANZER" passt da nicht. Auf
+   der Kachel steht deshalb der gekürzte Name, und darunter, für das
+   eine angewählte Angebot, der volle Name mit seiner Wirkung. Übersicht
+   oben, Einzelheit unten — statt beides überall halb.
+
+   ── Warum die Trefferfläche jetzt ein ganzes Rechteck ist ──────────
+
+   Vorher lagen die Felder in einer Spalte, und es genügte zu prüfen,
+   dass keines nach **unten** in das nächste wächst. Nebeneinander
+   liegende Kacheln kann man so nicht mehr prüfen: Feld 0 und Feld 1
+   haben dieselbe Höhe und verschiedene x. Deshalb trägt jedes Feld
+   jetzt seine ganze Trefferfläche, und
+   `werkzeuge/pruefe-tippen.mjs` prüft **Rechteck gegen Rechteck** —
+   eine strengere Zusicherung als vorher, nicht eine schwächere. */
+
+/* Wie hoch eine Kachel ist und wie viel Luft zwischen zweien liegt.
+   46 ist gerechnet: 6 Rand oben, 11 für das Bild, 8 je Textzeile für
+   Name und Wirkung, 9 für den Preis unten, 4 Rand — das ist die
+   kleinste Höhe, in der alles vier ohne Berührung steht. */
+export const KACHEL_H = 46;
+export const KACHEL_LUFT = 3;
+
 export function ladenFelder(welt) {
   const n = welt.spieler.length;
   /* Bei einem Spieler waere eine bildschirmbreite Spalte lauter Luft.
      Die Breite wird gedeckelt und der Block mittig gesetzt. */
   const sb = Math.min(150, Math.floor((BREITE - 6) / n) - 3);
   const links = Math.round((BREITE - (sb + 3) * n + 3) / 2);
+  const reihen = Math.ceil(ANGEBOTE / 2);
   const spalten = new Map();
 
   welt.spieler.forEach((s, i) => {
     const x = links + i * (sb + 3);
+    const kb = Math.floor((sb - KACHEL_LUFT) / 2);
     const felder = [];
-    let y = 26;
-    (s.angebote ?? []).forEach((a, k) => {
-      felder.push({ i: k, x, y, b: sb, h: 30 });
-      y += 32;
-    });
-    felder.push({ i: NEU_WUERFELN, x, y, b: sb, h: 12 });
-    y += 14;
-    felder.push({ i: BEREIT, x, y, b: sb, h: 12 });
 
-    /* Die Trefferfläche wächst nach unten, aber nie in das nächste Feld
-       hinein: Sie endet spätestens dort, wo der nächste Kasten beginnt.
-       Ohne diese Grenze läge „NEU" über „LOS", und ein Tipp auf „LOS"
-       würfelte neu — der teuerste Fehlgriff, den dieser Bildschirm zu
-       bieten hat. */
-    felder.forEach((f, k) => {
-      const naechstes = felder[k + 1];
-      /* Ohne Nachbarn darf voll gewachsen werden: Unter „LOS" steht nur
-         noch Text (Leben, Waffen), nichts Tippbares. Der erste Anlauf
-         nahm hier `f.h` als Platz — dann blieb ausgerechnet das
-         **unterste** Feld bei 12 Bildpunkten, und das ist der Knopf,
-         mit dem man die Runde weiterschickt. Von der eigenen Prüfung
-         gefangen, bevor es jemand am Telefon gemerkt hätte. */
-      const platz = naechstes ? naechstes.y - f.y : TIPP_MINDESTHOEHE;
+    for (let k = 0; k < ANGEBOTE; k++) {
+      felder.push({
+        i: k,
+        x: x + (k % 2) * (kb + KACHEL_LUFT),
+        y: LADEN_OBEN + Math.floor(k / 2) * (KACHEL_H + KACHEL_LUFT),
+        b: kb, h: KACHEL_H
+      });
+    }
+
+    /* Unter den Kacheln: die Zeile für das angewählte Angebot, dann
+       die beiden Knöpfe. Ihre Abstände sind so gewählt, dass die
+       gewachsene Trefferfläche des einen genau an den nächsten stößt
+       und nicht hinein — `TIPP_MINDESTHOEHE` ist 26, und 170 − 142 ist
+       28. */
+    const nachKacheln = LADEN_OBEN + reihen * (KACHEL_H + KACHEL_LUFT);
+    felder.push({ i: NEU_WUERFELN, x, y: nachKacheln + 18, b: sb, h: 14 });
+    felder.push({ i: BEREIT, x, y: nachKacheln + 46, b: sb, h: 14 });
+
+    for (const f of felder) {
       f.tippB = f.b;
-      f.tippH = Math.max(f.h, Math.min(TIPP_MINDESTHOEHE, platz));
+      /* Eine Kachel ist schon groß genug; nur die schmalen Knöpfe
+         wachsen. Ohne diese Zeile hätte der Finger dort 14 Bildpunkte,
+         und `TIPP_MINDESTHOEHE` sagt, dass 26 nötig sind. */
+      f.tippH = Math.max(f.h, TIPP_MINDESTHOEHE);
+    }
+
+    spalten.set(s.id, {
+      x, breite: sb, kachelB: kb,
+      detailY: nachKacheln + 1,
+      unten: nachKacheln + 64,
+      felder
     });
-    spalten.set(s.id, { x, breite: sb, felder });
   });
   return spalten;
+}
+
+/* Wo die Kacheln beginnen. Darüber stehen Titel und Goldzeile. */
+export const LADEN_OBEN = 26;
+
+/* Die Farbe einer Ware: bei einer Waffe ihre Schadensart, bei einem
+   Fundstück seine Seltenheit. Zwei Dinge, eine Stelle — sonst stünde
+   die Zuordnung im Zeichner und noch einmal in der Prüfung.
+
+   Die vier Seltenheitstöne sind dieselben wie bei den Aufstiegskarten
+   (`spiel/katalog/karten.mjs`): Man lernt sie einmal und liest sie
+   danach überall. */
+const SELTEN_FARBE = [FARBEN.schriftMatt, FARBEN.frostHell, FARBEN.bannHell, FARBEN.flammeHell];
+
+export function wareFarbe(angebot) {
+  if (angebot.sorte === "waffe") {
+    const w = WAFFE_NACH_ID.get(angebot.id);
+    const art = ART_NACH_ID.get(w?.schadensart ?? STANDARD_ART);
+    return (art ?? ART_NACH_ID.get(STANDARD_ART)).farbe;
+  }
+  return SELTEN_FARBE[angebot.selten] ?? FARBEN.schriftMatt;
+}
+
+/* Was in einem Satz über einer Ware steht. Steht hier und nicht im
+   Zeichner, damit die Kachel und die Zeile darunter dieselbe Auskunft
+   geben — zwei Formulierungen für dasselbe wären zwei Wahrheiten. */
+export function wareWirkung(angebot) {
+  if (angebot.sorte === "waffe") return `WAFFE STUFE ${angebot.stufe}`;
+  return Object.entries(angebot.werte)
+    .map(([w, v]) => `${v > 0 ? "+" : ""}${v} ${(WERT_NACH_ID.get(w)?.name ?? w).toUpperCase()}`)
+    .join("  ");
+}
+
+/* Eine Kachel: Bild, Name, Wirkung, Preis — und eine Verzierung, die
+   sagt, was für eine Ware das ist.
+
+   Die Verzierung ist **keine** Zierde im Sinne von „egal": Der Streifen
+   oben trägt die Farbe der Schadensart bzw. der Seltenheit, und die
+   vier Ecken wiederholen sie. Damit erkennt man eine Feuerwaffe oder
+   ein verfluchtes Fundstück, bevor man den Namen gelesen hat —
+   dieselbe Doppelkodierung wie bei den Trefferzeichen und der
+   Werteliste. */
+/* Einen Namen auf höchstens zwei Zeilen brechen.
+
+   Eigene vier Zeilen statt eines Imports von `brich()` aus
+   `runtime/karten-hand.js`: Diese Datei wird von dort **genannt**
+   (`bedieneWahl()` bewegt den Zeiger der Hand), und ein Import in die
+   Gegenrichtung wäre ein Ring zwischen zwei Dateien, die einander
+   heute nur beschreiben. Vier Zeilen sind der billigere Preis —
+   dieselbe Entscheidung wie bei `drehe()` in
+   `spiel/angriffsformen.mjs`.
+
+   Ein einzelnes zu langes Wort wird **nicht** getrennt: „KNOCHENPANZER"
+   hat keine Fuge, an der man es brechen dürfte, ohne es unleserlich zu
+   machen. Es wird gekürzt, und die volle Auskunft steht in der Zeile
+   unter dem Raster. */
+function zweiZeilen(text, zeichen) {
+  const worte = text.split(" ");
+  const raus = [""];
+  for (const w of worte) {
+    const versuch = raus[raus.length - 1] ? `${raus[raus.length - 1]} ${w}` : w;
+    if (versuch.length <= zeichen || raus[raus.length - 1] === "") raus[raus.length - 1] = versuch;
+    else if (raus.length < 2) raus.push(w);
+    else break;
+  }
+  return raus.filter((z) => z.length > 0);
+}
+
+function maleKachel(c, f, a, gewaehlt, jaeger, gold) {
+  const farbe = wareFarbe(a);
+  const bezahlbar = !a.gekauft && a.preis <= gold;
+  const rahmen = a.gekauft ? FARBEN.seucheHell : (gewaehlt ? jaeger.hell : FARBEN.rahmen);
+
+  kasten(c, f.x, f.y, f.b, f.h, rahmen,
+    a.gekauft ? "#0a1a0e" : (gewaehlt ? "#181226" : "#0c0913"));
+
+  /* Der Streifen oben. Zwei Bildpunkte, innerhalb des Rahmens — er
+     soll die Kante betonen, nicht ersetzen. */
+  c.fillStyle = a.gekauft ? FARBEN.seuche : farbe;
+  c.fillRect(f.x + 1, f.y + 1, f.b - 2, 2);
+
+  /* Die vier Ecken. Jeweils zwei Bildpunkte über Eck — das liest sich
+     als gefasste Kachel und kostet acht Rechtecke. */
+  const ecke = a.gekauft ? FARBEN.seucheHell : farbe;
+  c.fillStyle = ecke;
+  for (const [ex, ey] of [[0, 0], [f.b - 2, 0], [0, f.h - 2], [f.b - 2, f.h - 2]]) {
+    c.fillRect(f.x + ex, f.y + ey, 2, 1);
+    c.fillRect(f.x + ex, f.y + ey, 1, 2);
+  }
+
+  const bild = bildFuerWare(a.sorte, a.id);
+  if (bild) maleWare(c, bild, f.x + 3, f.y + 5, !bezahlbar && !a.gekauft);
+
+  /* Der Name rechts vom Bild, in zwei Zeilen, was übrig ist gekürzt.
+     Die volle Auskunft steht unter dem Raster — siehe Kopfnotiz. */
+  const textX = f.x + 4 + WARE_KANTE;
+  const platz = Math.max(3, Math.floor((f.b - (textX - f.x) - 3) / VORSCHUB));
+  const zeilen = zweiZeilen(a.name.toUpperCase(), platz);
+  zeilen.forEach((t, i) => {
+    zeichneText(c, kuerze(t, platz), textX, f.y + 6 + i * 8,
+      a.gekauft ? FARBEN.seucheHell : (bezahlbar ? FARBEN.schrift : FARBEN.schriftMatt));
+  });
+
+  if (a.gekauft) {
+    zeichneText(c, "GEKAUFT", f.x + 4, f.y + f.h - 11, FARBEN.seucheHell);
+    return;
+  }
+
+  /* Die Wirkung, gekürzt — eine Zeile reicht für „WAFFE STUFE 2" und
+     gibt bei einem Fundstück wenigstens den ersten Wert preis. */
+  zeichneText(c, kuerze(wareWirkung(a), Math.floor((f.b - 8) / VORSCHUB)),
+    f.x + 4, f.y + f.h - 20, FARBEN.schriftMatt);
+
+  /* Der Preis unten, mit einem Goldpunkt davor. */
+  c.fillStyle = bezahlbar ? FARBEN.goldHell : FARBEN.blut;
+  c.fillRect(f.x + 4, f.y + f.h - 10, 3, 3);
+  zeichneText(c, `${a.preis}`, f.x + 9, f.y + f.h - 11,
+    bezahlbar ? FARBEN.goldHell : FARBEN.blut);
 }
 
 export function zeichneLaden(c, welt, menue) {
@@ -331,47 +501,47 @@ export function zeichneLaden(c, welt, menue) {
   zeichneTextMittig(c, `DER KRÄMER — VOR NACHT ${welt.welle + 1}`, BREITE / 2, 5, FARBEN.flammeHell, FARBEN.kontur);
 
   const spalten = ladenFelder(welt);
-  const sb = spalten.get(welt.spieler[0].id).breite;
   welt.spieler.forEach((s) => {
-    const x = spalten.get(s.id).x;
-    const farbe = JAEGER_FARBEN[s.id % JAEGER_FARBEN.length];
-    zeichneText(c, `J${s.id + 1}`, x, 16, farbe.hell);
-    zeichneText(c, `${Math.floor(s.gold)} GOLD`, x + 14, 16, FARBEN.goldHell);
+    const spalte = spalten.get(s.id);
+    const x = spalte.x, sb = spalte.breite;
+    const jaeger = JAEGER_FARBEN[s.id % JAEGER_FARBEN.length];
+    zeichneText(c, `J${s.id + 1}`, x, 16, jaeger.hell);
+    /* Der Goldstand rechtsbündig in der Spalte: Er wechselt bei jedem
+       Kauf die Stellenzahl, und linksbündig wanderte dann der Text. */
+    const goldText = `${Math.floor(s.gold)} GOLD`;
+    zeichneText(c, goldText, x + sb - textBreite(goldText), 16, FARBEN.goldHell);
 
     const zeiger = menue.ladenZeiger[s.id];
-    const felder = spalten.get(s.id).felder;
+    const felder = spalte.felder;
     const feldVon = (nr) => felder.find((f) => f.i === nr);
-    let y = 26;
+
     (s.angebote ?? []).forEach((a, k) => {
-      y = feldVon(k).y;
-      const gewaehlt = zeiger === k && !s.bereit;
-      const bezahlbar = !a.gekauft && a.preis <= s.gold;
-      kasten(c, x, y, sb, 30, gewaehlt ? farbe.hell : FARBEN.rahmen,
-        a.gekauft ? "#0a1a0e" : (gewaehlt ? "#1a1426" : "#0d0a14"));
-      const titel = a.gekauft ? "GEKAUFT" : a.name;
-      zeichneText(c, kuerze(titel, Math.floor((sb - 8) / VORSCHUB)), x + 3, y + 4,
-        a.gekauft ? FARBEN.seucheHell : (bezahlbar ? FARBEN.schrift : FARBEN.schriftMatt));
-      if (!a.gekauft) {
-        zeichneText(c, `${a.preis}`, x + 3, y + 13, bezahlbar ? FARBEN.goldHell : FARBEN.blut);
-        const zusatz = a.sorte === "waffe"
-          ? `WAFFE ST${a.stufe}`
-          : Object.entries(a.werte).map(([w, v]) => `${v > 0 ? "+" : ""}${v} ${w.slice(0, 3).toUpperCase()}`).join(" ");
-        zeichneText(c, kuerze(zusatz, Math.floor((sb - 8) / VORSCHUB)), x + 3, y + 22, FARBEN.schriftMatt);
-      }
+      maleKachel(c, feldVon(k), a, zeiger === k && !s.bereit, jaeger, s.gold);
     });
+
+    /* Die Zeile unter den Kacheln schreibt das angewählte Angebot
+       aus — voller Name, volle Wirkung. Auf der Kachel ist beides
+       gekürzt, und zu viert bleiben dort elf Zeichen. */
+    const gewaehlt = (s.angebote ?? [])[zeiger];
+    if (gewaehlt && !s.bereit) {
+      zeichneText(c, kuerze(gewaehlt.name.toUpperCase(), Math.floor(sb / VORSCHUB)),
+        x, spalte.detailY, wareFarbe(gewaehlt));
+      zeichneText(c, kuerze(gewaehlt.gekauft ? "SCHON GEKAUFT" : wareWirkung(gewaehlt),
+        Math.floor(sb / VORSCHUB)), x, spalte.detailY + 8, FARBEN.schriftMatt);
+    }
 
     const wp = neuwuerfelnPreis(welt.welle + 1, s.malGewuerfelt);
     const wGewaehlt = zeiger === NEU_WUERFELN && !s.bereit;
-    y = feldVon(NEU_WUERFELN).y;
-    kasten(c, x, y, sb, 12, wGewaehlt ? farbe.hell : FARBEN.rahmen, wGewaehlt ? "#1a1426" : "#0d0a14");
-    zeichneText(c, kuerze(`NEU ${wp}`, Math.floor((sb - 6) / VORSCHUB)), x + 3, y + 4,
+    let y = feldVon(NEU_WUERFELN).y;
+    kasten(c, x, y, sb, 14, wGewaehlt ? jaeger.hell : FARBEN.rahmen, wGewaehlt ? "#181226" : "#0c0913");
+    zeichneText(c, kuerze(`NEU WÜRFELN ${wp}`, Math.floor((sb - 6) / VORSCHUB)), x + 3, y + 5,
       s.gold >= wp ? FARBEN.schrift : FARBEN.schriftMatt);
-    y = feldVon(BEREIT).y;
 
+    y = feldVon(BEREIT).y;
     const bGewaehlt = zeiger === BEREIT && !s.bereit;
-    kasten(c, x, y, sb, 12, s.bereit ? FARBEN.seucheHell : (bGewaehlt ? farbe.hell : FARBEN.rahmen),
-      s.bereit ? "#0a1a0e" : (bGewaehlt ? "#1a1426" : "#0d0a14"));
-    zeichneText(c, s.bereit ? "BEREIT" : "LOS", x + 3, y + 4,
+    kasten(c, x, y, sb, 14, s.bereit ? FARBEN.seucheHell : (bGewaehlt ? jaeger.hell : FARBEN.rahmen),
+      s.bereit ? "#0a1a0e" : (bGewaehlt ? "#181226" : "#0c0913"));
+    zeichneText(c, s.bereit ? "BEREIT" : "LOS", x + 3, y + 5,
       s.bereit ? FARBEN.seucheHell : FARBEN.schrift);
 
     /* Der Zähler erscheint erst in den letzten Sekunden. Von Anfang an
@@ -379,15 +549,15 @@ export function zeichneLaden(c, welt, menue) {
        ein Zähler, der immer da ist, wird nicht mehr gelesen. */
     const rest = fristRest(welt, menue, s);
     if (rest !== null && !s.bereit) {
-      zeichneText(c, `${Math.ceil(rest)}`, x + sb - 3 - textBreite(`${Math.ceil(rest)}`), y + 4,
+      zeichneText(c, `${Math.ceil(rest)}`, x + sb - 3 - textBreite(`${Math.ceil(rest)}`), y + 5,
         FARBEN.blutHell);
     }
-    y += 16;
 
+    y = spalte.unten;
     zeichneText(c, `LEBEN ${Math.ceil(s.leben)}/${s.lebenMax}`, x, y, FARBEN.schriftMatt);
     y += 8;
     const waffen = s.waffen.map((w) => `${w.vorlage.name.slice(0, 4)}${w.stufe}`).join(" ");
-    umbrich(c, waffen.toUpperCase(), x, y, sb, farbe.mittel);
+    umbrich(c, waffen.toUpperCase(), x, y, sb, jaeger.mittel);
   });
 
   /* Die Zeile nennt beide Wege. „Nochmal tippen" steht dabei zuerst,
@@ -398,47 +568,45 @@ export function zeichneLaden(c, welt, menue) {
     FARBEN.schriftMatt, FARBEN.kontur);
 }
 
-/* ── Vorspiel und Ende ───────────────────────────────────────────── */
-
-/* ── Die Pause ───────────────────────────────────────────────────────
-
-   Janniks Ansage: *„ein stats übersicht beim auf leveln. **und beim
-   pausieren**."* Eine Pause gab es bis zum 06.09.2026 gar nicht — das
-   Spiel kannte nur Wellen, Kartenwahl, Truhen, Krämer und das Ende.
-
-   ── Warum die Pause im Zeichner wohnt und nicht als Weltphase ──────
-
-   Eine sechste `welt.phase` wäre der naheliegende Weg und der falsche.
-   Eine Phase ist Teil des Weltzustands, und der muss im Netz-Koop auf
-   **allen** Rechnern gleich sein (`netz/lockstep.mjs`): Wer allein auf
-   „Pause" drückt, hielte damit die Runde für alle an — und ein Spieler,
-   der die Übersicht lesen will, wäre ein Spieler, der die anderen
-   warten lässt. Zwei Leute gleichzeitig, und es bräuchte eine Regel,
-   wessen Pause gilt.
-
-   Die Pause ist deshalb **örtlich**: ein Schalter in
-   `runtime/start.js`, der die Weltschritte anhält. Das darf er, solange
-   niemand mitspielt. In einer Runde über das Netz läuft die Welt weiter
-   und die Übersicht legt sich nur darüber — der Bildschirm sagt das
-   ausdrücklich, statt es den Spieler herausfinden zu lassen.
-
-   ── Die Fläche zum Antippen ────────────────────────────────────────
+/* ── Die Flaeche zum Antippen ───────────────────────────────────────
 
    Oben rechts, und zwar dort, weil unten alles belegt ist: links der
-   Daumen-Stick über der halben Bildbreite, rechts der Ausweichknopf,
+   Daumen-Stick ueber der halben Bildbreite, rechts der Ausweichknopf,
    dazwischen die Kartenhand (`runtime/karten-hand.js`). Oben rechts
    steht bisher nichts — die einzige Ecke, die niemandem etwas wegnimmt.
 
-   Die Maße stehen **hier** und werden von `runtime/start.js` sowohl
-   zum Malen als auch zum Treffen benutzt. Zwei Rechnungen wären zwei
+   Die Masse stehen **hier** und werden von `runtime/start.js` sowohl
+   zum Malen als auch zum Treffen benutzt. Zwei Rechnungen waeren zwei
    Wahrheiten, und man tippt dann irgendwann genau um den Unterschied
    daneben — derselbe Fehler, gegen den `felderFuer()` in
    `runtime/karten-hand.js` gebaut ist. */
-export const PAUSE_FELD = { x: BREITE - 26, y: 3, b: 23, h: 11 };
+export const PAUSE_FELD = { x: BREITE - 30, y: 3, b: 27, h: 14 };
 
-/* Das kleine Zeichen oben rechts: zwei Balken für „Pause", ein Dreieck
-   für „weiter". Kein Text, weil „PAUSE" in Bildpunktschrift 24
-   Bildpunkte breit wäre und die Ecke ausfüllte. */
+/* ── Warum die Trefferflaeche groesser ist als das Bild ──────────────
+
+   Der gemalte Kasten ist 27 x 14 Bildpunkte. Auf einem Telefon mit 375
+   Bildpunkten Fensterbreite wird das Bild von 480 herunterskaliert
+   (Faktor 0,78) — aus 14 werden knapp elf echte Bildpunkte, und das
+   ist fuer einen Finger zu wenig. `TIPP_MINDESTHOEHE` (26) sagt es
+   fuer den Kraemer schon.
+
+   Groesser **malen** waere der falsche Ausweg: Ein Kasten von 40
+   Bildpunkten Hoehe nimmt in einem 270 hohen Bild ein Siebtel der
+   Hoehe ein, und das fuer einen Knopf, den man selten braucht.
+
+   Deshalb zwei Rechtecke — und, damit es nicht zwei Wahrheiten werden,
+   eines **aus** dem anderen: `PAUSE_TIPPRAND` ist der Rand, den die
+   Trefferflaeche rundum zulegt. `pauseGetroffen()` ist die einzige
+   Stelle, die trifft; `runtime/start.js` fragt dort und rechnet nicht
+   selbst. */
+export const PAUSE_TIPPRAND = 9;
+
+export function pauseGetroffen(x, y) {
+  const f = PAUSE_FELD, r = PAUSE_TIPPRAND;
+  return x >= f.x - r && x < f.x + f.b + r
+    && y >= f.y - r && y < f.y + f.h + r;
+}
+
 export function zeichnePauseKnopf(c, laeuft) {
   const f = PAUSE_FELD;
   kasten(c, f.x, f.y, f.b, f.h, FARBEN.rahmen, "#0d0a14");
@@ -467,32 +635,44 @@ export function zeichnePause(c, welt, eigenerPlatz, imNetz) {
   const eigener = welt.spieler.find((s) => s.id === eigenerPlatz) ?? welt.spieler[0];
   const jaeger = JAEGER_FARBEN[eigener.id % JAEGER_FARBEN.length];
 
-  /* **Alle** Werte, nicht nur die Kopfgruppe: Hier ist Platz, und wer
-     anhält, will nachsehen. Bei der Kartenwahl ist es umgekehrt — dort
-     zählt der schnelle Vergleich. */
+  /* **Alle** Werte, nicht nur die Kopfgruppe — Janniks Ansage: „alle
+     werte die ich genannt habe sollen genommen werden mit icons in der
+     werte übersicht". Bei der Kartenwahl ist es umgekehrt: Dort zählt
+     der schnelle Vergleich, und der Platz neben der Hand reicht für
+     dreizehn Zeilen.
+
+     Drei Spalten, weil eine nicht reicht: 55 Werte plus sieben
+     Zwischenüberschriften sind 62 Zeilen à 7 Bildpunkten, also 434 —
+     das Bild ist 270 hoch. Gerechnet, nicht geraten; passt etwas nicht
+     mehr hinein, sagt `zeichneWerteliste()` es in der letzten Zeile,
+     statt es zu verschlucken. */
   const zeilen = zeilenFuer(eigener.werte, null, true);
-  const spaltenB = Math.max(140, breiteFuer(zeilen));
-  const platzHoehe = HOEHE - 46;
-  const jeSpalte = Math.max(1, Math.floor(platzHoehe / ZEILENHOEHE));
+  const spaltenZahl = 3;
+  const platzHoehe = HOEHE - 44;
+  const jeSpalte = Math.max(1, Math.ceil(zeilen.length / spaltenZahl));
+  /* Zehn Bildpunkte Luft zwischen den Spalten, nicht sechs: Rechts in
+     jeder Spalte steht eine rechtsbündige Zahl, links in der nächsten
+     ein Name. Mit sechs standen beide fast aneinander und man las
+     „0%FLÄCHENWEITE". */
+  const spaltenB = Math.floor((BREITE - 16 - (spaltenZahl - 1) * 10) / spaltenZahl);
 
   zeichneText(c, `JÄGER ${eigener.id + 1}`, 8, 20, jaeger.hell);
-  zeichneText(c, `NACHT ${welt.welle}`, 8 + spaltenB, 20, FARBEN.schriftMatt);
+  const kopfRechts = `NACHT ${welt.welle}`;
+  zeichneText(c, kopfRechts, BREITE - 8 - textBreite(kopfRechts), 20, FARBEN.schriftMatt);
 
-  zeichneWerteliste(c, zeilen.slice(0, jeSpalte), 8, 30, spaltenB, platzHoehe);
-  if (zeilen.length > jeSpalte) {
-    zeichneWerteliste(c, zeilen.slice(jeSpalte), 16 + spaltenB, 30, spaltenB, platzHoehe);
+  for (let i = 0; i < spaltenZahl; i++) {
+    const teil = zeilen.slice(i * jeSpalte, (i + 1) * jeSpalte);
+    if (teil.length === 0) continue;
+    zeichneWerteliste(c, teil, 8 + i * (spaltenB + 10), 28, spaltenB, platzHoehe);
   }
 
   /* Die Waffen im Gürtel — sie stehen sonst nirgends als Liste.
 
-     Ueber der Spielertafel und nicht darunter: Unten liegt die Tafel
-     selbst, und bei sechs Waffen laeuft die Zeile ueber die ganze
-     Breite. Gemessen im Browser lagen beide uebereinander. */
+     Ganz unten, über den beiden Hinweiszeilen. */
   const waffen = (eigener.waffen ?? []).map((w) => `${w.vorlage.name.toUpperCase()} ${w.stufe}`);
   if (waffen.length) {
-    zeichneText(c, "IM GÜRTEL", 8, HOEHE - 40, FARBEN.schriftMatt);
-    zeichneText(c, kuerze(waffen.join(" · "), Math.floor((BREITE - 16) / VORSCHUB)),
-      8, HOEHE - 32, FARBEN.schrift);
+    zeichneText(c, kuerze(`IM GÜRTEL: ${waffen.join(" · ")}`,
+      Math.floor((BREITE - 16) / VORSCHUB)), 8, HOEHE - 29, FARBEN.schriftMatt);
   }
 
   zeichneTextMittig(c,

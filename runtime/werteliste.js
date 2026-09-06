@@ -60,15 +60,21 @@
 import { FARBEN } from "./palette.js";
 import { zeichneText, textBreite, VORSCHUB } from "./schrift.js";
 import {
-  WERT_NACH_ID, WERTE, lebenMax, laufTempo, schadensminderung,
+  WERT_NACH_ID, WERTE, GRUPPEN, lebenMax, laufTempo, schadensminderung,
   abklingzeit, aufsammelReichweite, regenerationJeSekunde, wert
 } from "../spiel/werte.mjs";
+import { symbolFuerWert, maleSymbol, SYMBOL_KANTE, GRUPPEN_MIT_FARBE } from "./wertsymbole.js";
 
 /* Wie hoch eine Zeile steht. Enger als `ZEILE` (8) aus
    `runtime/schrift.js`: Die Schrift ist fünf Bildpunkte hoch, und bei
    sieben passen zwei Zeilen mehr in dieselbe Spalte. Enger als sieben
    klebt die Unterlänge der einen an der Oberlänge der nächsten. */
 export const ZEILENHOEHE = 7;
+
+/* Was das Zeichen links kostet: seine Kante plus zwei Bildpunkte Luft.
+   Abgeleitet und nicht danebengeschrieben — wer das Zeichen größer
+   macht, verschiebt damit auch den Text. */
+export const SYMBOL_SPALTE = SYMBOL_KANTE + 2;
 
 /* ── Was gezeigt wird ─────────────────────────────────────────────── */
 
@@ -92,7 +98,7 @@ export const KOPFZEILEN = [
      einer Sekunde Abklingzeit schlägt danach alle X Zehntel zu.
      Hundertstel, damit man den Unterschied zwischen 0,83 und 0,80
      überhaupt sieht. */
-  { id: "hast_wirkung", name: "SCHLAGZEIT", einheit: "", roh: false,
+  { id: "hast_wirkung", name: "SCHLAGZEIT", einheit: "", zeichen: "hast",
     lies: (w) => (Math.round(abklingzeit(w, 1) * 100) / 100).toFixed(2) },
   { id: "tempo", name: "TEMPO", lies: (w) => Math.round(laufTempo(w)) },
   { id: "ruestung", name: "SCHUTZ", einheit: "%",
@@ -105,7 +111,7 @@ export const KOPFZEILEN = [
     lies: (w) => Math.round(wert(w, "reichweite")) },
   { id: "lebensregeneration", name: "REGEN",
     lies: (w) => Math.round(regenerationJeSekunde(w) * 10) / 10 },
-  { id: "aufsammeln", name: "GRIFF",
+  { id: "aufsammeln", name: "GRIFF", zeichen: "gier",
     lies: (w) => Math.round(aufsammelReichweite(w)) },
   { id: "glueck", name: "GLÜCK", lies: (w) => Math.round(wert(w, "glueck")) },
   { id: "gier", name: "GIER", lies: (w) => Math.round(wert(w, "gier")) }
@@ -148,32 +154,66 @@ export function zeilenFuer(werte, karte, alle = false) {
   const nachher = vorschauWerte(werte, karte);
   const zeilen = [];
 
+  const zeile = (name, id, jetzt, dann, zeichenId) => ({
+    name, jetzt, dann,
+    geaendert: jetzt !== dann,
+    symbol: symbolFuerWert(zeichenId ?? id)
+  });
+
   for (const z of KOPFZEILEN) {
-    const jetzt = zahlText(z, werte);
-    const dann = zahlText(z, nachher);
-    zeilen.push({ name: z.name, jetzt, dann, geaendert: jetzt !== dann });
+    zeilen.push(zeile(z.name, z.id, zahlText(z, werte), zahlText(z, nachher), z.zeichen));
   }
 
-  /* Alles Weitere nur, wenn es **nicht null** ist oder wenn die Karte
-     es gerade ändert. Die Kopfgruppe oben zeigt sich auch bei null,
-     weil man sie sonst nie sähe; hier wäre eine Liste aus fünfzig
-     Nullen die Übersicht, die keine ist. */
-  for (const id of WERTE) {
-    if (IM_KOPF.has(id)) continue;
-    const a = werte[id] ?? 0;
-    const b = nachher[id] ?? 0;
-    if (a === 0 && b === 0) continue;
-    if (!alle && a === b) continue;
+  /* Wie ein Rohwert dasteht — an einer Stelle, damit die kurze und die
+     volle Liste nie auseinanderlaufen. */
+  const rohZeile = (id) => {
     const e = WERT_NACH_ID.get(id);
     const einheit = e && e.form !== "flach" ? "%" : "";
-    zeilen.push({
-      name: (e?.name ?? id).toUpperCase().replace(/ %$/, ""),
-      jetzt: `${Math.round(a)}${einheit}`,
-      dann: `${Math.round(b)}${einheit}`,
-      geaendert: a !== b
-    });
+    const a = werte[id] ?? 0, b = nachher[id] ?? 0;
+    /* ⚠️ **Das „ %" im Namen bleibt stehen.** Die Kartenhand streicht
+       es (`zeilenVon()` in `spiel/stufen.mjs`), weil dort die Einheit
+       schon hinter der Zahl steht. Hier stehen die beiden Zeilen
+       **untereinander**: „Schnittschaden" und „Schnittschaden %" sind
+       zwei verschiedene Werte, und ohne das Zeichen hiessen sie
+       gleich. Im Browser gemessen: sechs solcher Paare in der Liste,
+       jedes davon zweimal derselbe Text. */
+    return zeile((e?.name ?? id).toUpperCase(), id,
+      `${Math.round(a)}${einheit}`, `${Math.round(b)}${einheit}`);
+  };
+
+  if (!alle) {
+    /* Die kurze Liste — neben der Kartenhand, wo wenig Platz ist.
+       Dort steht nur, was gerade etwas aussagt: was der Spieler hat,
+       und was die Karte anfasst. Eine Liste aus fünfzig Nullen wäre
+       dort die Übersicht, die keine ist. */
+    for (const id of WERTE) {
+      if (IM_KOPF.has(id)) continue;
+      const a = werte[id] ?? 0, b = nachher[id] ?? 0;
+      if (a === 0 && b === 0) continue;
+      zeilen.push(rohZeile(id));
+    }
+    return zeilen;
   }
 
+  /* ── Die volle Liste ────────────────────────────────────────────
+
+     Janniks Ansage: „alle werte die ich genannt habe sollen genommen
+     werden". Also **alle** fünfundfünfzig, auch die auf null — in der
+     Pause ist der Platz da, und wer nachsieht, will wissen, was es
+     überhaupt gibt.
+
+     Sortiert nach den Gruppen aus `spiel/werte.mjs` und mit
+     Zwischenüberschriften. Fünfundfünfzig Zeilen ohne Gliederung sind
+     eine Wand; nach Bereichen geordnet findet man die Zeile, die man
+     sucht, ohne jede zu lesen. */
+  const schonDa = new Set(KOPFZEILEN.map((z) => z.id));
+  for (const [gruppe, name, farbe] of GRUPPEN_MIT_FARBE) {
+    const drin = WERTE.filter((id) => !schonDa.has(id)
+      && WERT_NACH_ID.get(id)?.gruppe === gruppe);
+    if (drin.length === 0) continue;
+    zeilen.push({ ueberschrift: name.toUpperCase(), farbe });
+    for (const id of drin) zeilen.push(rohZeile(id));
+  }
   return zeilen;
 }
 
@@ -197,20 +237,27 @@ export function metaHinweis(karte) {
 export function breiteFuer(zeilen) {
   let name = 0, zahl = 0;
   for (const z of zeilen) {
+    if (z.ueberschrift) { name = Math.max(name, textBreite(z.ueberschrift)); continue; }
     name = Math.max(name, textBreite(z.name));
     zahl = Math.max(zahl, textBreite(z.geaendert ? `${z.jetzt} > ${z.dann}` : z.jetzt));
   }
-  return name + VORSCHUB + zahl;
+  return SYMBOL_SPALTE + name + VORSCHUB + zahl;
 }
 
 /* Eine Liste malen. Gibt die benutzte Höhe zurück.
 
-   Die Zahlenspalte ist **rechtsbündig**: Untereinander stehende Zahlen
-   liest man an ihrer Länge, und linksbündig wackeln sie mit jeder
-   Stelle. Die Vorschau steht in derselben Zeile hinter einem `>` und
-   in Grün — dieselbe Farbe, in der die Karten ihre Zahlen tragen
-   („ihre werte auf der karte sind dynamisch und grünlich
-   hervorgehoben", `runtime/karten-hand.js`). */
+   Links das Zeichen, dann der Name, rechtsbündig die Zahl.
+   **Rechtsbündig**, weil untereinander stehende Zahlen an ihrer Länge
+   gelesen werden und linksbündig mit jeder Stelle wackeln. Die
+   Vorschau steht in derselben Zeile hinter einem `>` und in Grün —
+   dieselbe Farbe, in der die Karten ihre Zahlen tragen („ihre werte
+   auf der karte sind dynamisch und grünlich hervorgehoben",
+   `runtime/karten-hand.js`).
+
+   Das Zeichen trägt die Farbe seines Wertes, wenn die Zeile etwas zu
+   sagen hat, und einen gedämpften Ton, wenn nicht. Damit liest sich
+   die Liste auch dann noch, wenn man nur die linke Spalte überfliegt:
+   Was leuchtet, hat man. */
 export function zeichneWerteliste(c, zeilen, x, y, breite, hoehe) {
   const passen = Math.max(0, Math.floor(hoehe / ZEILENHOEHE));
   /* Passt nicht alles, wird die **letzte** Zeile für den Hinweis
@@ -224,18 +271,51 @@ export function zeichneWerteliste(c, zeilen, x, y, breite, hoehe) {
   for (const z of zeilen) {
     if (gemalt >= platz) break;
     const zy = y + gemalt * ZEILENHOEHE;
-    zeichneText(c, z.name, x, zy, z.geaendert ? FARBEN.schrift : FARBEN.schriftMatt);
+
+    if (z.ueberschrift) {
+      /* Eine Zwischenüberschrift bekommt kein Zeichen — sie **ist**
+         die Auskunft, und ein Zeichen daneben behauptete, sie sei ein
+         Wert wie die anderen. */
+      zeichneText(c, z.ueberschrift, x, zy + 1, z.farbe ?? FARBEN.schriftMatt);
+      gemalt++;
+      continue;
+    }
+
+    /* Das Zeichen füllt die Zeile (sieben hoch), die Schrift ist fünf
+       hoch und sitzt deshalb einen Bildpunkt tiefer — so stehen beide
+       auf derselben Mittellinie statt auf derselben Oberkante.
+
+       ⚠️ **Nicht andersherum.** Der erste Anlauf setzte das Zeichen auf
+       `zy - 1` und die Schrift auf `zy`; optisch dasselbe, aber die
+       oberste Zeile ragte damit einen Bildpunkt über den Kasten
+       hinaus — von der eigenen Prüfung gefangen, bevor es im Browser
+       jemandem aufgefallen wäre. */
+    /* ⚠️ **Drei Helligkeiten, und die unterste muss noch lesbar sein.**
+       Der erste Anlauf malte Zeilen auf null in `FARBEN.rahmen`
+       (#3a3446). Im Browser gemessen war das auf dem fast schwarzen
+       Pausengrund kaum zu erkennen — und damit war „alle Werte zeigen"
+       wieder eine Auswahl, nur eine unsichtbare. `steinHell` ist
+       deutlich zurückgenommen und trotzdem zu lesen.
+
+       Das **Zeichen** behält immer seine eigene Farbe. Es ist die
+       Spalte, über die man die Liste überfliegt: Wer nach „Frost"
+       sucht, sucht nach Blau, nicht nach einem Wort. Ein gedämpftes
+       Zeichen wäre ein zweiter Kanal, der dasselbe sagt wie der Text,
+       statt etwas Eigenes. */
+    const leer = z.jetzt === "0" || z.jetzt === "0%";
+    maleSymbol(c, z.symbol, x, zy);
+
+    const tx = x + SYMBOL_SPALTE;
+    zeichneText(c, z.name, tx, zy + 1,
+      leer ? FARBEN.steinHell : FARBEN.schrift);
 
     const text = z.geaendert ? `${z.jetzt} > ${z.dann}` : z.jetzt;
-    const tx = x + breite - textBreite(text);
+    const zx = x + breite - textBreite(text);
     if (z.geaendert) {
-      /* Der alte Wert bleibt matt, der neue leuchtet grün. Wer nur die
-         Farbe sieht und nicht liest, sieht trotzdem sofort, welche
-         Zeile die Karte anfasst. */
-      zeichneText(c, `${z.jetzt} >`, tx, zy, FARBEN.schriftMatt);
-      zeichneText(c, z.dann, tx + textBreite(`${z.jetzt} > `), zy, FARBEN.seucheHell);
+      zeichneText(c, `${z.jetzt} >`, zx, zy + 1, FARBEN.schriftMatt);
+      zeichneText(c, z.dann, zx + textBreite(`${z.jetzt} > `), zy + 1, FARBEN.seucheHell);
     } else {
-      zeichneText(c, text, tx, zy, FARBEN.schriftMatt);
+      zeichneText(c, text, zx, zy + 1, leer ? FARBEN.steinHell : FARBEN.schriftMatt);
     }
     gemalt++;
   }

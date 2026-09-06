@@ -66,6 +66,8 @@ graph TD
   zeichnen --> effekte["runtime/effekte.js<br/>malt Felder und Blitze"]
   effekte --> partikel["runtime/partikel.js<br/>Teilchen mit eigener Bahn"]
   oberflaeche --> werteliste["runtime/werteliste.js<br/>Übersicht und Vorschau"]
+  oberflaeche --> ladenbilder["runtime/ladenbilder.js<br/>ein Bild je Ware"]
+  werteliste --> wertsymbole["runtime/wertsymbole.js<br/>ein Zeichen je Wert"]
   kartenhand["runtime/karten-hand.js"] --> werteliste
   start --> kartenhand
 ```
@@ -85,6 +87,9 @@ Trennlinie von oben.
 | wie ein Angriff **aussieht** (Kegel, Ring, Blitz, Einschlag) | `runtime/effekte.js` |
 | **Partikel**: neue Sorte, andere Bahn, andere Menge | `runtime/partikel.js` (`SORTEN`) und `runtime/effekte.js` (`AUSWURF`) |
 | die **Werteübersicht** und ihre Vorschau | `runtime/werteliste.js` |
+| das **Zeichen** neben einem Wert | `runtime/wertsymbole.js` — ein Raster je Achse, die Farbe kommt aus der Schadensart |
+| das **Bild** einer Ware im Laden | `runtime/ladenbilder.js` — je ein Raster für jede Waffe und jedes Fundstück |
+| wie eine **Ladenkachel** aussieht | `runtime/oberflaeche.js`, `maleKachel()`; wo sie liegt, sagt `ladenFelder()` |
 | die **Pause** | `runtime/start.js` (der Schalter) und `runtime/oberflaeche.js` (das Bild) |
 | einen neuen **Gegner** | `spiel/katalog/gegner.mjs` **und** ein Raster in `runtime/sprite-daten.js`; die Prüfung besteht auf beidem |
 | ein neues **Fundstück** | `spiel/katalog/gegenstaende.mjs` |

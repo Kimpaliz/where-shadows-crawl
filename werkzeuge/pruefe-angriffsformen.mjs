@@ -481,6 +481,37 @@ function laufMit(waffenId, schritte = 60 * 16, bewegung = { x: 0, y: 0 }) {
   melde(ring && Math.abs(ring.x - s.x) < 1e-9 && Math.abs(ring.y - s.y) < 1e-9,
     "und die Aura ist mitgelaufen");
 
+  /* ⚠️ **Zwei Moderkränze im Gürtel geben zwei Ringe.** Gleiche Waffen
+     verschmelzen zwar (Bauteil 7) — aber auf der höchsten Stufe nicht
+     mehr, und dann trägt ein Spieler zweimal dieselbe Kennung. Suchte
+     `loeseAus()` den Ring über die **Kennung**, fänden beide denselben,
+     die zweite Waffe frischte nur die erste auf und wäre still
+     wirkungslos: bezahlt, angelegt, ohne Wirkung, ohne Meldung. */
+  const zwei = macheWelt({ spielerzahl: 1, saat: 5 });
+  starteWelle(zwei, 1);
+  zwei.gegner = []; zwei.plan = [];
+  zwei.spieler[0].waffen = [macheWaffe("moderkranz", 1), macheWaffe("moderkranz", 4)];
+  for (let t = 0; t < 60; t++) schritt(zwei, [{ x: 0, y: 0 }]);
+  melde(zwei.felder.filter((f) => f.form === "aura").length === 2,
+    "zwei Aura-Waffen legen zwei Ringe an, nicht einen",
+    `${zwei.felder.filter((f) => f.form === "aura").length}`);
+
+  /* Und der Ring trägt den Schaden, den die Waffe **jetzt** hat: Eine
+     Schadenskarte mitten in der Welle muss ankommen. */
+  const wachsend = macheWelt({ spielerzahl: 1, saat: 5 });
+  starteWelle(wachsend, 1);
+  wachsend.gegner = []; wachsend.plan = [];
+  const w = wachsend.spieler[0];
+  w.waffen = [macheWaffe("moderkranz", 1)];
+  for (let t = 0; t < 60; t++) schritt(wachsend, [{ x: 0, y: 0 }]);
+  const vorGrund = wachsend.felder.find((f) => f.form === "aura").schlag.grund;
+  w.werte.schaden += 50;
+  for (let t = 0; t < 60; t++) schritt(wachsend, [{ x: 0, y: 0 }]);
+  const nachGrund = wachsend.felder.find((f) => f.form === "aura").schlag.grund;
+  melde(nachGrund > vorGrund,
+    "und ein Schadenszuwachs mitten in der Welle kommt im Ring an",
+    `${vorGrund.toFixed(1)} auf ${nachGrund.toFixed(1)}`);
+
   /* Eine gewöhnliche Nahkampfwaffe tut das **nicht** — der Fall, der
      ohne die Ausnahme gleich aussähe. */
   const ohne = macheWelt({ spielerzahl: 1, saat: 5 });

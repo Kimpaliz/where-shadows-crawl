@@ -230,6 +230,46 @@ kontrolliere, gehört nie als Zeichenkette in `replace` — entweder eine
 Funktion als Ersatz oder `slice` und Zusammensetzen. Nach jeder
 Ersetzung die Dateigröße ansehen.
 
+### C2b · Eine Bereichsersetzung, die einen fremden Block mitnahm
+
+**Was ich tat:** In `runtime/oberflaeche.js` eine Funktion ersetzt,
+indem ich den Text **von** ihrem Anfang **bis** zum Anfang der nächsten
+Funktion herausschnitt und neu schrieb:
+
+```python
+alt = s[s.index("export function zeichneLaden("):s.index("export function zeichnePauseKnopf(")]
+```
+
+**Was herauskam:** Der Browser meldete
+`does not provide an export named 'pauseGetroffen'`. Die Prüfkette blieb
+dabei grün — die eine Prüfung, die diesen Export liest, hatte ich in
+dieser Runde nicht laufen lassen.
+
+**Warum:** Zwanzig Minuten vorher hatte ich zwischen die beiden
+Funktionen einen **neuen** Block gesetzt (`PAUSE_FELD`,
+`PAUSE_TIPPRAND`, `pauseGetroffen`, dazu die Begründung dazu). Der
+Schnitt „von A bis B" nahm ihn mit, weil er dazwischen lag. Ich hatte
+die Grenzen aus dem Gedächtnis gewählt — aus dem Stand *vor* meiner
+eigenen Einfügung.
+
+Das ist derselbe Kern wie C2: **Ein Ersatztext, dessen Umfang man nicht
+selbst nachgerechnet hat, ist keine Ersetzung, sondern eine Wette.**
+Dort war es `$'` in `String.replace`, hier eine Indexrechnung — beide
+Male wurde mehr geschrieben, als gemeint war.
+
+**Woran ich es früher merke:** Zwei Gegenproben, die nichts kosten:
+
+1. **Vor** dem Schneiden ausgeben, wie lang der Ausschnitt ist und was
+   darin steht (die ersten und letzten hundert Zeichen). Ein Ausschnitt,
+   der doppelt so lang ist wie die Funktion, ist keine Funktion.
+2. **Nach** dem Schreiben die Exporte der Datei zählen, nicht nur
+   `node --check` laufen lassen. Ein verschluckter Export ist gültiges
+   JavaScript — die Syntaxprüfung sieht ihn nicht.
+
+Und die Lehre über die Lehre: Die Prüfung, die es gefangen hätte, gab
+es bereits. **Wer eine Datei umbaut, lässt jede Prüfung laufen, die sie
+liest** — nicht die, an die er gerade denkt.
+
 ### C3 · CRLF gegen LF *(Startkapital)*
 
 Textersetzungen mit `\n`-Suchmustern treffen auf CRLF-Dateien nichts;

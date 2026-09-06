@@ -14,8 +14,8 @@ einzige Stelle, an der sich zwei Sitzungen sehen.
 | --- | --- | --- | --- |
 | `spiel/kampf.mjs`, `spiel/angriffsformen.mjs`, `spiel/katalog/waffen.mjs` | Claude (Sitzung Angriffe) | sieben Angriffsformen statt eines Treffereffekts | 06.09.2026 |
 | `runtime/zeichnen.js`, `runtime/partikel.js`, `runtime/sprite-daten.js` | Claude (Sitzung Angriffe) | Partikel mit eigener Bahn, Kegel-, Blitz- und Meteorbilder | 06.09.2026 |
-| `runtime/oberflaeche.js`, `runtime/werteliste.js`, `runtime/eingabe.js`, `runtime/start.js` | Claude (Sitzung Angriffe) | Werte-Uebersicht mit Vorschau, Pause, Zeigerposition | 06.09.2026 |
-| `werkzeuge/pruefe-angriffsformen.mjs`, `werkzeuge/pruefe-partikel.mjs`, `werkzeuge/pruefe-werteliste.mjs` | Claude (Sitzung Angriffe) | drei neue Waechter | 06.09.2026 |
+| `runtime/oberflaeche.js`, `runtime/werteliste.js`, `runtime/wertsymbole.js`, `runtime/ladenbilder.js`, `runtime/start.js` | Claude (Sitzung Angriffe) | Werte-Uebersicht mit Zeichen und Vorschau, Ladenkacheln, Pause | 06.09.2026 |
+| `werkzeuge/pruefe-angriffsformen.mjs`, `werkzeuge/pruefe-partikel.mjs`, `werkzeuge/pruefe-werteliste.mjs`, `werkzeuge/pruefe-bilder.mjs` | Claude (Sitzung Angriffe) | vier neue Waechter | 06.09.2026 |
 
 ## Format
 

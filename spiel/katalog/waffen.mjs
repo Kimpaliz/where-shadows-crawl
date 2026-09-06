@@ -305,9 +305,9 @@ export const WAFFEN = [
   },
   {
     id: "mondsichel", name: "Mondsichel", merkmale: ["Schnitt"], schadensart: "schnitt",
-    art: "nahkampf", reichweite: 52, abklingzeit: 0.75,
-    schaden: 13, mitschaden: 1.0, ziele: 4, wirkung: { wucht: 6 },
-    preis: 34,
+    art: "nahkampf", reichweite: 52, abklingzeit: 0.88,
+    schaden: 12, mitschaden: 1.0, ziele: 4, wirkung: { wucht: 6 },
+    preis: 38,
     angriffsform: "bogen",
     /* Die einzige Waffe mit einer **gerichteten** Trefferfläche.
        Janniks Ansage: „sichel angriff mittelgross in richtung der

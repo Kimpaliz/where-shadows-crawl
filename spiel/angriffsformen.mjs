@@ -225,6 +225,16 @@ function grundfeld(form, s, schlag, v, waffe, zusatz) {
     x: s.x, y: s.y,
     besitzer: s,
     schlag, wirkung: v.wirkung ?? {}, waffe: waffe.id,
+    /* Die Waffe selbst, nicht nur ihre Kennung. Gebraucht wird das
+       heute nur von der Aura, die ihren eigenen Ring wiederfinden
+       muss (`loeseAus()` in `spiel/kampf.mjs`) — und dafuer reicht die
+       Kennung nicht: Steht ein Guertel voll und laesst sich eine
+       gekaufte Waffe nicht mehr verschmelzen, traegt ein Spieler
+       zweimal dieselbe Kennung. Beide fänden dann **denselben** Ring,
+       der zweite frischte nur den ersten auf, und die zweite Waffe
+       waere still wirkungslos. Ein Objektvergleich kann das nicht
+       verwechseln. */
+    quelle: waffe,
     art: schlag.art,
     rest: 0, dauer: 0, takt: 0, taktRest: 0,
     warnRest: 0,

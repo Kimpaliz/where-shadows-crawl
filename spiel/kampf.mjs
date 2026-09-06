@@ -177,17 +177,25 @@ function loeseAus(welt, s, ziele, schlag, v, waffe, reichweite) {
        Abklingzeit einen zweiten übereinander: Der Schaden verdoppelte
        sich still mit jedem Takt, und im Bild sähe man nichts davon,
        weil zwei gleiche Ringe wie einer aussehen. Der bestehende Ring
-       wird stattdessen aufgefrischt — dasselbe Muster wie bei `brand`. */
-    const alt = welt.felder.find((f) => f.form === "aura"
-      && f.besitzer === s && f.waffe === waffe.id);
+       wird stattdessen aufgefrischt — dasselbe Muster wie bei `brand`.
+
+       ⚠️ Gesucht wird über die **Waffe selbst** (`f.quelle === waffe`)
+       und nicht über ihre Kennung. Zwei Waffen derselben Kennung
+       verschmelzen zwar (Bauteil 7), aber auf der höchsten Stufe nicht
+       mehr — dann trüge ein Spieler zweimal `moderkranz`, beide fänden
+       denselben Ring, und die zweite Waffe wäre still wirkungslos. */
+    const alt = welt.felder.find((f) => f.form === "aura" && f.quelle === waffe);
     const neu = baueAura(welt, s, schlag, v, waffe, reichweite,
       abklingzeit(s.werte, v.abklingzeit));
     if (alt) {
       alt.rest = neu.rest;
       alt.radius = neu.radius;
       alt.takt = neu.takt;
+      /* Auch der Schlag wird aufgefrischt: Er trägt den Schaden des
+         Spielers **zum Zeitpunkt des Feuerns**. Ohne diese Zeile bliebe
+         der Ring auf dem Wert stehen, den er beim Anlegen hatte, und
+         jede Schadenskarte danach ginge an ihm vorbei. */
       alt.schlag = neu.schlag;
-      alt.getroffen.clear();
     } else {
       welt.felder.push(neu);
     }

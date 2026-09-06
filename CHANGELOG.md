@@ -3,6 +3,126 @@
 Oben das Neueste. Jeder Eintrag sagt **was**, **warum** und **womit
 gemessen** — nicht nur, dass etwas anders ist.
 
+## 0.9.8 — Zeichen für jeden Wert, Kacheln für jede Ware (06.09.2026)
+
+Janniks Ansage, unmittelbar nach 0.9.7: *„alle werte die ich genannt
+habe sollen genommen werden mit icons in der werte übersicht."* Und:
+*„im shop haben alle items item bilder/icons und werden in kacheln
+angezeigt. schön verziert."*
+
+### Der Befund, bevor etwas gebaut war
+
+**Die Werteübersicht war eine Auswahl, keine Übersicht.** Sie zeigte
+dreizehn Zeilen — die abgeleiteten Kopfwerte plus das, was gerade nicht
+null war. Von den 55 Werten aus `spiel/werte.mjs` bekam ein Spieler mit
+frischer Figur genau dreizehn zu sehen, und was es überhaupt gibt,
+stand nirgends.
+
+**Im Laden stand Text.** Vier Kästen untereinander, in jedem drei
+Zeilen: Name, Preis, Wirkung. Kein Bild — man las, was man kaufte,
+statt es zu sehen. Zu viert waren das sechzehn Kästen nebeneinander,
+also eine Textwand. Von den 33 Waren hatte **keine einzige** ein
+eigenes Bild; die sechs vorhandenen Sprites sind Geschosse (ein Bolzen,
+kein Armbrustschaft).
+
+| | vorher | jetzt |
+| --- | --- | --- |
+| Werte in der Übersicht | **13 von 55** | 55, nach sieben Bereichen gegliedert |
+| Zeichen je Wert | **0** | 29 Raster, die alle 55 abdecken |
+| Bilder für Waren | **0 von 33** | 19 Waffen + 14 Fundstücke |
+| Anordnung im Laden | vier Kästen untereinander | **zwei mal zwei Kacheln** |
+| Höhe der Angebote | 128 Bildpunkte | **98** — der Rest wird zur Detailzeile |
+| Prüfungen in der Kette | 27 | **29** |
+
+### 29 Raster für 55 Werte, und warum nicht 55
+
+32 der 55 Werte werden **erzeugt** — fünf Achsen je Schadensart, eine
+Neigung je Kartengruppe. Für sie 32 Bilder zu zeichnen hieße, dieselbe
+Aussage 32-mal aufzuschreiben, und beim nächsten Wert wäre eines
+vergessen. Genau der Fehler, den `erzeugeArtWerte()` im Regelkern schon
+einmal vermieden hat.
+
+Stattdessen tragen sie **fünf** Raster (eines je Achse) in der Farbe
+ihrer Schadensart. Man erkennt an der Form, worum es geht — Schaden,
+Krit, Widerstand —, und an der Farbe, welche Art. Dieselbe
+Doppelkodierung wie bei den Trefferzeichen: Wer eines von beidem nicht
+liest, liest das andere.
+
+Nachgerechnet wird beides: dass **jeder** der 55 ein Zeichen bekommt,
+dass **keiner** auf den Rückfall fällt, dass die fünf Werte einer Art
+fünf verschiedene Formen und eine gemeinsame Farbe haben, und dass
+keine zwei Raster dieselbe Silhouette tragen.
+
+### Die Kachel sagt zweierlei, bevor man liest
+
+Der Streifen oben und die vier Ecken tragen die Farbe der Ware: bei
+einer Waffe ihre Schadensart, bei einem Fundstück seine Seltenheit — in
+denselben vier Tönen wie die Aufstiegskarten, damit man sie einmal
+lernt und überall wiedererkennt.
+
+Eine Kachel ist zu viert nur 56 Bildpunkte breit, also elf Zeichen.
+„KNOCHENPANZER" passt da nicht. Deshalb steht auf der Kachel der
+gekürzte Name und **unter** dem Raster die volle Auskunft für das
+angewählte Angebot: Übersicht oben, Einzelheit unten, statt beides
+überall halb.
+
+### Die Prüfung hat den Umbau gefangen, bevor ein Finger danebentraf
+
+`pruefe-tippen.mjs` schreibt die Geometrie des Krämers ab, **damit ein
+Verrutschen auffällt**. Beim Umbau auf Kacheln wurde sie sofort rot —
+zehn Zeilen. Sie ist jetzt nachgezogen und dabei **strenger** geworden:
+Vorher prüfte sie „ragt ein Feld nach unten in das nächste", was bei
+nebeneinanderliegenden Kacheln nichts mehr aussagt (sie meldete −46
+Bildpunkte „Abstand" für einen völlig richtigen Fall). Jetzt wird jedes
+Paar in beiden Achsen verglichen — das fängt auch die seitliche
+Überlappung, die die alte Fassung gar nicht sehen konnte.
+
+### Ein Fehler von mir, und was er lehrt
+
+Beim Umbau des Ladens habe ich einen Textbereich „von Funktion A bis
+Funktion B" ersetzt — und dabei einen Block mitgenommen, den ich zwanzig
+Minuten vorher selbst dazwischengesetzt hatte (`PAUSE_FELD`,
+`pauseGetroffen`). Der Browser meldete `does not provide an export named
+'pauseGetroffen'`; `node --check` sah nichts, weil das Ergebnis gültiges
+JavaScript war. Steht als Fall **C2b** im Fehlerbuch, samt der Lehre:
+*Wer eine Datei umbaut, lässt jede Prüfung laufen, die sie liest* — die
+eine, die es gefangen hätte, gab es schon.
+
+### Balance: die Mondsichel war ein Ausreißer
+
+Nach 0.9.7 meldete `pruefe-balance.mjs`, dass es zu viert schwerer sei
+als allein (Welle 36,7 gegen 45,6). Gemessen, statt geraten:
+
+* Ohne die sieben neuen Waffen ist alles grün — sie sind die Ursache.
+* Unter **gleichen** Bedingungen (20 s, vier Saaten, Welle 5) teilen die
+  neuen 11,57 Schaden je Sekunde aus, die zwölf alten 9,14 — aber **je
+  Gold sind sie exakt gleich stark**: 30,49 gegen 30,55. Sie sind also
+  nicht zu stark, sondern teurer und stärker.
+* Ein einziger echter Ausreißer: Die Mondsichel war mit 16,6 Schaden je
+  Sekunde die stärkste Waffe im Spiel **und** die zweitbeste je Gold.
+
+Sie steht jetzt auf 12 Schaden, 0,88 s Abklingzeit und 38 Gold statt 13
+/ 0,75 / 34. Danach: zu viert Welle **56,2** statt 36,7, und die
+Zusicherung hält mit 10,7 Wellen Abstand statt −8,9.
+
+⚠️ **Was dabei über die Prüfung selbst zu lernen war:** `welleMittel`
+ist im endlosen Modus fast nur eine Umrechnung der Zahl der Läufe, die
+den Deckel bei Welle 200 erreichen (8 von 40 allein, 10 zu viert). Die
+Zusicherung „zu viert nicht schwerer als allein" entscheidet damit über
+**zwei Läufe von vierzig** — eine grobe Zahl für eine feine Aussage.
+Sie ist heute grün mit Abstand; wer sie das nächste Mal knapp reißen
+sieht, sollte zuerst die Stichprobe ansehen und nicht die Waffe
+(`docs/FEHLERBUCH.md` E4).
+
+### Nachrechnen
+
+```bash
+node werkzeuge/pruefe-bilder.mjs        # 388 Prüfungen
+node werkzeuge/pruefe-werteliste.mjs    #  48 Prüfungen
+node werkzeuge/pruefe-tippen.mjs        #  33 Prüfungen
+node werkzeuge/pruefe-balance.mjs       # dass es weiter spielbar ist
+```
+
 ## 0.9.7 — Angriffe, die eine Weile dastehen (06.09.2026)
 
 Janniks Ansage: *„die angriffe dürfen nicht blos ein treffer effekt

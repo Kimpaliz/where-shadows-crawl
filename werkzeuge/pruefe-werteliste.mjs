@@ -185,6 +185,33 @@ function probeWelt(saat = 4, zusatz = {}) {
   /* Leben und Tempo sind **nicht** null, obwohl der Wert null ist —
      sie sind abgeleitet. Genau das ist der Grund, warum es die
      Kopfgruppe gibt. */
+  /* ── Janniks Ansage: „alle werte … sollen genommen werden" ──────
+
+     Die volle Liste muss **jeden** der 55 Werte zeigen, auch die auf
+     null — sonst ist es eine Auswahl und keine Übersicht. Gezählt wird
+     gegen `WERTE`, nicht gegen eine Zahl im Text: Eine Prosazahl neben
+     einer Liste ist ein Fehler in Wartestellung (`FEHLERBUCH.md` E2). */
+  const voll = zeilenFuer(frisch, null, true);
+  const gezeigt = new Set();
+  for (const z of voll) {
+    if (z.ueberschrift) continue;
+    gezeigt.add(z.name);
+  }
+  const kopfNamen = new Set(KOPFZEILEN.map((z) => z.name));
+  const fehlendeWerte = WERTE.filter((id) => {
+    const e = WERT_NACH_ID.get(id);
+    const name = (e?.name ?? id).toUpperCase().replace(/ %$/, "");
+    return !gezeigt.has(name) && !KOPFZEILEN.some((z) => z.id === id);
+  });
+  melde(fehlendeWerte.length === 0,
+    "die volle Liste zeigt jeden der 55 Werte",
+    `${fehlendeWerte.length} fehlen: ${fehlendeWerte.slice(0, 4).join(" ")}`);
+  melde(voll.some((z) => z.ueberschrift),
+    "und gliedert sie nach Bereichen, statt eine Wand aus Zeilen zu sein",
+    `${voll.filter((z) => z.ueberschrift).length} Überschriften`);
+  melde(voll.filter((z) => !z.ueberschrift).every((z) => z.symbol && z.symbol.raster),
+    "jede Zeile trägt ein Zeichen");
+
   const leben = zeilen.find((z) => z.name === "LEBEN");
   const tempo = zeilen.find((z) => z.name === "TEMPO");
   melde(leben && Number(leben.jetzt) > 0, "LEBEN zeigt das Grundleben, nicht die Null",
@@ -342,7 +369,10 @@ function probeWelt(saat = 4, zusatz = {}) {
 
   const fehlend = new Set();
   for (const z of zeilen) {
-    for (const t of [z.name, z.jetzt, z.dann, `${z.jetzt} > ${z.dann}`]) {
+    const texte = z.ueberschrift
+      ? [z.ueberschrift]
+      : [z.name, z.jetzt, z.dann, `${z.jetzt} > ${z.dann}`];
+    for (const t of texte) {
       for (const c of t) if (!kennt(c)) fehlend.add(c);
     }
   }
@@ -369,6 +399,15 @@ function probeWelt(saat = 4, zusatz = {}) {
   melde(/pause && !gleichschritt/.test(start),
     "und er hält die Welt nur an, wenn niemand mitspielt");
   melde(/Escape|KeyP/.test(start), "die Tastatur kann ihn erreichen");
+  /* ⚠️ Nur dort, wo die Uhr läuft. Bei „wahl" und „laden" wartet die
+     Welt ohnehin auf den Spieler; im Browser gemessen lagen dort zwei
+     Bildschirme übereinander, von denen keiner mehr zu lesen war. */
+  melde(/const PAUSE_PHASEN = \["welle", "truhen"\]/.test(start),
+    "und er greift nur in den Phasen, in denen die Uhr läuft");
+  melde(/PAUSE_PHASEN\.includes\(welt\.phase\)/.test(start),
+    "gefragt wird das auch wirklich, nicht nur aufgeschrieben");
+  melde(/pause = false/.test(start),
+    "und ein Phasenwechsel beendet die Pause von selbst");
 
   /* Die Fläche zum Antippen liegt im Bild, ist groß genug für einen
      Finger und liegt **nicht** dort, wo schon etwas anderes liegt. */

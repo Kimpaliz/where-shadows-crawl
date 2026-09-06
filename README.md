@@ -36,8 +36,12 @@ Laden und bei der Kartenwahl.
 
 ## Was drin steckt
 
-- **Zwölf Waffen** in acht Merkmalsgruppen; vier gleiche Merkmale geben
-  einen Aufschlag
+- **Neunzehn Waffen** in acht Merkmalsgruppen; vier gleiche Merkmale
+  geben einen Aufschlag
+- **Neun Angriffsformen**: Schlag und Geschoss wie eh und je, dazu
+  Flammenkegel, Suchschwarm, Schadensaura, erlahmendes Geschoss,
+  Kettenblitz, Meteoritenschauer und ein Sichelbogen mit echter,
+  gerichteter Trefferfläche
 - **Acht Gegnerarten**, gestaffelt eingeführt, alle vier Wellen ein
   Hauptmann
 - **Vierzehn Fundstücke**, die Hälfte davon mit Nachteil
