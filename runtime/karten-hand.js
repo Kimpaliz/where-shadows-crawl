@@ -550,7 +550,11 @@ export function macheKartenhand(leinwand) {
          Finger, Tastatur, Gamepad und Daumen-Stick gleichermassen. */
       const schwebend = schwebtAuf !== null && karten[schwebtAuf] ? schwebtAuf : zeiger;
       const vorschauKarte = karten[schwebend] ?? null;
-      const zeilen = zeilenFuer(eigener.werte, vorschauKarte);
+      /* Der Platz wird **mitgegeben**, damit `zeilenFuer()` die Zeile,
+         um die es geht, nicht als letzte wegwirft — siehe `aufPlatz()`
+         in `runtime/werteliste.js`. */
+      const zeilenPlatz = Math.floor((WERTE_HOEHE - ZEILENHOEHE - 2) / ZEILENHOEHE);
+      const zeilen = zeilenFuer(eigener.werte, vorschauKarte, false, zeilenPlatz);
       const listeB = Math.max(WERTE_MINDESTBREITE, breiteFuer(zeilen));
       zeichneText(c, "DEINE WERTE", WERTE_X, WERTE_Y, jaeger.hell);
       zeichneWerteliste(c, zeilen, WERTE_X, WERTE_Y + ZEILENHOEHE + 2,

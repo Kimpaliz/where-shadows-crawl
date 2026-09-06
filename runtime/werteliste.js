@@ -150,7 +150,7 @@ function zahlText(zeile, werte) {
    `alle` schaltet von der Kartenwahl (wenig Platz, links neben der
    Hand) auf die Pause um (viel Platz, zwei Spalten): Dort steht
    zusätzlich **jeder** Wert, den der Spieler tatsächlich hat. */
-export function zeilenFuer(werte, karte, alle = false) {
+export function zeilenFuer(werte, karte, alle = false, platz = 0) {
   const nachher = vorschauWerte(werte, karte);
   const zeilen = [];
 
@@ -192,7 +192,7 @@ export function zeilenFuer(werte, karte, alle = false) {
       if (a === 0 && b === 0) continue;
       zeilen.push(rohZeile(id));
     }
-    return zeilen;
+    return aufPlatz(zeilen, platz);
   }
 
   /* ── Die volle Liste ────────────────────────────────────────────
@@ -215,6 +215,35 @@ export function zeilenFuer(werte, karte, alle = false) {
     for (const id of drin) zeilen.push(rohZeile(id));
   }
   return zeilen;
+}
+
+/* Die Liste auf den vorhandenen Platz bringen, **ohne** die Zeile zu
+   verlieren, um die es geht.
+
+   ⚠️ **Im Browser gemessen, und zwar an genau dem Fall, für den die
+   Vorschau da ist.** Die Kopfgruppe hat dreizehn Zeilen, neben die
+   Kartenhand passen vierzehn. Fasst eine Karte einen Wert an, der
+   **nicht** in der Kopfgruppe steht — „+17 % Flächenschaden" zum
+   Beispiel —, kommt eine vierzehnte Zeile dazu, und mit dem Hinweis
+   „+N weitere" bleiben nur noch dreizehn: Die eine Zeile, die die
+   Karte erklärt, war die einzige, die man **nicht** sah.
+
+   Geworfen wird deshalb von unten nach oben, und zwar nur, was
+   **null** ist und was die Karte **nicht** anfasst. Eine Zeile auf
+   null sagt „hast du nicht"; das ist verzichtbar, solange man sieht,
+   was sich ändert. Die Reihenfolge bleibt dabei, wie sie ist — eine
+   Liste, die ihre Zeilen umsortiert, während man sie liest, kann man
+   nicht lernen. */
+function aufPlatz(zeilen, platz) {
+  if (!(platz > 0) || zeilen.length <= platz) return zeilen;
+  const raus = [...zeilen];
+  for (let i = raus.length - 1; i >= 0 && raus.length > platz; i--) {
+    const z = raus[i];
+    if (z.geaendert) continue;
+    if (z.jetzt !== "0" && z.jetzt !== "0%") continue;
+    raus.splice(i, 1);
+  }
+  return raus;
 }
 
 /* Was eine Meta-Karte ändert, lässt sich nicht als Zahl zeigen — sie

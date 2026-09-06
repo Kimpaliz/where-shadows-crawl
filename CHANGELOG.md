@@ -77,6 +77,29 @@ Bildpunkte „Abstand" für einen völlig richtigen Fall). Jetzt wird jedes
 Paar in beiden Achsen verglichen — das fängt auch die seitliche
 Überlappung, die die alte Fassung gar nicht sehen konnte.
 
+### Zwei Befunde aus dem Browser
+
+**Die Vorschau zeigte ausgerechnet die Zeile nicht, um die es ging.**
+Die Kopfgruppe hat 13 Zeilen, neben die Kartenhand passen 14. Eine
+Karte auf „Flächenschaden" — ein Wert, der nicht in der Kopfgruppe
+steht — machte daraus 15, und mit dem Hinweis „+N weitere" fiel genau
+die geänderte Zeile heraus. `aufPlatz()` wirft jetzt von unten nach
+oben weg, was **null** ist und was die Karte **nicht** anfasst; die
+Reihenfolge bleibt, wie sie ist. Nachgerechnet über **jede** ziehbare
+Wertkarte mit dem Platz, den die Hand wirklich hat.
+
+**Die Pause lag über der Kartenwahl.** Beide Bildschirme schimmerten
+durcheinander, keiner war zu lesen. Der Schalter greift jetzt nur in
+den Phasen, in denen die Uhr läuft (`welle`, `truhen`) — bei „wahl" und
+„laden" wartet die Welt ohnehin auf den Spieler. Ein Phasenwechsel
+beendet die Pause von selbst, damit kein Schalter gesetzt bleibt, den
+niemand gedrückt hat.
+
+Dazu eine Kleinigkeit, die erst mit den großen Kacheln auffiel: Das
+Fundstück hieß „Laeuferschuh". Es heißt jetzt **Läuferschuh** — die
+Kennung bleibt ohne Umlaut (sie steht in Spielständen), der Name ist
+das, was ein Spieler liest, und das Spiel ist deutsch.
+
 ### Ein Fehler von mir, und was er lehrt
 
 Beim Umbau des Ladens habe ich einen Textbereich „von Funktion A bis

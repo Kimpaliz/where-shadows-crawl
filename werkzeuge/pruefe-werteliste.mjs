@@ -264,6 +264,46 @@ function probeWelt(saat = 4, zusatz = {}) {
   melde(geaendert.every((z) => z.name === "SCHADEN"),
     "und genau die, um die es geht", geaendert.map((z) => z.name).join(" "));
 
+  /* ⚠️ **Und sie bleibt sichtbar, auch wenn der Platz knapp wird.**
+     Im Browser gemessen: Die Kopfgruppe hat 13 Zeilen, neben die
+     Kartenhand passen 14. Eine Karte auf „Flächenschaden" — einen
+     Wert, der nicht in der Kopfgruppe steht — machte daraus 15, und
+     mit dem Hinweis „+N weitere" fiel ausgerechnet die eine Zeile
+     heraus, um die es ging.
+
+     Geprüft wird über **jede** ziehbare Karte und mit dem Platz, den
+     die Kartenhand wirklich hat. */
+  {
+    const platz = Math.floor((WERTE_HOEHE - ZEILENHOEHE - 2) / ZEILENHOEHE);
+    melde(platz >= 10, "neben die Kartenhand passen genug Zeilen", `${platz}`);
+
+    const unsichtbar = [];
+    for (const vorlage of ziehbareKarten()) {
+      if (vorlage.wirkung.art !== "wert") continue;
+      const probe = macheWerte();
+      const karte = { id: vorlage.id, wert: vorlage.wirkung.wert,
+        menge: mengeVon(vorlage, probe), regel: null, zeilen: [] };
+      const gekuerzt = zeilenFuer(probe, karte, false, platz);
+      const sichtbar = gekuerzt.slice(0, platz);
+      if (!sichtbar.some((z) => z.geaendert)) unsichtbar.push(vorlage.id);
+      if (gekuerzt.length > platz) unsichtbar.push(`${vorlage.id}(zu lang)`);
+    }
+    melde(unsichtbar.length === 0,
+      "bei jeder Karte ist die geänderte Zeile wirklich zu sehen",
+      unsichtbar.slice(0, 4).join(" "));
+
+    /* Gegenprobe: Ohne den Platzhinweis wäre die Liste länger — sonst
+       prüfte die Zeile oben eine Kürzung, die gar nicht stattfindet. */
+    const probe = macheWerte();
+    const lang = zeilenFuer(probe, { wert: "flaechenschaden", menge: 17 }, false, 0);
+    const kurz = zeilenFuer(probe, { wert: "flaechenschaden", menge: 17 }, false, platz);
+    melde(lang.length > kurz.length,
+      "und ohne Platzangabe wäre sie zu lang gewesen",
+      `${lang.length} auf ${kurz.length}`);
+    melde(kurz.some((z) => z.geaendert && z.name.startsWith("FL")),
+      "die Flächenschadenzeile überlebt die Kürzung");
+  }
+
   /* Ein Wert ohne eigene Kopfzeile taucht trotzdem auf, sobald die
      Karte ihn anfasst — sonst zeigte die Vorschau bei zwei Dritteln
      aller Karten gar nichts. */

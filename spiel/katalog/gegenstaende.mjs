@@ -59,7 +59,11 @@ export const GEGENSTAENDE = [
     text: "Wer sie trägt, findet Besseres."
   },
   {
-    id: "laeuferschuh", name: "Laeuferschuh", preis: 28, selten: 1,
+    /* Die **Kennung** bleibt ohne Umlaut — sie steht in Spielstaenden
+       und in `runtime/ladenbilder.js`. Der **Name** ist das, was ein
+       Spieler liest, und das Spiel ist deutsch: Seit die Waren im Laden
+       gross und mit Bild dastehen, faellt „LAEUFERSCH." auf. */
+    id: "laeuferschuh", name: "Läuferschuh", preis: 28, selten: 1,
     werte: { tempo: 18, ruestung: -5 },
     text: "Man rennt. Man hält nichts aus."
   },
