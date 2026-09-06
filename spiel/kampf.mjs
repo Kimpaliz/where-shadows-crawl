@@ -47,6 +47,11 @@ import { schadenDerWaffe } from "./katalog/waffen.mjs";
 import { stosse } from "./bewegung.mjs";
 import { richtungenDerSalve, geschosseDerSalve, anteilJeGeschoss } from "./salven.mjs";
 import { lassBeuteFallen } from "./beute.mjs";
+import {
+  angriffsformVon, baueKegel, baueAura, baueBogen, baueMeteore,
+  kettenZiele, kettenAnteil, staerkeDesFeldes, imKegel, drehe, naechstesVon,
+  bremseGeschoss, erlahmterAnteil, schwarmZiel, neuesSuchziel
+} from "./angriffsformen.mjs";
 
 /* Wie lange ein Spieler nach einem Treffer unverwundbar ist. Ohne
    diese Pause würde ein Gegner, der auf einem steht, sechzigmal je
@@ -89,7 +94,19 @@ export function feuereWaffen(welt, dt) {
       const v = waffe.vorlage;
       const reichweite = waffenReichweite(s.werte, v);
       const ziele = zieleInReichweite(welt, s.x, s.y, reichweite, v.ziele);
-      if (ziele.length === 0) { waffe.bereitIn = 0; continue; }
+      /* Ohne Ziel wird nicht geschlagen, und die Uhr bleibt stehen —
+         sonst sammelte eine Waffe während der Ruhe Abklingzeit an und
+         entlüde sich beim ersten Gegner mehrfach.
+
+         ⚠️ **Die Aura ist die eine Ausnahme, und sie ist der Grund,
+         warum sie eine Aura ist.** Ein Ring, der erst erscheint, wenn
+         jemand hineinläuft, und verschwindet, sobald der Letzte fällt,
+         wäre kein dauerhafter Ring, sondern ein Nahkampfschlag mit
+         Kreis drumherum — also genau der „bloße Treffereffekt", gegen
+         den diese ganze Änderung gebaut ist. */
+      if (ziele.length === 0 && angriffsformVon(v) !== "aura") {
+        waffe.bereitIn = 0; continue;
+      }
 
       waffe.bereitIn = abklingzeit(s.werte, v.abklingzeit);
 
@@ -106,22 +123,197 @@ export function feuereWaffen(welt, dt) {
       };
 
       for (let n = 0; n < angriffeJeSchlag(s.werte); n++) {
-        if (v.art === "nahkampf") {
-          s.schlagZeit = 0.14;
-          s.schlagWaffe = waffe.id;
-          for (const g of ziele) {
-            /* Ein zweiter Schlag auf eine Leiche wäre verschenkt —
-               ohne diese Zeile wäre `zusatzangriffe` genau dort am
-               schwächsten, wo es am meisten trifft. */
-            if (g.tot) continue;
-            schlageZu(welt, s, g, schlag, v.wirkung, waffe.id);
-          }
-        } else {
-          wirfSalve(welt, s, ziele[0], schlag, v, waffe, reichweite);
-        }
+        loeseAus(welt, s, ziele, schlag, v, waffe, reichweite);
       }
     }
   }
+}
+
+/* Welche Form der Angriff annimmt.
+
+   ⚠️ **Die beiden ersten Zweige sind wörtlich das, was vorher hier in
+   der Schleife stand.** Der Umbau ist deshalb einer ohne sichtbare
+   Änderung: Jede der zwölf Waffen im Katalog fällt über
+   `angriffsformVon()` auf `schlag` oder `geschoss` zurück und verhält
+   sich byteweise wie zuvor (`werkzeuge/pruefe-angriffsformen.mjs`
+   rechnet das nach). Erst eine Waffe, die ausdrücklich eine
+   `angriffsform` nennt, geht einen anderen Weg. Das ist die Trennung,
+   auf der dieses Projekt besteht: erst der Umbau, dann der Inhalt. */
+function loeseAus(welt, s, ziele, schlag, v, waffe, reichweite) {
+  const form = angriffsformVon(v);
+
+  /* Worauf die gerichteten Formen zeigen. **Nicht** `ziele[0]`: Der ist
+     nur dann der nächste, wenn mehr Gegner gefunden wurden als die
+     Waffe Ziele hat — sonst gibt `zieleInReichweite()` sie unsortiert
+     in Rasterreihenfolge zurück. Die Begründung samt Messung steht bei
+     `naechstesVon()` in `spiel/angriffsformen.mjs`. */
+  const naechstes = ziele.length ? naechstesVon(s.x, s.y, ziele) : null;
+
+  if (form === "schlag") {
+    s.schlagZeit = 0.14;
+    s.schlagWaffe = waffe.id;
+    for (const g of ziele) {
+      /* Ein zweiter Schlag auf eine Leiche wäre verschenkt — ohne
+         diese Zeile wäre `zusatzangriffe` genau dort am schwächsten,
+         wo es am meisten trifft. */
+      if (g.tot) continue;
+      schlageZu(welt, s, g, schlag, v.wirkung, waffe.id);
+    }
+    return;
+  }
+
+  if (form === "geschoss" || form === "erlahmend" || form === "schwarm") {
+    wirfSalve(welt, s, ziele, schlag, v, waffe, reichweite);
+    return;
+  }
+
+  if (form === "kegel") {
+    welt.felder.push(baueKegel(welt, s, naechstes, schlag, v, waffe, reichweite));
+    return;
+  }
+
+  if (form === "aura") {
+    /* Nur **ein** Ring je Waffe. Ohne diese Frage legte jede
+       Abklingzeit einen zweiten übereinander: Der Schaden verdoppelte
+       sich still mit jedem Takt, und im Bild sähe man nichts davon,
+       weil zwei gleiche Ringe wie einer aussehen. Der bestehende Ring
+       wird stattdessen aufgefrischt — dasselbe Muster wie bei `brand`. */
+    const alt = welt.felder.find((f) => f.form === "aura"
+      && f.besitzer === s && f.waffe === waffe.id);
+    const neu = baueAura(welt, s, schlag, v, waffe, reichweite,
+      abklingzeit(s.werte, v.abklingzeit));
+    if (alt) {
+      alt.rest = neu.rest;
+      alt.radius = neu.radius;
+      alt.takt = neu.takt;
+      alt.schlag = neu.schlag;
+      alt.getroffen.clear();
+    } else {
+      welt.felder.push(neu);
+    }
+    /* Der Ring taktet selbst; die Waffenuhr treibt ihn nur an. Der
+       Takt schlägt in `wirkeFelder()` zu, damit er auch dann läuft,
+       wenn gerade kein Ziel in Reichweite ist — eine Aura, die erst
+       zuschlägt, wenn die Waffe ein Ziel *findet*, wäre keine
+       dauerhafte Aura, sondern ein Nahkampfschlag mit Ring drumherum. */
+    return;
+  }
+
+  if (form === "bogen") {
+    s.schlagZeit = v.bogen?.dauer ?? 0.2;
+    s.schlagWaffe = waffe.id;
+    welt.felder.push(baueBogen(welt, s, naechstes, schlag, v, waffe, reichweite));
+    return;
+  }
+
+  if (form === "meteore") {
+    for (const f of baueMeteore(welt, s, naechstes, schlag, v, waffe,
+      reichweite, welt.zufall)) welt.felder.push(f);
+    return;
+  }
+
+  if (form === "kette") {
+    schlageKette(welt, s, naechstes, schlag, v, waffe);
+  }
+}
+
+/* Der Kettenblitz. Er fliegt nicht — er **steht schon**, in dem
+   Augenblick, in dem er fällt. Deshalb wird hier zugeschlagen und
+   danach nur noch der Linienzug für den Zeichner abgelegt.
+
+   Der Reihe nach, nicht auf einmal: `kettenZiele()` liefert die
+   getroffenen Gegner in der Reihenfolge, in der der Blitz sie berührt,
+   und derselbe Linienzug wird gemalt. Zwei Reihenfolgen wären zwei
+   Wahrheiten — der Blitz zöge sichtbar woanders hin, als er wehtut. */
+function schlageKette(welt, s, start, schlag, v, waffe) {
+  const k = v.kette ?? {};
+  const kette = kettenZiele(welt.gegner, start, k.spruenge ?? 3, k.sprungweite ?? 58);
+  const verlust = k.verlust ?? 0.22;
+  const punkte = [{ x: s.x, y: s.y }];
+
+  kette.forEach((g, i) => {
+    punkte.push({ x: g.x, y: g.y });
+    if (g.tot) return;
+    schlageZu(welt, s, g, schlag, v.wirkung, waffe.id, kettenAnteil(i, verlust));
+  });
+
+  welt.blitze.push({
+    punkte, rest: BLITZ_LEBEN, dauer: BLITZ_LEBEN,
+    art: schlag.art, waffe: waffe.id
+  });
+}
+
+/* Wie lange ein Blitzpfad zu sehen ist.
+
+   ⚠️ **Ein Blitz ohne Standzeit ist ein Blitz, den niemand sieht.** Der
+   Einschlag dauert einen Simulationsschritt (1/60 s); auf einem Bild
+   mit 60 Hz wäre er in genau einem Rahmen da und in keinem zweiten —
+   also ein Flackern, das man für einen Anzeigefehler hält. 0,16 s sind
+   rund zehn Bilder: lang genug, um die Zacken zu lesen, kurz genug,
+   dass zwei Blitze hintereinander nicht zu einem Netz verkleben.
+   `runtime/zeichnen.js` liest diese Zahl mit, damit sie nicht an zwei
+   Stellen steht. */
+export const BLITZ_LEBEN = 0.16;
+
+/* ── Felder: Angriffe, die eine Weile dastehen ────────────────────── */
+
+/* Was `welt.felder` je Schritt tut. Vier Formen laufen hier
+   zusammen — Kegel, Aura, Sichelbogen und Meteoreinschlag —, und der
+   Unterschied zwischen ihnen sind ausschließlich **Zahlen am Feld**,
+   keine Verzweigungen: Öffnungswinkel, Standzeit, Takt, ob es dem
+   Besitzer folgt, ob jeder Gegner nur einmal drankommt.
+
+   Genau das war der Zweck der Übung. Eine achte Form ist damit ein
+   Eintrag in `spiel/angriffsformen.mjs` und keine achte Verzweigung
+   mitten in der Kampfschleife. */
+export function wirkeFelder(welt, dt) {
+  for (const feld of welt.felder) {
+    feld.rest -= dt;
+
+    /* Was am Besitzer hängt, zieht mit ihm mit — die Aura ist ein
+       Ring um den Spieler, kein Fleck auf dem Boden. Liegt er, hört
+       das Feld auf zu wirken, verschwindet aber nicht sofort: Die
+       Standzeit läuft aus, und der Ring verglimmt. */
+    if (feld.folgt && feld.besitzer) {
+      feld.x = feld.besitzer.x;
+      feld.y = feld.besitzer.y;
+      if (feld.besitzer.zustand !== "lebt") continue;
+    }
+
+    /* Die Vorwarnung eines Meteors: sichtbar, aber noch harmlos. */
+    if (feld.warnRest > 0) { feld.warnRest -= dt; continue; }
+    if (feld.rest <= 0) continue;
+
+    /* Der Sichelbogen dreht seine Schneide über die Standzeit. Der
+       Fortschritt kommt aus der **Restzeit** und nicht aus einem
+       eigenen Zähler: Zwei Uhren für dieselbe Bewegung laufen
+       irgendwann auseinander. */
+    if (feld.spanne) {
+      const fortschritt = Math.max(0, Math.min(1, 1 - feld.rest / feld.dauer));
+      const [nx, ny] = drehe(feld.zielNx, feld.zielNy,
+        -feld.spanne / 2 + feld.spanne * fortschritt);
+      feld.nx = nx; feld.ny = ny;
+    }
+
+    feld.taktRest -= dt;
+    if (feld.taktRest > 0) continue;
+    /* Aufaddieren statt zurücksetzen: Bei einem Takt kürzer als ein
+       Simulationsschritt bliebe sonst jeder Rest liegen, und das Feld
+       schlüge langsamer zu, als es soll. */
+    feld.taktRest += Math.max(feld.takt, dt);
+
+    const staerke = staerkeDesFeldes(feld);
+    welt.gitter.umkreis(feld.x, feld.y, feld.radius + 12, (g) => {
+      if (g.tot) return;
+      if (feld.einmal && feld.getroffen.has(g)) return;
+      if (!imKegel(feld.x, feld.y, feld.nx, feld.ny, feld.cosHalb,
+        feld.radius, g.x, g.y, g.radius)) return;
+      if (feld.einmal) feld.getroffen.add(g);
+      schlageZu(welt, feld.besitzer, g, feld.schlag, feld.wirkung, feld.waffe,
+        feld.anteil * staerke);
+    });
+  }
+  welt.felder = welt.felder.filter((f) => f.rest > 0);
 }
 
 /* Eine Salve. **Wie** die Geschosse liegen, entscheidet das Muster der
@@ -131,7 +323,14 @@ export function feuereWaffen(welt, dt) {
    sonst wäre ein Vierfach-Muster schlicht vierfacher Schaden und jede
    andere Waffe unbrauchbar. Die Begründung samt Aufschlag steht bei
    `anteilJeGeschoss()`. */
-function wirfSalve(welt, s, ziel, schlag, v, waffe, reichweite) {
+function wirfSalve(welt, s, ziele, schlag, v, waffe, reichweite) {
+  const ziel = ziele[0];
+  const form = angriffsformVon(v);
+  /* Ein Schwarm sucht **eigene** Ziele — das ist der ganze Unterschied
+     zum Bannstein, der seit jeher drei suchende Steine auf denselben
+     Gegner schickt. Jede andere Form nimmt weiter das nächste Ziel,
+     also genau das, was vorher hier stand. */
+  const schwarm = form === "schwarm";
   const dx = ziel.x - s.x, dy = ziel.y - s.y;
   const d = Math.hypot(dx, dy) || 1;
   const nx = dx / d, ny = dy / d;
@@ -154,20 +353,35 @@ function wirfSalve(welt, s, ziel, schlag, v, waffe, reichweite) {
      `welt.zufall` ist ein Objekt mit `zahl()`, keine Funktion. */
   const richtungen = richtungenDerSalve(nx, ny, anzahl, v.salve, welt.zufall);
 
-  for (const r of richtungen) {
+  richtungen.forEach((r, i) => {
     /* `laengs` zeigt in Flugrichtung, `quer` senkrecht dazu. */
     const startX = s.x + nx * r.laengs - ny * r.quer;
     const startY = s.y + ny * r.laengs + nx * r.quer;
+    const eigenesZiel = schwarm ? schwarmZiel(ziele, i) : ziel;
+    const sucht = v.suchend === true || schwarm;
 
     welt.geschosse.push({
       x: startX, y: startY, vx: r.rx * v.geschosstempo, vy: r.ry * v.geschosstempo,
       schlag, anteil, wirkung: v.wirkung, waffe: waffe.id, radius: 3,
       rest: durchschlaege(s.werte, v), getroffen: new Set(),
       lebenszeit: reichweite / v.geschosstempo + 0.35,
-      suchend: v.suchend === true, ziel: v.suchend ? ziel : null,
+      suchend: sucht, ziel: sucht ? (eigenesZiel ?? ziel) : null,
+      /* Ein Schwarm zieht härter nach als ein einzelner Sucher: Er
+         besteht aus vielen kleinen Geschossen mit kurzer Lebenszeit,
+         und eines, das weich vorbeikurvt, trifft nie. Der Bannstein
+         behält seine weiche Bahn — sie ist sein Bild. */
+      lenkung: schwarm ? (v.schwarm?.lenkung ?? 11) : 6,
+      sucherReichweite: schwarm ? (v.schwarm?.suchweite ?? reichweite) : 0,
+      /* Bremse und Schadensverlust: nur bei `erlahmend`. Steht `bremse`
+         nicht am Geschoss, tut `bremseGeschoss()` gar nichts — jedes
+         bestehende Geschoss fliegt deshalb unverändert weiter. */
+      bremse: form === "erlahmend" ? (v.erlahmt?.bremse ?? 0.85) : 0,
+      tempoAnteil: 1,
+      mindestTempo: v.erlahmt?.mindestTempo ?? 0.22,
+      mindestSchaden: v.erlahmt?.mindestSchaden ?? 0.25,
       tempo: v.geschosstempo, besitzer: s, feindlich: false
     });
-  }
+  });
 }
 
 /* Die `anzahl` nächsten Gegner im Umkreis. Über das Raster gesucht,
@@ -249,14 +463,33 @@ export function bewegeGeschosse(welt, dt) {
     p.lebenszeit -= dt;
     if (p.lebenszeit <= 0) { p.weg = true; continue; }
 
+    /* Ein Sucher, dessen Ziel fällt, sucht sich ein neues — sonst
+       fliegt er geradeaus ins Leere. Bei einem Schwarm aus acht
+       kleinen Geschossen mit kurzer Abklingzeit ist das der Normalfall
+       und nicht die Ausnahme: Die ersten treffen, das Ziel fällt, und
+       alle übrigen wären verschenkt. Nur der Schwarm sucht neu
+       (`sucherReichweite > 0`) — der Bannstein behält sein Ziel, weil
+       drei Steine, die mitten im Flug abbiegen, wie ein Fehler
+       aussehen. */
+    if (p.suchend && p.sucherReichweite > 0 && (!p.ziel || p.ziel.tot)) {
+      p.ziel = neuesSuchziel(welt.gegner, p, p.sucherReichweite);
+    }
+
     /* Suchende Geschosse lenken weich nach — hart nachgezogen sähen
-       sie aus, als klebten sie am Ziel. */
+       sie aus, als klebten sie am Ziel. `lenkung` fehlt an jedem
+       Geschoss, das vor dieser Änderung entstand; die 6 dahinter ist
+       genau der Wert, der vorher fest hier stand. */
     if (p.suchend && p.ziel && !p.ziel.tot) {
       const dx = p.ziel.x - p.x, dy = p.ziel.y - p.y;
       const d = Math.hypot(dx, dy) || 1;
-      p.vx += ((dx / d) * p.tempo - p.vx) * Math.min(1, dt * 6);
-      p.vy += ((dy / d) * p.tempo - p.vy) * Math.min(1, dt * 6);
+      const tempo = p.tempo * (p.tempoAnteil ?? 1);
+      p.vx += ((dx / d) * tempo - p.vx) * Math.min(1, dt * (p.lenkung ?? 6));
+      p.vy += ((dy / d) * tempo - p.vy) * Math.min(1, dt * (p.lenkung ?? 6));
     }
+
+    /* Erlahmen: langsamer werden **und** schwächer. Tut nichts, wenn
+       `bremse` fehlt oder null ist. */
+    bremseGeschoss(p, dt);
 
     p.x += p.vx * dt; p.y += p.vy * dt;
 
@@ -279,8 +512,12 @@ export function bewegeGeschosse(welt, dt) {
       p.getroffen.add(g);
       /* `anteil` verteilt den Schlag auf die Geschosse der Salve. Ohne
          ihn wäre ein Vierfach-Muster vierfacher Schaden — siehe
-         `anteilJeGeschoss()` in `spiel/salven.mjs`. */
-      schlageZu(welt, p.besitzer, g, p.schlag, p.wirkung, p.waffe, p.anteil);
+         `anteilJeGeschoss()` in `spiel/salven.mjs`. `erlahmterAnteil()`
+         kommt dazu: Ein Geschoss, das langsamer geworden ist, trifft
+         auch schwächer. Es liefert 1, solange nichts bremst, und
+         lässt jede bestehende Waffe damit unberührt. */
+      schlageZu(welt, p.besitzer, g, p.schlag, p.wirkung, p.waffe,
+        p.anteil * erlahmterAnteil(p));
       if (--p.rest <= 0) p.weg = true;
     });
   }

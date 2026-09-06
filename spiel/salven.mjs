@@ -50,9 +50,15 @@
    `spiel/katalog/waffen.mjs` (jede Fernwaffe trägt ihr `salve`),
    `werkzeuge/pruefe-angriffe.mjs` (misst die Muster). */
 
-/* Die fünf Formen. Mehr braucht es nicht — jede ist beim Spielen an
-   einem Blick zu erkennen, und das ist der Zweck. */
-export const FORMEN = ["einzeln", "faecher", "folge", "parallel", "streu", "ring"];
+/* Die Formen. Jede ist beim Spielen an einem Blick zu erkennen, und
+   das ist der Zweck — nicht die Zahl.
+
+   ⚠️ Hier stand „Die fünf Formen", während sechs dastanden, und mit
+   `schwarm` sind es sieben. Eine Zahl in Prosa neben einer Liste ist
+   ein Fehler in Wartestellung (`docs/FEHLERBUCH.md` E2): Sie geht gut,
+   bis jemand die Liste ändert. Deshalb steht hier jetzt keine mehr —
+   wer zählen will, zählt `FORMEN.length`. */
+export const FORMEN = ["einzeln", "faecher", "folge", "parallel", "streu", "ring", "schwarm"];
 
 /* Der Fächerwinkel, wenn eine Waffe keinen eigenen nennt. Übernommen
    aus dem alten `FAECHER` in `kampf.mjs`, damit `zusatzgeschosse` sich
@@ -102,7 +108,18 @@ export const AUFSCHLAG_JE_FORM = {
   parallel: 0,
   faecher: 0.2,
   ring: 0.2,
-  streu: 0.3
+  streu: 0.3,
+  /* `schwarm` steht bei 0,2 wie der Faecher — die Geschosse verlassen
+     die Hand auf einem Kreis und laufen auseinander, verfehlen also
+     wie ein Faecher. Die **eine** Waffe, die die Form heute traegt,
+     bekommt den Aufschlag trotzdem nicht: Sie ist `suchend`, und
+     `anteilJeGeschoss()` setzt den Aufschlag fuer suchende Waffen auf
+     null (siehe oben, der Bannstein-Fall). Der Eintrag steht hier
+     fuer den Tag, an dem jemand einen Schwarm baut, der **nicht**
+     sucht — dann waere ein fehlender Eintrag ein stiller Rueckfall auf
+     `SALVEN_AUFSCHLAG`, also 0, und der Schwarm waere schwaecher als
+     ein Einzelschuss, ohne dass es jemand entschieden haette. */
+  schwarm: 0.2
 };
 
 /* Der Wert für Formen, die oben nicht stehen. Bewusst der kleinste:
@@ -180,6 +197,26 @@ export function richtungenDerSalve(nx, ny, anzahl, salve, zufall) {
       const w = (zufall.zahl() * 2 - 1) * (salve?.streuung ?? 0.34);
       const [rx, ry] = drehe(nx, ny, w);
       raus.push({ rx, ry, laengs: 0, quer: 0 });
+    } else if (form === "schwarm") {
+      /* Ein Schwarm verlaesst die Hand als **Wolke**: Alle Geschosse
+         fliegen in dieselbe Richtung, aber sie starten auf einem
+         kleinen Kreis um den Werfer — die einen weiter vorn, die
+         anderen weiter aussen.
+
+         Damit ist es die einzige Form, die `laengs` **und** `quer`
+         zugleich benutzt. `folge` versetzt nur nach hinten, `parallel`
+         nur zur Seite, `faecher` und `ring` gar nicht; ein Schwarm
+         sieht deshalb nach keiner der fuenf aus, obwohl er keine
+         einzige neue Zutat braucht.
+
+         Der Kreis ist kein Zufall und darf keiner sein: Zufaellige
+         Startpunkte kosteten je Geschoss eine Ziehung aus dem
+         gesaeten Strom und verschoeben damit jeden spaeteren
+         Wellenplan (siehe die Warnung im Dateikopf). Gleichmaessig
+         verteilt sieht ohnehin mehr nach Schwarm aus als geklumpt. */
+      const w = (i / anzahl) * Math.PI * 2;
+      const r = salve?.radius ?? 6;
+      raus.push({ rx: nx, ry: ny, laengs: Math.cos(w) * r, quer: Math.sin(w) * r });
     } else if (form === "ring") {
       /* Rundum, gleichmäßig. Der Bannstein sucht ohnehin sein Ziel —
          ein Ring sieht aus wie ein Schwarm und trifft trotzdem. */

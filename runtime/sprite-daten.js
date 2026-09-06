@@ -536,6 +536,35 @@ export const GESCHOSSE = {
       1: "seucheTief", 2: "seuche", 3: "seucheMitte", 4: "seucheHell", 5: "seucheGlanz"
     },
     bild: [".343.", "34543", "34543", ".343.", "..2.."]
+  },
+
+  /* ── Die zwei neuen Fernwaffen (06.09.2026) ───────────────────────
+
+     Beide muessen sich von den sechs oben unterscheiden, und zwar in
+     der **Silhouette** und nicht nur in der Farbe — genau der Fall,
+     der `werkzeuge/pruefe-angriffe.mjs` ueberhaupt erst ausgeloest hat
+     (drei Geschosse waren dasselbe Kreuz aus fuenf Punkten). */
+
+  /* Ein Irrlicht: Kopf mit Schweif nach hinten. Der Schweif ist der
+     Unterschied zur Frostrune, die dasselbe Kreuz **ohne** ihn ist —
+     und er zeigt beim Drehen die Flugrichtung an, was bei einem
+     Schwarm aus vier Stueck der Unterschied zwischen „Wolke" und
+     „Klumpen" ist. */
+  irrlichter: {
+    zeichen: {
+      1: "bannTief", 2: "bann", 3: "bannMitte", 4: "bannHell", 5: "bannGlanz"
+    },
+    bild: ["..5..", ".454.", "34543", "..2..", "..1.."]
+  },
+
+  /* Die Bleikugel: voll, schwer, ohne Spitze. Sie ist das dichteste
+     Geschoss im Katalog (21 von 25 Punkten gesetzt) — das passt zu
+     einer Waffe, die nah zerschlaegt und weit weg nur noch faellt. */
+  bleischleuder: {
+    zeichen: {
+      1: "eisenDunkel", 2: "eisenTief", 3: "eisen", 4: "eisenMitte", 5: "eisenHell"
+    },
+    bild: [".343.", "34543", "35553", "34443", ".232."]
   }
 };
 

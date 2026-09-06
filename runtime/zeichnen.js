@@ -32,6 +32,8 @@ import { FARBEN, JAEGER_FARBEN } from "./palette.js";
 import { richtungsIndex } from "./sprites.js";
 import { macheZufall } from "../spiel/zufall.mjs";
 import { bekannteZeichen, ZEICHEN_BREITE, ZEICHEN_HOEHE, VORSCHUB } from "./schrift.js";
+import { macheSchwarm } from "./partikel.js";
+import { macheEffekte, zeichneFelder, zeichneBlitze, lichtQuellen } from "./effekte.js";
 import { ART_NACH_ID, STANDARD_ART } from "../spiel/schadensarten.mjs";
 
 export const BREITE = 480;
@@ -149,6 +151,9 @@ const NACHT = [86, 78, 112];
 function zeichneLicht(licht, welt, kamera, zeit) {
   const d = licht.bild.data;
   const fackeln = welt.fackeln;
+  /* Einmal je Bild gesammelt, nicht je Zelle — sonst liefe die Suche
+     ueber `welt.felder` 8.160-mal. */
+  const feldLichter = lichtQuellen(welt);
   for (let cy = 0; cy < LICHT_H; cy++) {
     const wy = kamera.y + cy * LICHT_ZELLE + LICHT_ZELLE / 2;
     for (let cx = 0; cx < LICHT_B; cx++) {
@@ -180,6 +185,22 @@ function zeichneLicht(licht, welt, kamera, zeit) {
         const q = dx * dx + dy * dy;
         if (q > 76 * 76) continue;
         hell += (1 - Math.sqrt(q) / 76) * 0.6;
+      }
+      /* Ein Flammenkegel, der eine dunkle Ecke nicht erhellt, ist kein
+         Feuer, sondern ein Aufkleber. Deshalb leuchten die stehenden
+         Angriffe mit (`lichtQuellen()` in `runtime/effekte.js`).
+
+         Bewusst **ohne** Flackern und Wabern: Die beiden kosten je
+         Quelle und Zelle vier trigonometrische Aufrufe, und diese
+         Schleife laeuft ueber 8.160 Zellen je Bild. Eine Fackel steht
+         eine ganze Welle lang und darf das kosten; ein Kegel steht
+         1,8 Sekunden und flackert ohnehin schon in seiner eigenen
+         Zeichnung. */
+      for (const q of feldLichter) {
+        const dx = wx - q.x, dy = wy - q.y;
+        const qq = dx * dx + dy * dy;
+        if (qq > q.reichweite * q.reichweite) continue;
+        hell += (1 - Math.sqrt(qq) / q.reichweite) * q.staerke;
       }
 
       hell = Math.min(1, hell);
@@ -485,16 +506,27 @@ export function macheZeichner(leinwand) {
   const c = leinwand.getContext("2d", { alpha: false });
   c.imageSmoothingEnabled = false;
   const licht = baueLichtLeinwand();
-  return { c, licht };
+  /* Der Teilchenschwarm gehoert dem Zeichner und nicht der Welt — er
+     entscheidet nichts und muss deshalb nicht ueber die Leitung
+     stimmen. Die Begruendung steht ausfuehrlich in
+     `runtime/partikel.js`. */
+  const schwarm = macheSchwarm();
+  return { c, licht, schwarm, effekte: macheEffekte(schwarm) };
 }
 
 function male(c, bild, x, y) {
   c.drawImage(bild.l, Math.round(x) - bild.mx, Math.round(y) - bild.my);
 }
 
-export function zeichne(zeichner, welt, boden, sprites, zeit) {
+export function zeichne(zeichner, welt, boden, sprites, zeit, dt = 0) {
   const { c, licht } = zeichner;
   const kamera = kameraFuer(welt);
+
+  /* Erst fuettern, dann malen: Ein Treffer, der in diesem Bild
+     entstanden ist, soll in diesem Bild auch Funken werfen. Umgekehrt
+     haette jedes Teilchen ein Bild Verspaetung — bei einer Entladung
+     von 0,26 s waeren das 6 % ihrer Lebensdauer. */
+  zeichner.effekte?.fuettere(welt, dt);
 
   c.fillStyle = FARBEN.aussen0;
   c.fillRect(0, 0, BREITE, HOEHE);
@@ -634,9 +666,19 @@ export function zeichne(zeichner, welt, boden, sprites, zeit) {
     }
   }
 
+  /* Die stehenden Angriffe: Kegel, Aura, Sichelbogen, Meteore. Sie
+     liegen **in** der Szene, unter dem Licht — es sind Dinge in der
+     Welt und keine Auskunft ueber sie. Damit sie im Dunkeln nicht
+     verschwinden, leuchten sie selbst (siehe `zeichneLicht`). */
+  zeichneFelder(c, welt, zeit);
+
   /* Staub in der Szene — er wird vom Licht gedämpft, das Trefferzeichen
      weiter unten nicht. Warum, steht im Abschnitt „Treffer". */
   zeichneStaub(c, welt);
+  /* Und die Teilchen aus `runtime/partikel.js`, aus demselben Grund an
+     derselben Stelle: Glut, die im Schatten weiterglueht, waere kein
+     Feuer. */
+  zeichner.schwarm?.zeichne(c);
 
   c.restore();
 
@@ -655,6 +697,17 @@ export function zeichne(zeichner, welt, boden, sprites, zeit) {
      zu lesen, und das ist die Frage, um die es hier geht. */
   zeichneTrefferZeichen(c, welt, sprites, kamera);
   zeichneZahlen(c, welt, kamera);
+
+  /* Die Blitze liegen **ueber** dem Licht, anders als die Felder. Ein
+     Kettenblitz ist ein Augenblick und keine Sache in der Szene: Er
+     ist 0,16 s zu sehen und beantwortet die Frage „was hat gerade
+     getroffen und in welcher Reihenfolge". Am dunklen Rand des
+     Bannkreises waere er unter dem Licht nicht zu lesen — dieselbe
+     Entscheidung wie bei den Trefferzeichen darueber. */
+  c.save();
+  c.translate(-kamera.x, -kamera.y);
+  zeichneBlitze(c, welt);
+  c.restore();
 
   return kamera;
 }

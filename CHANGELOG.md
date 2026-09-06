@@ -3,6 +3,189 @@
 Oben das Neueste. Jeder Eintrag sagt **was**, **warum** und **womit
 gemessen** — nicht nur, dass etwas anders ist.
 
+## 0.9.7 — Angriffe, die eine Weile dastehen (06.09.2026)
+
+Janniks Ansage: *„die angriffe dürfen nicht blos ein treffer effekt
+sein."* Dazu sieben namentlich: *„flammenkegel der langsam ausglüht mit
+hoher abklingzeit"* · *„zielsuchende geschosse, wenig schaden, kurze
+abklingzeit"* · *„dauerhafte schadensaura"* · *„normales projektil das
+an geschwindigkeit und schaden verliert"* · *„kettenblitz"* ·
+*„meteoritenschauer"* · *„sichel angriff mittelgross in richtung der
+gegner aber nur als nahkampf (richtige hitbox)"*. Und:
+*„schöne partikeleffekte"* sowie *„ein stats übersicht beim auf leveln.
+und beim pausieren. wenn man mit maus oder finger lvl up werte anwählt
+oder drüberhält oder auch karte. sieht man bei den allgemeinen werten
+schon eine vorschau veränderung!"*
+
+### Der Befund, bevor etwas gebaut war
+
+Der Regelkern kannte genau **zwei** Angriffsformen, und beide sind
+Augenblicke:
+
+* `nahkampf` schlägt sofort **alles** in Reichweite — rundum, ohne
+  Richtung. Der Schlagbogen im Bild zeigte seit jeher eine
+  Blickrichtung, die die Regel gar nicht kannte: Wer nach oben schaute,
+  traf trotzdem den im Rücken. Genau das ist Janniks *„richtige
+  hitbox"*.
+* `fern` wirft ein Geschoss, das fliegt und beim Einschlag einmal
+  zuschlägt.
+
+Ein Angriff, der eine Sekunde lang **dasteht**, war nicht ausdrückbar.
+Nicht schwer zu bauen — **nicht ausdrückbar**. Das ist der Unterschied
+zwischen einem Treffereffekt und einem Angriff.
+
+Dazu: Ein Spieler hat 55 Werte, und er bekam **keinen einzigen** davon
+zu sehen. Was er erfuhr, stand auf den Karten („+12 RÜSTUNG"). Wovon
+auf wie viel, sagte niemand — und ob 12 Rüstung viel sind, hängt daran,
+ob man 0 oder 60 hat. Eine Pause gab es gar nicht.
+
+| | vorher | jetzt |
+| --- | --- | --- |
+| Angriffsformen im Regelkern | **2** | 9 |
+| Formen, die eine Weile in der Welt stehen | **0** | 4 |
+| Waffen im Katalog | 12 | **19** |
+| Waffen mit gerichteter Trefferfläche | **0** | 1 |
+| Salvenmuster | 6 | 7 |
+| Geschoss-Sprites | 6 | 8 |
+| Teilchen mit eigener Bahn | **0** | bis zu 640, 7 Sorten |
+| Lebensdauer eines Teilchens | 0,18 s (Formel, kein Zustand) | **0,26 bis 1,15 s** |
+| Werte, die der Spieler zu sehen bekommt | **0** | 13 immer, dazu jeder, der nicht null ist |
+| Bildschirme mit Werteübersicht | 0 | **2** (Aufstieg und Pause) |
+| Prüfungen in der Kette | 24 | **27** |
+
+### Die eine neue Sache: ein Feld
+
+Ein **Feld** (`welt.felder`) ist eine Fläche, die eine Weile in der Welt
+steht und in ihrem eigenen Takt zuschlägt. Vier der sieben Formen sind
+Felder: Kegel, Aura, Sichelbogen, Meteoreinschlag. Der Unterschied
+zwischen ihnen sind ausschließlich **Zahlen am Feld** — Öffnungswinkel,
+Standzeit, Takt, ob es dem Besitzer folgt, ob jeder Gegner nur einmal
+drankommt —, keine Verzweigungen. Eine achte Form ist damit ein Eintrag
+in `spiel/angriffsformen.mjs` und keine achte Verzweigung mitten in der
+Kampfschleife.
+
+### Umbau und Inhalt sind getrennt
+
+`angriffsformVon()` gibt einer Waffe ohne eigene `angriffsform` genau
+das zurück, was `art` schon immer bedeutet hat. Alle **zwölf** alten
+Waffen fallen darauf zurück und verhalten sich unverändert; die beiden
+ersten Zweige in `loeseAus()` sind wörtlich das, was vorher in der
+Schleife stand. `werkzeuge/pruefe-angriffsformen.mjs` rechnet beides
+nach — Eintrag für Eintrag.
+
+Gemessen: `node werkzeuge/pruefe-balance.mjs` bleibt mit den sieben
+neuen Waffen im Angebot grün (27 Prüfungen, 0 Fehler).
+
+### Was die neuen Prüfungen beim ersten Lauf gefunden haben
+
+Fünf Befunde, davon **zwei im Code** und drei am Prüfaufbau selbst:
+
+1. **Die gerichteten Formen zielten nicht auf den nächsten Gegner.**
+   `zieleInReichweite()` sortiert nur, *wenn mehr gefunden wurden als
+   gefragt* — für `schlag` und `geschoss` ist das richtig, für Kegel,
+   Bogen, Meteore und Kette falsch. Gemessen: Mit einem Gegner 25
+   Bildpunkte vor und einem 40 dahinter schwang die Mondsichel **nach
+   hinten**. Behoben mit `naechstesVon()`; beim Spielen hätte man es
+   für einen Zufall gehalten, nicht für einen Fehler.
+2. **Der Meteor kannte seine eigene Warnzeit nicht.** `warnRest` läuft
+   gegen null, aber ohne den Nenner konnte der Zeichner den
+   zusammenlaufenden Ring nicht malen — der fünfte Meteor wartet länger
+   als der erste. `warnDauer` nachgetragen.
+3. Die Prüfung hielt ihre **eigene Begründung** für den Fehler: Der
+   Kommentar in `angriffsformen.mjs` erklärt, warum dort kein
+   `Math.pow` steht, und schreibt das Wort dabei hin
+   (`docs/FEHLERBUCH.md` B4). Jetzt wird das Zitierte vorher
+   herausgenommen — mit Gegenprobe, dass die Ersetzung nicht alles
+   wegputzt.
+4. Sechs Sekunden Messzeit waren zu kurz: Der Spieler steht in der
+   Mitte, die Gegner laufen vom Rand herein, und die Prüflinge feuerten
+   schlicht nie. Die Prüfung meldete das als Befund über den Code
+   (`docs/FEHLERBUCH.md` B5). Jetzt sechzehn Sekunden — gemessen, nicht
+   geraten.
+5. Zwei von Hand gebaute Probengegner ohne `tempo` machten in
+   `bewegeGegner()` `NaN` aus ihren Koordinaten. Danach findet **kein**
+   Abstandsvergleich mehr etwas, weil jeder Vergleich mit `NaN` falsch
+   ist — keine Meldung, kein Absturz, null Treffer. Gegner werden jetzt
+   genau wie in `setzeGegner()` gebaut.
+
+### Die Teilchen wohnen im Zeichner, würfeln aber nicht
+
+`zeichneStaub()` malt zu jedem Treffer einen Kranz aus einer **Formel**
+über den Ort: keine Lebensdauer über den Funken hinaus, keine
+Schwerkraft, keine Reibung — und zwei Treffer an derselben Stelle
+werfen denselben Staub, weil es keinen Zustand gibt, in dem etwas
+anders sein könnte. Für einen Einschlag ist das richtig; für eine
+Flamme, die aufsteigt, oder Glut, die zu Boden fällt, zu wenig.
+
+Die neuen Teilchen liegen in `runtime/partikel.js` und nicht im
+Regelkern: Sie entscheiden nichts und müssen deshalb nicht über die
+Leitung stimmen. Sie würfeln trotzdem nicht — die Streuung kommt aus
+einem **Zähler durch eine Hashfunktion**, wie `streu()` sie aus dem Ort
+zieht. Die Plätze werden wiederverwendet (`rest <= 0` heißt frei): Bei
+640 Teilchen und 60 Bildern je Sekunde entstünden sonst 38.400
+kurzlebige Objekte je Sekunde, und der Aufräumer des Browsers machte
+daraus ein regelmäßiges Stocken.
+
+Was **unter** dem Licht liegt und was darüber, ist bewusst entschieden:
+Kegel, Aura, Bogen, Einschläge und alle Teilchen sind Dinge in der
+Szene; Kettenblitze sind wie Trefferzeichen und Schadenszahlen
+**Auskunft** und liegen darüber. Ein Blitz, den man am dunklen Rand des
+Bannkreises nicht lesen kann, beantwortet die Frage nicht, für die er
+da ist. Damit die Felder im Dunkeln trotzdem etwas sind, leuchten sie
+selbst (`lichtQuellen()`) — gedeckelt auf sechs Quellen, weil die
+Lichtrechnung über 8.160 Zellen je Bild läuft.
+
+### Die Vorschau geht beide Wege
+
+`vorschauWerte()` tut auf einer **Kopie** genau das, was `nimmKarte()`
+an den Werten tut. Dass beides dasselbe ergibt, ist keine Behauptung:
+`werkzeuge/pruefe-werteliste.mjs` nimmt **jede** ziehbare Karte einmal
+in der Vorschau und einmal wirklich und vergleicht alle 55 Werte.
+
+Warum nicht einfach `nimmKarte()` „zum Ausrechnen" rufen: Die Funktion
+zieht eine neue Hand aus dem gesäten Strom, sobald noch ein Aufstieg
+offen ist. Jede Mausbewegung über eine Karte hätte damit im Netz-Koop
+zwei Rechner auseinanderlaufen lassen — bemerkbar erst Minuten später,
+wenn die Gegner woanders stehen. Auch das wird nachgemessen: Die
+Vorschau zieht **null** Mal, `nimmKarte()` sehr wohl.
+
+Die Übersicht zeigt **abgeleitete** Zahlen, wo es welche gibt. Bei
+Rüstung ist das der ganze Punkt: 30 Rüstung nehmen die Hälfte des
+Schadens, weitere 30 lange nicht noch einmal so viel. Gemessen zeigt
+dieselbe Karte („+30 Rüstung") einer nackten Figur +50 Prozentpunkte
+Schutz und einer mit 60 Rüstung deutlich weniger — das steht so
+da, statt dass beide Male „+30" dastünde.
+
+### Die Pause ist örtlich und keine Weltphase
+
+Eine sechste `welt.phase` wäre der naheliegende Weg und der falsche:
+Wer allein auf Pause drückt, hielte die Runde für alle an. Der Schalter
+sitzt deshalb in `runtime/start.js` und hält die Welt **nur an, wenn
+niemand mitspielt**; im Netzspiel legt sich die Übersicht darüber und
+der Bildschirm sagt ausdrücklich, dass die Welt weiterläuft. Erreichbar
+über `Escape`, `P` oder eine Fläche oben rechts — die einzige Ecke, die
+auf dem Telefon niemandem etwas wegnimmt (links der Daumen-Stick,
+rechts unten der Ausweichknopf, dazwischen die Kartenhand).
+
+### Was ausdrücklich **nicht** getan wurde
+
+**Sichel und Sense behalten ihren Rundumschlag.** Beide sind
+Startwaffen und in fast jedem Lauf dabei; sie auf die gerichtete
+Trefferfläche umzustellen, verschiebt jede Balancemessung des Projekts
+auf einmal. Die neue Form steckt deshalb in einer **neuen** Waffe
+(Mondsichel), und die Umstellung der beiden alten ist eine eigene
+Entscheidung — sie liegt beim Auftraggeber.
+
+### Nachrechnen
+
+```bash
+node werkzeuge/pruefe-angriffsformen.mjs   # 159 Prüfungen
+node werkzeuge/pruefe-partikel.mjs         # 100 Prüfungen
+node werkzeuge/pruefe-werteliste.mjs       #  45 Prüfungen
+node werkzeuge/pruefe-balance.mjs          # dass es weiter spielbar ist
+node werkzeuge/pruefe-alles.mjs            # die ganze Kette
+```
+
 ## 0.9.6 — Salven und Splitter (06.09.2026)
 
 Janniks Ansage: *„benutzt bitte das design modul von claude um den

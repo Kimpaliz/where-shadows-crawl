@@ -36,7 +36,7 @@ import { bewegeSpieler, bewegeGegner } from "./bewegung.mjs";
 import { ruesteAusweichen } from "./ausweichen.mjs";
 import {
   feuereWaffen, feuereGegner, bewegeGeschosse, wirkeZeitschaden,
-  beruehrung, heile, regeneriere
+  wirkeFelder, BLITZ_LEBEN, beruehrung, heile, regeneriere
 } from "./kampf.mjs";
 import { bewegeBeute, raeumeBeute } from "./beute.mjs";
 import { pruefeAufstieg, alleGewaehlt } from "./stufen.mjs";
@@ -97,6 +97,17 @@ export function macheWelt({ spielerzahl = 1, saat = 1, modusId = STANDARD_MODUS 
     arena: { radius: arenaRadius(spielerzahl) },
     spieler: Array.from({ length: spielerzahl }, (_, i) => macheSpieler(i, spielerzahl)),
     gegner: [], geschosse: [], beute: [], funken: [], zahlen: [],
+    /* Angriffe, die eine Weile **dastehen** statt sich sofort zu
+       entladen: Flammenkegel, Schadensaura, Sichelbogen,
+       Meteoreinschlag. Was sie sind und warum es sie gibt, steht in
+       `spiel/angriffsformen.mjs`; abgearbeitet werden sie in
+       `wirkeFelder()` (`spiel/kampf.mjs`). */
+    felder: [],
+    /* Die Pfade der Kettenblitze — reine Auskunft fuer den Zeichner.
+       Der Schaden ist im Augenblick des Einschlags schon gefallen; was
+       hier liegt, ist nur noch das Bild dazu, damit man den Blitz
+       ueberhaupt sieht (`BLITZ_LEBEN`). */
+    blitze: [],
     /* Truhen, die gerade am Boden liegen (noch nicht aufgehoben). Was
        aufgehoben, aber noch nicht geöffnet ist, steht auf dem Spieler
        selbst (`spieler.truhen`) — erst am Wellenende wird daraus
@@ -124,6 +135,12 @@ export function starteWelle(welt, welle) {
   welt.truhen = [];
   welt.funken = [];
   welt.zahlen = [];
+  /* Auch die stehenden Angriffe: Ein Flammenkegel, der die Welle
+     ueberlebt, brennt in der naechsten weiter, ohne dass ihn jemand
+     geworfen hat — und eine Aura mit totem Besitzer wuerde ihn ueber
+     `feld.besitzer` am Leben halten, obwohl er laengst ersetzt ist. */
+  welt.felder = [];
+  welt.blitze = [];
   welt.phase = "welle";
   for (const s of welt.spieler) {
     s.bereit = false;
@@ -182,6 +199,11 @@ function altereListen(welt, dt) {
   welt.funken = welt.funken.filter((f) => f.zeit > 0);
   for (const z of welt.zahlen) { z.zeit -= dt; z.hoch += dt * 16; }
   welt.zahlen = welt.zahlen.filter((z) => z.zeit > 0);
+  /* Die Blitzpfade. Sie altern hier und nicht in `wirkeFelder()`,
+     weil sie keine Wirkung haben — sie sind Bild wie `funken` und
+     `zahlen` und gehoeren zu denen. */
+  for (const b of welt.blitze) b.rest -= dt;
+  welt.blitze = welt.blitze.filter((b) => b.rest > 0);
   for (const s of welt.spieler) {
     if (s.trefferZeit > 0) s.trefferZeit -= dt;
     if (s.schlagZeit > 0) s.schlagZeit -= dt;
@@ -226,6 +248,13 @@ export function schritt(welt, eingaben = []) {
 
   bewegeGegner(welt, dt);
   feuereWaffen(welt, dt);
+  /* Direkt nach dem Feuern: Ein Kegel, der in diesem Schritt entsteht,
+     soll in diesem Schritt zum ersten Mal zuschlagen. Stuende der
+     Aufruf davor, haette jeder stehende Angriff einen Schritt
+     Verspaetung — bei einem Sichelbogen von 0,2 s waeren das 8 % der
+     Schwungdauer, in denen die Schneide unsichtbar durch den Gegner
+     faehrt. */
+  wirkeFelder(welt, dt);
   feuereGegner(welt, dt);
   bewegeGeschosse(welt, dt);
   wirkeZeitschaden(welt, dt);

@@ -371,10 +371,39 @@ function macheAufnahme() {
   const hand = macheKartenhand(leinwand);
   globalThis.addEventListener = altesAdd;
 
-  melde(horcher.length === 1 && horcher[0].art === "pointerdown",
-    "die Hand horcht auf genau einen Zeiger", horcher.map((h) => h.art).join(","));
+  /* ⚠️ **Bis zum 06.09.2026 stand hier `horcher.length === 1`.**
 
-  const zeigerDown = horcher[0].fn;
+     Das war richtig, solange die Hand nur einen Tipp kannte. Seit der
+     Werteuebersicht horcht sie zusaetzlich auf `pointermove`,
+     `pointerleave` und `blur` — fuer Janniks „oder drueberhaelt".
+
+     Die Zusicherung wird deshalb **nicht abgeschwaecht, sondern
+     genauer**: Die Liste muss **genau** diese vier sein. Ein fuenfter
+     Horcher, der sich einschleicht, faellt weiterhin auf. Und die
+     Sache, um die es der alten Zeile wirklich ging — dass die Hand
+     keine Ereignisse frisst, die ihr nicht gehoeren —, wird jetzt
+     direkt gemessen: Ein `pointermove` darf **nie** anhalten oder
+     abwehren, sonst bliebe auf dem Telefon der Daumen-Stick mitten im
+     Zug haengen. Genau das stand vorher nirgends. */
+  const arten = horcher.map((h) => h.art).sort().join(",");
+  melde(arten === "blur,pointerdown,pointerleave,pointermove",
+    "die Hand horcht auf genau die vier Zeigerereignisse", arten);
+
+  const nimm = (art) => horcher.find((h) => h.art === art)?.fn;
+  const zeigerDown = nimm("pointerdown");
+  const zeigerMove = nimm("pointermove");
+
+  {
+    /* Eine Zeigerbewegung darf nichts anhalten und nichts abwehren. */
+    let gestoert = 0;
+    zeigerMove?.({
+      clientX: 10, clientY: 10, pointerType: "mouse", button: 0,
+      stopPropagation() { gestoert++; }, preventDefault() { gestoert++; }
+    });
+    melde(gestoert === 0,
+      "eine Zeigerbewegung faengt nichts ab — sonst haengt der Daumen-Stick",
+      `${gestoert} Eingriffe`);
+  }
   let angehalten = 0;
   const tippe = (x, y) => {
     angehalten = 0;

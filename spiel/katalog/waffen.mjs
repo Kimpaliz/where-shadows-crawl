@@ -8,7 +8,19 @@
 
    ── Die Felder ─────────────────────────────────────────────────────
 
-   `art`          `nahkampf` schlägt sofort, `fern` wirft ein Geschoss
+   `art`          ob die Waffe **etwas fliegen lässt**: `fern` wirft ein
+                  Geschoss, `nahkampf` nicht. Achtung, der Name ist
+                  älter als die Sache: Ein Kettenblitz und ein
+                  Meteoritenschauer reichen weit und tragen trotzdem
+                  `nahkampf`, weil kein Geschoss durch die Welt fliegt.
+                  An `art` hängen zwei Prüfungen — eine Fernwaffe
+                  braucht `geschosstempo` und ein Salvenmuster, eine
+                  Nahkampfwaffe darf keines haben
+                  (`werkzeuge/pruefe-angriffe.mjs`).
+   `angriffsform` **wie** sie zuschlägt, aus `spiel/angriffsformen.mjs`.
+                  Fehlt sie, gilt der Bestand: `schlag` bzw. `geschoss`.
+                  Das ist der Grund, warum keine der zwölf alten Waffen
+                  eine Zeile brauchte, als es die Formen gab.
    `reichweite`   in Bildpunkten; darüber hinaus sucht sie kein Ziel
    `abklingzeit`  Sekunden zwischen zwei Schlägen, vor der Hast
    `schaden`      Grundschaden auf Stufe 1
@@ -39,9 +51,28 @@
    `lebensraub`   heilt den Träger je Treffer
    `wucht`        stößt das Ziel zurück, in Bildpunkten
 
+   ── Die Angriffsformen und ihre eigenen Felder ─────────────────────
+
+   Jede Form bringt einen eigenen Unterblock mit; er heißt wie die Form
+   und steht nur bei den Waffen, die sie benutzen. Was darin steht und
+   welche Vorgabe gilt, wenn ein Feld fehlt, steht bei der jeweiligen
+   `baue…()` in `spiel/angriffsformen.mjs` — hier stünde es zum zweiten
+   Mal und liefe irgendwann auseinander.
+
+   | Form | Block | was sie ist |
+   | --- | --- | --- |
+   | `kegel` | `kegel` | ein Flammenkegel, der steht und ausglüht |
+   | `schwarm` | `schwarm` | viele kleine Sucher mit **eigenen** Zielen |
+   | `aura` | `aura` | ein Ring, der mitläuft und dauernd wirkt |
+   | `erlahmend` | `erlahmt` | ein Geschoss, das langsamer und schwächer wird |
+   | `kette` | `kette` | ein Blitz, der von Ziel zu Ziel springt |
+   | `meteore` | `meteore` | Einschläge mit Vorwarnung |
+   | `bogen` | `bogen` | ein Schwung mit echter Trefferfläche |
+
    ── Arbeitet zusammen mit ───────────────────────────────────────────
 
-   `spiel/kampf.mjs` (führt sie aus), `spiel/laden.mjs` (bietet sie an),
+   `spiel/kampf.mjs` (führt sie aus), `spiel/angriffsformen.mjs` (die
+   Formen), `spiel/laden.mjs` (bietet sie an),
    `spiel/werte.mjs` (Stufe und Gruppenbonus). Importiert selbst
    nichts — ein Katalog hängt an niemandem. */
 
@@ -166,6 +197,128 @@ export const WAFFEN = [
        Ziel zurück, und der Umweg ist genau das, was man sieht. */
     salve: { form: "ring", geschosse: 3 },
     text: "Drei Steine, und jeder findet sein Ziel allein."
+  },
+
+  /* ── Janniks sieben Angriffe (06.09.2026) ─────────────────────────
+
+     *„die angriffe dürfen nicht blos ein treffer effekt sein."* Jede
+     der sieben trägt eine `angriffsform`, und keine von ihnen entlädt
+     sich im Augenblick des Auslösens — sie stehen, wandern, springen
+     oder fallen. Die Zahlen sind so gewählt, dass ihr Schaden über die
+     Zeit ungefähr im Feld der zwölf bestehenden Waffen liegt
+     (11 bis 17 je Sekunde); nachgemessen wird das nicht hier, sondern
+     über ganze Läufe in `werkzeuge/pruefe-balance.mjs`. */
+  {
+    id: "flammenatem", name: "Flammenatem", merkmale: ["Feuer"], schadensart: "feuer",
+    art: "nahkampf", reichweite: 62, abklingzeit: 2.6,
+    schaden: 9, mitschaden: 0.6, ziele: 3, wirkung: { brand: 6 },
+    preis: 38,
+    angriffsform: "kegel",
+    /* „hohe abklingzeit" ist Janniks Wort und hier die eigentliche
+       Entscheidung: 2,6 s ist die längste im Katalog. Dafür steht der
+       Kegel 1,8 s lang da und schlägt achtmal zu — wer ihn wirft, wirft
+       ihn dorthin, wo gleich jemand sein wird, nicht dorthin, wo gerade
+       jemand ist. `restStaerke: 0.28` ist das Ausglühen: Der letzte
+       Takt trägt gut ein Viertel des ersten. */
+    kegel: { halbWinkel: 0.6, dauer: 1.8, takt: 0.22, restStaerke: 0.28, gesamt: 2.4 },
+    text: "Ein langer Atemzug Feuer. Er bleibt liegen und glüht aus."
+  },
+  {
+    id: "irrlichter", name: "Irrlichter", merkmale: ["Bann"], schadensart: "fluch",
+    art: "fern", reichweite: 100, abklingzeit: 0.38,
+    schaden: 5, mitschaden: 0.35, ziele: 4, wirkung: {},
+    preis: 30, geschosstempo: 120, suchend: true,
+    angriffsform: "schwarm",
+    /* Vier Lichter, die als Wolke starten und sich dann **verteilen**:
+       `schwarmZiel()` gibt jedem ein eigenes Ziel. Genau das trennt sie
+       vom Bannstein, der seine drei suchenden Steine auf denselben
+       Gegner schickt. „wenig schaden, kurze abklingzeit" wörtlich:
+       5 Grundschaden ist der zweitniedrigste Wert im Katalog, 0,38 s
+       die kürzeste Abklingzeit. */
+    salve: { form: "schwarm", geschosse: 4, radius: 6 },
+    schwarm: { lenkung: 12, suchweite: 110 },
+    text: "Vier kalte Lichter. Jedes sucht sich seinen eigenen Toten."
+  },
+  {
+    id: "moderkranz", name: "Moderkranz", merkmale: ["Seuche"], schadensart: "fluch",
+    art: "nahkampf", reichweite: 40, abklingzeit: 0.5,
+    schaden: 3, mitschaden: 0.25, ziele: 8, wirkung: {},
+    preis: 40,
+    angriffsform: "aura",
+    /* Die einzige Waffe, die **auch ohne Ziel** auslöst
+       (`spiel/kampf.mjs`, `feuereWaffen`). Ohne diese Ausnahme wäre
+       „dauerhaft" gelogen: Der Ring erschiene erst, wenn jemand
+       hineinläuft, und verschwände, sobald der letzte fällt.
+       `nachhall: 2.5` heißt, dass er zweieinhalb Takte überlebt —
+       lange genug, dass er zwischen zwei Takten nicht flackert, kurz
+       genug, dass er beim Tod des Trägers verglimmt. */
+    aura: { anteil: 1, nachhall: 2.5 },
+    text: "Ein Ring aus Fäulnis, der mit dir geht. Er fragt nicht nach Rüstung."
+  },
+  {
+    id: "bleischleuder", name: "Bleischleuder", merkmale: ["Wucht"], schadensart: "wucht",
+    art: "fern", reichweite: 120, abklingzeit: 1.15,
+    schaden: 24, mitschaden: 1.2, ziele: 1, wirkung: { wucht: 16 },
+    preis: 36, geschosstempo: 240,
+    angriffsform: "erlahmend",
+    /* Die einzige Waffe mit `einzeln` — und das ist kein Rest, sondern
+       der Sinn: „normales projektil das an geschwindigkeit und schaden
+       verliert". Ein Muster daneben würde von der einen Sache
+       ablenken, um die es geht. Nah trifft sie am härtesten; auf voller
+       Reichweite bleiben ein Viertel Tempo und 30 % Schaden. */
+    salve: { form: "einzeln", geschosse: 1 },
+    erlahmt: { bremse: 0.9, mindestTempo: 0.25, mindestSchaden: 0.3 },
+    text: "Nah zerschlägt sie einen Schädel. Weit weg wirft sie Steine."
+  },
+  {
+    id: "gewitterrune", name: "Gewitterrune", merkmale: ["Bann"], schadensart: "fluch",
+    art: "nahkampf", reichweite: 96, abklingzeit: 1.3,
+    schaden: 14, mitschaden: 0.9, ziele: 1, wirkung: {},
+    preis: 44,
+    angriffsform: "kette",
+    /* `nahkampf` bei 96 Bildpunkten Reichweite sieht falsch aus und ist
+       richtig: Es fliegt nichts. Der Blitz steht in dem Augenblick, in
+       dem er fällt (`schlageKette()` in `spiel/kampf.mjs`); was danach
+       0,16 s lang zu sehen ist, ist nur noch sein Bild.
+       Vier Ziele bei drei Sprüngen, jedes 22 % schwächer als das
+       davor — zusammen das 2,9-fache eines Schlages, verteilt. */
+    kette: { spruenge: 3, sprungweite: 56, verlust: 0.22 },
+    text: "Einer wird getroffen. Die drei daneben auch."
+  },
+  {
+    id: "sternenfall", name: "Sternenfall", merkmale: ["Feuer"], schadensart: "feuer",
+    art: "nahkampf", reichweite: 130, abklingzeit: 3.4,
+    schaden: 10, mitschaden: 0.7, ziele: 3, wirkung: { brand: 4 },
+    preis: 48,
+    angriffsform: "meteore",
+    /* Fünf Einschläge, jeder mit 0,55 s **Vorwarnung** am Boden. Die
+       Vorwarnung ist nicht Zierde: Ein Flächenschaden, der ohne
+       Ankündigung vom Himmel fällt, ist im exakten Top-Down nicht
+       ausweichbar und damit nur eine Zahl. Mit ihr wird er zu einer
+       Entscheidung — auch für den Spieler, der danebensteht.
+       ⚠️ Zieht **zehnmal** aus `welt.zufall` (zwei je Meteor). */
+    meteore: {
+      anzahl: 5, streuung: 34, radius: 22,
+      warnung: 0.55, abstand: 0.16, glut: 0.35, gesamt: 2.6
+    },
+    text: "Der Himmel merkt sich, wo du hingezeigt hast."
+  },
+  {
+    id: "mondsichel", name: "Mondsichel", merkmale: ["Schnitt"], schadensart: "schnitt",
+    art: "nahkampf", reichweite: 52, abklingzeit: 0.75,
+    schaden: 13, mitschaden: 1.0, ziele: 4, wirkung: { wucht: 6 },
+    preis: 34,
+    angriffsform: "bogen",
+    /* Die einzige Waffe mit einer **gerichteten** Trefferfläche.
+       Janniks Ansage: „sichel angriff mittelgross in richtung der
+       gegner aber nur als nahkampf (richtige hitbox)". Jede andere
+       Nahkampfwaffe trifft rundum — wer nach oben schaut, erwischt auch
+       den im Rücken. Hier fährt eine schmale Schneide (`schneide`) über
+       einen weiten Bogen (`spanne`, gut 120 Grad) und trifft jeden
+       genau einmal. Man kann ihr ausweichen, indem man hinter dem
+       Schwung steht; das kann man bei keiner anderen. */
+    bogen: { spanne: 2.1, schneide: 0.36, dauer: 0.22, anteil: 1 },
+    text: "Ein weiter Schwung. Was dahinter steht, bleibt heil."
   }
 ];
 

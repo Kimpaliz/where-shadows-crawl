@@ -32,6 +32,7 @@ import { nimmKarte } from "../spiel/stufen.mjs";
 import { abklingzeit } from "../spiel/werte.mjs";
 import { ART_NACH_ID, STANDARD_ART } from "../spiel/schadensarten.mjs";
 import { SCHRITT } from "../spiel/welt.mjs";
+import { zeilenFuer, breiteFuer, zeichneWerteliste, ZEILENHOEHE } from "./werteliste.js";
 
 /* Der Laden hat je Spieler sechs Felder: vier Angebote, neu würfeln,
    bereit. Eine Reihe statt eines Rasters — mit einer Achse ist eine
@@ -398,6 +399,108 @@ export function zeichneLaden(c, welt, menue) {
 }
 
 /* ── Vorspiel und Ende ───────────────────────────────────────────── */
+
+/* ── Die Pause ───────────────────────────────────────────────────────
+
+   Janniks Ansage: *„ein stats übersicht beim auf leveln. **und beim
+   pausieren**."* Eine Pause gab es bis zum 06.09.2026 gar nicht — das
+   Spiel kannte nur Wellen, Kartenwahl, Truhen, Krämer und das Ende.
+
+   ── Warum die Pause im Zeichner wohnt und nicht als Weltphase ──────
+
+   Eine sechste `welt.phase` wäre der naheliegende Weg und der falsche.
+   Eine Phase ist Teil des Weltzustands, und der muss im Netz-Koop auf
+   **allen** Rechnern gleich sein (`netz/lockstep.mjs`): Wer allein auf
+   „Pause" drückt, hielte damit die Runde für alle an — und ein Spieler,
+   der die Übersicht lesen will, wäre ein Spieler, der die anderen
+   warten lässt. Zwei Leute gleichzeitig, und es bräuchte eine Regel,
+   wessen Pause gilt.
+
+   Die Pause ist deshalb **örtlich**: ein Schalter in
+   `runtime/start.js`, der die Weltschritte anhält. Das darf er, solange
+   niemand mitspielt. In einer Runde über das Netz läuft die Welt weiter
+   und die Übersicht legt sich nur darüber — der Bildschirm sagt das
+   ausdrücklich, statt es den Spieler herausfinden zu lassen.
+
+   ── Die Fläche zum Antippen ────────────────────────────────────────
+
+   Oben rechts, und zwar dort, weil unten alles belegt ist: links der
+   Daumen-Stick über der halben Bildbreite, rechts der Ausweichknopf,
+   dazwischen die Kartenhand (`runtime/karten-hand.js`). Oben rechts
+   steht bisher nichts — die einzige Ecke, die niemandem etwas wegnimmt.
+
+   Die Maße stehen **hier** und werden von `runtime/start.js` sowohl
+   zum Malen als auch zum Treffen benutzt. Zwei Rechnungen wären zwei
+   Wahrheiten, und man tippt dann irgendwann genau um den Unterschied
+   daneben — derselbe Fehler, gegen den `felderFuer()` in
+   `runtime/karten-hand.js` gebaut ist. */
+export const PAUSE_FELD = { x: BREITE - 26, y: 3, b: 23, h: 11 };
+
+/* Das kleine Zeichen oben rechts: zwei Balken für „Pause", ein Dreieck
+   für „weiter". Kein Text, weil „PAUSE" in Bildpunktschrift 24
+   Bildpunkte breit wäre und die Ecke ausfüllte. */
+export function zeichnePauseKnopf(c, laeuft) {
+  const f = PAUSE_FELD;
+  kasten(c, f.x, f.y, f.b, f.h, FARBEN.rahmen, "#0d0a14");
+  const mx = f.x + Math.round(f.b / 2), my = f.y + Math.round(f.h / 2);
+  c.fillStyle = FARBEN.schriftMatt;
+  if (laeuft) {
+    c.fillRect(mx - 3, my - 3, 2, 6);
+    c.fillRect(mx + 1, my - 3, 2, 6);
+  } else {
+    /* Ein Dreieck aus Zeilen — `moveTo`/`lineTo` zöge weiche Kanten. */
+    for (let i = 0; i < 3; i++) c.fillRect(mx - 2 + i, my - 3 + i, 1, 7 - i * 2);
+  }
+}
+
+/* Der Pausenbildschirm. `imNetz` sagt, ob die Welt weiterläuft. */
+export function zeichnePause(c, welt, eigenerPlatz, imNetz) {
+  /* Fast undurchsichtig. Der erste Entwurf stand auf 0,88, und im
+     Browser gemessen schimmerte die Spielertafel am unteren Rand durch
+     die Waffenzeile hindurch — zwei Texte uebereinander, die man fuer
+     einen Anzeigefehler haelt. Ganz undurchsichtig waere es dagegen ein
+     anderer Bildschirm; man soll noch sehen, wo man steht. */
+  c.fillStyle = "rgba(6,5,12,0.95)";
+  c.fillRect(0, 0, BREITE, HOEHE);
+  zeichneTextMittig(c, "ANGEHALTEN", BREITE / 2, 8, FARBEN.flammeHell, FARBEN.kontur);
+
+  const eigener = welt.spieler.find((s) => s.id === eigenerPlatz) ?? welt.spieler[0];
+  const jaeger = JAEGER_FARBEN[eigener.id % JAEGER_FARBEN.length];
+
+  /* **Alle** Werte, nicht nur die Kopfgruppe: Hier ist Platz, und wer
+     anhält, will nachsehen. Bei der Kartenwahl ist es umgekehrt — dort
+     zählt der schnelle Vergleich. */
+  const zeilen = zeilenFuer(eigener.werte, null, true);
+  const spaltenB = Math.max(140, breiteFuer(zeilen));
+  const platzHoehe = HOEHE - 46;
+  const jeSpalte = Math.max(1, Math.floor(platzHoehe / ZEILENHOEHE));
+
+  zeichneText(c, `JÄGER ${eigener.id + 1}`, 8, 20, jaeger.hell);
+  zeichneText(c, `NACHT ${welt.welle}`, 8 + spaltenB, 20, FARBEN.schriftMatt);
+
+  zeichneWerteliste(c, zeilen.slice(0, jeSpalte), 8, 30, spaltenB, platzHoehe);
+  if (zeilen.length > jeSpalte) {
+    zeichneWerteliste(c, zeilen.slice(jeSpalte), 16 + spaltenB, 30, spaltenB, platzHoehe);
+  }
+
+  /* Die Waffen im Gürtel — sie stehen sonst nirgends als Liste.
+
+     Ueber der Spielertafel und nicht darunter: Unten liegt die Tafel
+     selbst, und bei sechs Waffen laeuft die Zeile ueber die ganze
+     Breite. Gemessen im Browser lagen beide uebereinander. */
+  const waffen = (eigener.waffen ?? []).map((w) => `${w.vorlage.name.toUpperCase()} ${w.stufe}`);
+  if (waffen.length) {
+    zeichneText(c, "IM GÜRTEL", 8, HOEHE - 40, FARBEN.schriftMatt);
+    zeichneText(c, kuerze(waffen.join(" · "), Math.floor((BREITE - 16) / VORSCHUB)),
+      8, HOEHE - 32, FARBEN.schrift);
+  }
+
+  zeichneTextMittig(c,
+    imNetz ? "IM NETZSPIEL LÄUFT DIE WELT WEITER" : "WELT ANGEHALTEN",
+    BREITE / 2, HOEHE - 20, imNetz ? FARBEN.glut : FARBEN.schriftMatt, FARBEN.kontur);
+  zeichneTextMittig(c, "ESC ODER TIPP OBEN RECHTS", BREITE / 2, HOEHE - 11,
+    FARBEN.schriftMatt, FARBEN.kontur);
+}
 
 export function zeichneVorspiel(c, menue, padZahl) {
   c.fillStyle = "#07060c";

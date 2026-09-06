@@ -51,6 +51,8 @@ graph TD
 
   kampf --> waffen["katalog/waffen.mjs"]
   kampf --> werte["spiel/werte.mjs"]
+  kampf --> formen["spiel/angriffsformen.mjs<br/>Kegel, Aura, Bogen, Kette …"]
+  kampf --> salven["spiel/salven.mjs"]
   bewegung --> werte
   beute --> werte
   laden --> gegenstaende["katalog/gegenstaende.mjs"]
@@ -61,6 +63,11 @@ graph TD
   oberflaeche --> schrift["runtime/schrift.js"]
   zeichnen --> palette["runtime/palette.js"]
   sprites --> palette
+  zeichnen --> effekte["runtime/effekte.js<br/>malt Felder und Blitze"]
+  effekte --> partikel["runtime/partikel.js<br/>Teilchen mit eigener Bahn"]
+  oberflaeche --> werteliste["runtime/werteliste.js<br/>Übersicht und Vorschau"]
+  kartenhand["runtime/karten-hand.js"] --> werteliste
+  start --> kartenhand
 ```
 
 Alle Pfeile zeigen **von** dem, der ruft, **zu** dem, der gerufen wird.
@@ -74,6 +81,11 @@ Trennlinie von oben.
 | Wunsch | Datei |
 | --- | --- |
 | eine neue **Waffe** | `spiel/katalog/waffen.mjs` — ein Eintrag, keine Zeile Programm |
+| eine neue **Angriffsform** (etwas, das steht, wandert oder springt) | `spiel/angriffsformen.mjs` — ein `baue…()` und ein Eintrag in `ANGRIFFSFORMEN`; ausgeführt wird sie in `spiel/kampf.mjs`, `loeseAus()` |
+| wie ein Angriff **aussieht** (Kegel, Ring, Blitz, Einschlag) | `runtime/effekte.js` |
+| **Partikel**: neue Sorte, andere Bahn, andere Menge | `runtime/partikel.js` (`SORTEN`) und `runtime/effekte.js` (`AUSWURF`) |
+| die **Werteübersicht** und ihre Vorschau | `runtime/werteliste.js` |
+| die **Pause** | `runtime/start.js` (der Schalter) und `runtime/oberflaeche.js` (das Bild) |
 | einen neuen **Gegner** | `spiel/katalog/gegner.mjs` **und** ein Raster in `runtime/sprite-daten.js`; die Prüfung besteht auf beidem |
 | ein neues **Fundstück** | `spiel/katalog/gegenstaende.mjs` |
 | Wellen härter oder weicher | `spiel/katalog/wellen.mjs` (`budgetDerWelle`) und `gegner.mjs` (`LEBEN_JE_WELLE`) |
@@ -102,6 +114,21 @@ des vorigen Bildes — das fällt kaum auf und ist trotzdem falsch.
 Licht darüber, **dann** die Anzeige. Die Anzeige liegt bewusst
 außerhalb des Lichts; eine Lebensanzeige im Schatten wäre keine
 Stimmung, sondern ein Fehler.
+
+Was **in** der Welt liegt und was **darüber**, ist dieselbe Frage in
+klein: Flammenkegel, Aura, Sichelbogen, Meteoreinschlag und alle
+Teilchen sind Dinge in der Szene und werden vom Licht gedämpft —
+Trefferzeichen, Schadenszahlen und Kettenblitze sind **Auskunft** und
+liegen darüber. Ein Blitz, den man am dunklen Rand des Bannkreises
+nicht lesen kann, beantwortet die Frage nicht, für die er da ist.
+
+**Beim Ziehen aus `welt.zufall`:** Jede Ziehung verschiebt den gesäten
+Strom für alles danach — Wellenpläne, Beutewürfe, Truhen. Heute ziehen
+genau zwei Stellen im Kampf: `streu` in `spiel/salven.mjs` (einmal je
+Geschoss) und `baueMeteore()` in `spiel/angriffsformen.mjs` (**zwei**
+je Meteor). Wer eine dritte hinzufügt, ändert still jede bisherige
+Messung des Projekts; beide Zahlen werden nachgerechnet
+(`werkzeuge/pruefe-angriffe.mjs`, `werkzeuge/pruefe-angriffsformen.mjs`).
 
 ---
 

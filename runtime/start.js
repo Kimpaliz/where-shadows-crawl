@@ -31,7 +31,8 @@ import { macheZeichner, zeichne, baueBoden, fackelOrte, BREITE, HOEHE } from "./
 import { macheEingabe, macheFlanken } from "./eingabe.js";
 import {
   macheMenue, zeichneAnzeige, zeichneLaden, zeichneEnde, zeichneTruhen,
-  bedieneWahl, bedieneLaden, SPERRE_SEKUNDEN
+  bedieneWahl, bedieneLaden, SPERRE_SEKUNDEN,
+  zeichnePause, zeichnePauseKnopf, PAUSE_FELD
 } from "./oberflaeche.js";
 import { macheKartenhand } from "./karten-hand.js";
 import { macheLadenhand } from "./laden-tippen.js";
@@ -75,6 +76,67 @@ let sammler = 0;
 let zeit = 0;
 let vorher = performance.now();
 let letztePhase = null;
+
+/* ── Die Pause ────────────────────────────────────────────────────────
+
+   Ein **örtlicher** Schalter, kein Weltzustand. Die ausführliche
+   Begründung steht bei `zeichnePause()` in `runtime/oberflaeche.js`;
+   kurz: Eine Pause als sechste `welt.phase` hielte im Netz-Koop die
+   Runde für alle an, sobald einer nachsehen will.
+
+   Deshalb gilt: **Allein hält die Welt an, im Netzspiel nicht.** Der
+   Bildschirm sagt beides ausdrücklich — eine Übersicht, hinter der
+   die Gegner weiterlaufen, ohne dass es dasteht, wäre eine Falle. */
+let pause = false;
+
+/* Umschalten. Nur im Lauf, und nicht auf dem Endbildschirm: Dort
+   wartet das Spiel ohnehin auf einen Knopfdruck, und eine Pause davor
+   wäre ein Schalter, der nichts tut. */
+function schaltePause() {
+  if (zustand !== "spiel" || !welt) return;
+  if (welt.phase === "gewonnen" || welt.phase === "verloren") return;
+  pause = !pause;
+  /* Der aufgelaufene Rest wird verworfen. Ohne diese Zeile rechnete
+     die Welt beim Fortsetzen alles nach, was während der Pause
+     aufgelaufen ist — bis zu `MAX_SCHRITTE` Schritte in einem Bild,
+     also ein Ruck, in dem man Schaden nimmt, ohne etwas gesehen zu
+     haben. */
+  if (!pause) sammler = 0;
+}
+
+/* Die Taste. Ein eigener Horcher und nicht `BELEGUNG` in
+   `runtime/eingabe.js`: Was dort steht, geht über die Leitung und
+   gehört zur Figur — die Pause gehört zum Bildschirm.
+
+   `Escape` **und** `KeyP`, weil `Escape` im Vollbild von manchen
+   Browsern selbst gegriffen wird (es verlässt das Vollbild); dann
+   bleibt `P`. */
+addEventListener("keydown", (e) => {
+  if (e.repeat) return;
+  if (e.code === "Escape" || e.code === "KeyP") schaltePause();
+});
+
+/* Und der Finger. In der **Einfangphase**, aus demselben Grund wie bei
+   der Kartenhand: Auf dem Telefon liegt `#stickfeld` über der linken
+   Bildhälfte, und der Ausweichknopf rechts unten. Oben rechts liegt
+   nichts darüber, aber die Einfangphase kostet nichts und macht die
+   Fläche unabhängig davon, was künftig noch über das Bild gelegt wird.
+
+   Angehalten wird das Ereignis nur, wenn es die Fläche wirklich
+   trifft — sonst führe es der Figur in die Bewegung. */
+addEventListener("pointerdown", (e) => {
+  if (zustand !== "spiel") return;
+  if (e.pointerType === "mouse" && e.button !== 0) return;
+  const r = leinwand.getBoundingClientRect();
+  if (!(r.width > 0) || !(r.height > 0)) return;
+  const x = (e.clientX - r.left) / r.width * BREITE;
+  const y = (e.clientY - r.top) / r.height * HOEHE;
+  if (x < PAUSE_FELD.x || x >= PAUSE_FELD.x + PAUSE_FELD.b) return;
+  if (y < PAUSE_FELD.y || y >= PAUSE_FELD.y + PAUSE_FELD.h) return;
+  e.stopPropagation();
+  e.preventDefault();
+  schaltePause();
+}, true);
 /* Der Platz dieses Rechners in der Runde. Allein ist das 0; in einer
    Lobby vergibt ihn der Wirt (netz/sitzung.mjs). */
 let eigenerPlatz = 0;
@@ -321,14 +383,25 @@ function bild(jetzt) {
   if (phaseJetzt !== letztePhase) { menue.sperre = SPERRE_SEKUNDEN; letztePhase = phaseJetzt; }
   if (menue.sperre > 0) menue.sperre -= dt;
 
-  const zurLobby = gleichschritt ? taktImGleichschritt(dt) : taktAllein(dt, eingaben);
+  /* Angehalten wird nur allein. Im Gleichschritt liefe die Runde für
+     alle anderen weiter, und ein Rechner, der seine Ticks nicht mehr
+     abholt, brächte sie nach `WEG_NACH_SEKUNDEN` zum Stehen — die
+     Pause eines Einzelnen wäre dann ein Aussetzer für alle. */
+  const haelt = pause && !gleichschritt;
+  const zurLobby = haelt ? false
+    : (gleichschritt ? taktImGleichschritt(dt) : taktAllein(dt, eingaben));
   if (zurLobby) return;
 
   /* Die Welt wird immer gezeichnet — auch hinter Laden und Kartenwahl.
      Das hält den Zusammenhang: Man sieht, wo man steht, während man
      einkauft, und die Pause fühlt sich nicht wie ein anderer
      Bildschirm an. */
-  zeichne(zeichner, welt, boden, sprites, zeit);
+  /* `dt` reicht die verstrichene Zeit an den Teilchenschwarm durch
+     (`runtime/partikel.js`). Ohne sie haetten die Teilchen keine
+     eigene Uhr und muessten sich an die Bildrate haengen — auf
+     einem 144-Hz-Bildschirm flogen sie dann zweieinhalbmal so
+     schnell. */
+  zeichne(zeichner, welt, boden, sprites, zeit, dt);
 
   if (welt.phase === "welle") zeichneAnzeige(zeichner.c, welt);
   else if (welt.phase === "wahl") {
@@ -346,6 +419,13 @@ function bild(jetzt) {
     ladenhand.merke(welt, menue, eigenerPlatz);
   }
   else zeichneEnde(zeichner.c, welt);
+
+  /* Zuletzt und über allem: die Pause. Der kleine Knopf steht nur da,
+     solange man ihn auch drücken kann — auf dem Endbildschirm tut er
+     nichts, und ein Knopf, der nichts tut, ist schlimmer als keiner. */
+  const imLauf = welt.phase !== "gewonnen" && welt.phase !== "verloren";
+  if (imLauf) zeichnePauseKnopf(zeichner.c, !pause);
+  if (pause && imLauf) zeichnePause(zeichner.c, welt, eigenerPlatz, !!gleichschritt);
 }
 
 /* Die Lobby ist der Einstieg. Sie entscheidet, mit wie vielen und mit

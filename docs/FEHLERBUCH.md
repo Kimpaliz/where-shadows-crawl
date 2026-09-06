@@ -161,6 +161,49 @@ reagiert, bevor man mit ihm misst.
 
 ---
 
+### B6 · Zwei Aufbaufehler, die beide wie Befunde über den Code aussahen
+
+Am 06.09.2026 lief `werkzeuge/pruefe-angriffsformen.mjs` zum ersten
+Mal. Von dreizehn roten Zusicherungen waren **drei** Fehler im
+Prüfaufbau — und alle drei sahen aus wie Aussagen über den geprüften
+Code.
+
+**Erstens: zu kurz gemessen.** Der Prüfling stand in der Mitte der
+Arena, die Gegner laufen vom Rand herein, und die Messung lief sechs
+Sekunden. In dieser Zeit kam keiner in Reichweite einer 62 Bildpunkte
+weiten Waffe. Die Meldung lautete „teilt keinen Schaden aus" — was wie
+eine kaputte Waffe klingt und in Wahrheit hieß: Sie hat nie gefeuert.
+Bei sechzehn Sekunden schlug jede der sieben Formen zu.
+
+**Zweitens: ein Probengegner mit fehlendem Feld.** Zwei Gegner wurden
+als Objektliteral von Hand gebaut, mit den Feldern, die die Prüfung zu
+brauchen glaubte. `tempo` fehlte. `bewegeGegner()` rechnet damit
+`g.tempo * tempoFaktor * …` und schrieb `NaN` in `x` und `y`. Danach
+findet **kein** Abstandsvergleich mehr etwas, weil jeder Vergleich mit
+`NaN` falsch ist. Keine Meldung, kein Absturz — null Treffer, und zwar
+auch für die Vergleichswaffe, die eigentlich hätte treffen müssen.
+
+**Drittens: eine Frage, die nicht eindeutig war.** Ein Gegner vor und
+einer hinter dem Spieler, beide gleich weit weg. Welchen die Waffe als
+Ziel nimmt, war damit nicht festgelegt — die Prüfung las das Ergebnis
+als „schwingt nach hinten statt nach vorn". Der Aufbau war zweideutig,
+nicht das Verhalten.
+
+**Woran ich es früher merke:** Derselbe Kern wie B5, in drei
+Ausprägungen. **Bevor aus dem Ausbleiben einer Wirkung ein Befund über
+den Code wird, muss der Aufbau selbst belegt sein.** Drei Gegenproben,
+die nichts kosten:
+
+1. Hat der Prüfling überhaupt **einmal** ausgelöst? Wenn die Antwort
+   nicht gemessen ist, misst die Zusicherung nichts.
+2. Ein Probenobjekt wird **wie im Spiel** gebaut — im Zweifel aus
+   derselben Funktion oder als Kopie eines echten. Ein Literal enthält
+   genau die Felder, an die man beim Schreiben gedacht hat.
+3. Wo eine Zusicherung „vorn und nicht hinten" prüft, darf „vorn" nicht
+   zufällig sein. Gleichstand ist keine Frage, sondern eine Lücke.
+
+---
+
 ## C · Werkzeugfallen dieser Umgebung (Windows, Git-Bash, Node)
 
 Nichts davon hat mit einem Projekt zu tun — alles davon hat schon Zeit
@@ -496,6 +539,49 @@ Der Rettungsanker war, dass die Änderung klein und ihr Wortlaut noch im
 Sitzungsverlauf stand. Wäre sie eine Stunde Arbeit gewesen, wäre sie
 weg gewesen — es gab keinen Commit. **Committen, bevor ein Messlauf
 startet, der schreibt.**
+
+---
+
+## G · Eine Zusage, die nur unter einer Bedingung gilt
+
+### G1 · Die Sortierung, die nur manchmal stattfindet
+
+**Was ich tat:** Vier neue, **gerichtete** Angriffsformen (Kegel,
+Sichelbogen, Meteore, Kettenblitz) richteten sich nach `ziele[0]` aus
+`zieleInReichweite()` — dem, was jede Waffe seit jeher als „das nächste
+Ziel" benutzt.
+
+**Was herauskam:** Mit einem Gegner 25 Bildpunkte **vor** und einem 40
+Bildpunkte **hinter** dem Spieler schwang die Mondsichel nach hinten.
+Der Gegner vorn blieb heil.
+
+**Warum:** Die Funktion sortiert nur unter einer Bedingung:
+
+```js
+if (gefunden.length > anzahl) gefunden.sort((a, b) => a[0] - b[0]);
+```
+
+Für die beiden alten Formen ist das genau richtig und sogar sparsam:
+`schlag` trifft ohnehin **alle** Ziele, und `geschoss` hat `ziele: 1`
+und bekommt damit immer eine sortierte Liste. Erst ein Aufrufer mit
+`ziele: 4`, der aus der Liste **einen** herausgreift, stolpert darüber
+— und dann nur, wenn zufällig weniger Gegner in Reichweite sind als die
+Waffe Ziele hat. Also selten, unauffällig und beim Spielen als Zufall
+lesbar.
+
+Der Kommentar über der Funktion sagte, was sie tut („die `anzahl`
+nächsten Gegner im Umkreis"), aber nicht, unter welcher Bedingung die
+Reihenfolge stimmt. Die Zusage stand da; die Einschränkung nicht.
+
+**Woran ich es früher merke:** Wer eine bestehende Funktion für einen
+**neuen** Zweck benutzt, liest nicht ihren Kommentar, sondern ihren
+Rumpf — und sucht dort nach jedem `if`, das eine Zusage einschränkt.
+Und umgekehrt, für die eigene Seite: Eine Optimierung, die eine
+Eigenschaft nur unter Bedingung herstellt (hier: die Sortierung), gehört
+in den Kommentar der Funktion, nicht nur in die Zeile. Faustregel:
+**Was eine Funktion nur manchmal garantiert, garantiert sie nicht.**
+Wer die Eigenschaft wirklich braucht, stellt sie selbst her — hier
+`naechstesVon()`, drei Zeilen, dafür immer wahr.
 
 ---
 

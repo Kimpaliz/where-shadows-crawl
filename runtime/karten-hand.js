@@ -76,6 +76,9 @@
 import { FARBEN, JAEGER_FARBEN } from "./palette.js";
 import { zeichneText, zeichneTextMittig, zeichneTextUmrandet, textBreite, VORSCHUB, ZEILE } from "./schrift.js";
 import { BREITE, HOEHE } from "./zeichnen.js";
+import {
+  zeilenFuer, breiteFuer, zeichneWerteliste, metaHinweis, ZEILENHOEHE
+} from "./werteliste.js";
 
 /* ── Masse ───────────────────────────────────────────────────────────
 
@@ -127,6 +130,25 @@ const VERSATZ = GROSS_B / 2 - KARTE_B / 2 + (KARTE_B - SCHRITT_X);
 /* Gruen fuer die Zahlen — Janniks „gruenlich hervorgehoben". Aus der
    Palette, nicht frei gemischt. */
 export const ZAHL_FARBE = FARBEN.seucheHell;
+
+/* ── Wo die Werteuebersicht steht ────────────────────────────────────
+
+   Oben steht der Titel (y = 8) und die Zeile „waehlt noch" (y = 20);
+   unten beginnt die hervorgehobene Karte bei `GRUND_Y - GROSS_H`.
+   Dazwischen liegt der Streifen, der bei **jeder** Kartenzahl und
+   **jeder** Auswahl frei bleibt. `WERTE_HOEHE` ist genau dieser
+   Streifen, ausgerechnet und nicht geraten — mit einer festen Zahl
+   waere die Liste entweder kuerzer als noetig oder sie liefe bei vier
+   Karten unter die aeusserste.
+
+   `WERTE_MINDESTBREITE` faengt den umgekehrten Fall: Sind alle Werte
+   einstellig, waere die gerechnete Breite so schmal, dass die Spalte
+   bei der naechsten Karte sichtbar springt. Ein Kasten, der die Breite
+   wechselt, waehrend man ihn liest, sieht aus wie ein Fehler. */
+export const WERTE_X = 4;
+export const WERTE_Y = 30;
+export const WERTE_HOEHE = GRUND_Y - GROSS_H - WERTE_Y - 3;
+export const WERTE_MINDESTBREITE = 86;
 
 const RUECKEN = "#151021";
 const RUECKEN_HELL = "#221a33";
@@ -328,6 +350,24 @@ export function macheKartenhand(leinwand) {
      Schritte. */
   let geplant = null;
 
+  /* Ueber welcher Karte gerade der Zeiger liegt — Janniks „oder
+     drueberhaelt".
+
+     ⚠️ **Das ist der einzige Zustand dieser Datei, der bewusst
+     oertlich bleibt und nicht ueber die Leitung geht.** Ein Klick tut
+     das (siehe Kopfnotiz), weil er die Welt aendert: Er verschiebt
+     `menue.wahlZeiger`, und der muss auf allen Rechnern gleich stehen.
+     Ein Schweben aendert **nichts** — es entscheidet nur, welche
+     Vorschau *dieser* Bildschirm zeigt. Es ueber den Gleichschritt zu
+     schicken hiesse, fuer eine Mausbewegung Eingabeplaetze zu
+     verbrauchen und alle anderen um den Eingabeverzug warten zu
+     lassen, damit sie sehen, wohin jemand mit der Maus zeigt.
+
+     Der Rueckfall ist die **angewaehlte** Karte. Damit gilt Janniks
+     „anwaehlt oder drueberhaelt" auch fuer Tastatur, Gamepad und
+     Daumen-Stick, die gar keinen Zeiger haben. */
+  let schwebtAuf = null;
+
   function ortAufLeinwand(e) {
     const r = leinwand.getBoundingClientRect();
     /* Ohne Groesse waere das eine Division durch null und der Ort still
@@ -380,6 +420,27 @@ export function macheKartenhand(leinwand) {
     geplant = feld.i;
   }
 
+  /* Das Schweben. **Ohne** `stopPropagation` und ohne
+     `preventDefault`: Eine Mausbewegung darf nichts abfangen, sonst
+     bliebe der Daumen-Stick auf dem Telefon mitten im Zug haengen.
+     Diese Zeile liest nur mit.
+
+     Ein Finger meldet `pointermove` nur, solange er aufliegt — auf dem
+     Telefon ist das Schweben also der Augenblick zwischen Auftippen
+     und Loslassen, und genau in dem sieht man die Vorschau. Auf dem
+     Schreibtisch liegt der Zeiger einfach da. Beides ist richtig. */
+  addEventListener("pointermove", (e) => {
+    if (!sicht) { schwebtAuf = null; return; }
+    const feld = getroffen(ortAufLeinwand(e));
+    schwebtAuf = feld ? feld.i : null;
+  }, true);
+
+  /* Verlaesst der Zeiger das Fenster, schwebt er ueber nichts mehr —
+     sonst bliebe die Vorschau einer Karte stehen, auf die niemand mehr
+     zeigt, und man haelt sie fuer die angewaehlte. */
+  addEventListener("pointerleave", () => { schwebtAuf = null; });
+  addEventListener("blur", () => { schwebtAuf = null; });
+
   /* In der Einfangphase am Fenster: sonst faengt `#stickfeld` den Tipp
      auf der linken Bildhaelfte ab (siehe Kopfnotiz). Angehalten wird
      das Ereignis nur, wenn es wirklich eine Karte trifft. */
@@ -408,6 +469,7 @@ export function macheKartenhand(leinwand) {
         geplant = null;
         ausgegeben = false;
         sicht = null;
+        schwebtAuf = null;
         return eigene;
       }
       const kopf = kette[0];
@@ -431,6 +493,7 @@ export function macheKartenhand(leinwand) {
        sehen ist. */
     kette: () => kette.slice(),
     sicht: () => sicht,
+    schwebt: () => schwebtAuf,
 
     zeichne(c, welt, menue, platz) {
       c.fillStyle = "rgba(6,5,12,0.82)";
@@ -467,6 +530,42 @@ export function macheKartenhand(leinwand) {
       for (const f of reihenfolge) {
         if (f.gross) maleGross(c, karten[f.i], f.x, f.y, jaeger);
         else maleKlein(c, karten[f.i], f.x, f.y);
+      }
+
+      /* ── Die Werteuebersicht mit Vorschau ─────────────────────────
+
+         Janniks Ansage: „wenn man mit maus oder finger lvl up werte
+         anwaehlt oder drueberhaelt oder auch karte. sieht man bei den
+         allgemeinen werten schon eine vorschau veraenderung!"
+
+         Sie steht **links oben**, und zwar aus einem gemessenen Grund:
+         Unten liegt die Hand (bis y = ${GRUND_Y - GROSS_H} hinauf),
+         rechts steht bei vier Karten die aeusserste, und mittig laege
+         sie unter der hervorgehobenen Karte. Links oben ist der
+         einzige Fleck, der bei jeder Kartenzahl und jeder Auswahl
+         frei bleibt — nachgerechnet in `werkzeuge/pruefe-werteliste.mjs`.
+
+         Welche Karte die Vorschau zeigt: die, ueber der der Zeiger
+         liegt, sonst die angewaehlte. Damit gilt sie fuer Maus,
+         Finger, Tastatur, Gamepad und Daumen-Stick gleichermassen. */
+      const schwebend = schwebtAuf !== null && karten[schwebtAuf] ? schwebtAuf : zeiger;
+      const vorschauKarte = karten[schwebend] ?? null;
+      const zeilen = zeilenFuer(eigener.werte, vorschauKarte);
+      const listeB = Math.max(WERTE_MINDESTBREITE, breiteFuer(zeilen));
+      zeichneText(c, "DEINE WERTE", WERTE_X, WERTE_Y, jaeger.hell);
+      zeichneWerteliste(c, zeilen, WERTE_X, WERTE_Y + ZEILENHOEHE + 2,
+        listeB, WERTE_HOEHE - ZEILENHOEHE - 2);
+
+      /* Eine Meta-Karte aendert eine **Regel** und keine Zahl. Statt
+         einer Vorschau, in der sich nichts ruehrt — die man fuer einen
+         Fehler haelt —, steht dann dort, was sie stattdessen tut. */
+      const hinweis = metaHinweis(vorschauKarte);
+      if (hinweis) {
+        const zeilenText = brich(hinweis.toUpperCase(), listeB, 3);
+        zeilenText.forEach((t, i) => {
+          zeichneText(c, t, WERTE_X, WERTE_Y + WERTE_HOEHE + 3 + i * ZEILENHOEHE,
+            FARBEN.flammeHell);
+        });
       }
 
       /* Wer waehlt, steht links neben seiner Hand. */
