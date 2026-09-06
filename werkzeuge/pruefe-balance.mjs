@@ -100,14 +100,26 @@ for (const m of messungen) {
      der Fall, den der Hauptmann in Welle 4 einmal gebaut hat.
 
      ⚠️ **Hier stand eine feste Grenze von 0,78, und sie war bei sechs
-     Läufen je Reihe nicht zu halten.** Über 40 Läufe gemessen liegt die
-     Wirklichkeit am 05.09.2026 so:
+     Läufen je Reihe nicht zu halten.** Über 40 Läufe gemessen (Saat 1):
 
-     | Spieler | schlimmste Welle | Anteil | davon auf Bosswellen |
-     | ---: | ---: | ---: | ---: |
-     | 1 | 6 | 58,8 % | 26,5 % |
-     | 2 | 8 | 40,0 % | 43,3 % |
-     | 4 | 8 | **78,1 %** | **84,4 %** |
+     | Spieler | schlimmste Welle | Anteil | Stand |
+     | ---: | ---: | ---: | --- |
+     | 1 | 6 | 50,0 % | 06.09.2026 |
+     | 2 | 6 | 40,0 % | 06.09.2026 |
+     | 4 | 8 | **75,0 %** | 06.09.2026 |
+
+     ⚠️ **Die vorige Fassung dieser Tabelle nannte 58,8 / 40,0 / 78,1 %
+     und die schlimmste Welle für einen Spieler mit 6, für zwei mit 8.**
+     Diese Zahlen stammten von *vor* der Kartenhand und wurden beim
+     Nachziehen der Sperren nicht mitgemessen — die Tabelle beschrieb
+     also einen Stand, den die Datei zwanzig Zeilen weiter selbst für
+     überholt erklärt. Wer die Wand beurteilen wollte, las 58,8 % und
+     maß 50,0 %. Von einer unabhängigen Prüfung am 06.09.2026 gefunden,
+     an den Nennern erkannt.
+
+     Für die Streuung dieser Werte gilt dasselbe wie für die
+     Abbruchzahl weiter unten: Sie sind mit **einer** Saatbasis
+     gemessen und auf einen Prozentpunkt genau nicht zu lesen.
 
      Die Zahlen sind keine Panne, sondern zwei Befunde: Zu viert stirbt
      man fast nur noch auf Bosswellen (Welle 8 ist die erste mit zwei
@@ -183,15 +195,51 @@ for (const m of messungen.slice(1)) {
    **Damit ist #52 nicht mehr eine offene Frage, sondern die
    blockierende.** Zwei Fünftel aller Viererläufe enden nicht mehr von
    selbst. Wer diese Zahlen weiter steigen lässt, ohne dass ein Sturz
-   etwas kostet, baut einen Bildschirmschoner. Die nächste Änderung an
-   dieser Zeile muss die Zahlen **senken**. */
-const ABBRUCH_SPERRE = { 1: 10, 2: 15, 4: 16 };
+   etwas kostet, baut einen Bildschirmschoner.
+
+   ── Und jetzt der Teil, der die Zahlen oben relativiert ────────────
+
+   ⚠️ **Am 06.09.2026 gemessen: Diese Kennzahl schwankt allein durch die
+   Saatbasis stärker, als jede bisherige Änderung sie bewegt hat.**
+   Fünf Basen zu je 40 Läufen, am selben Code:
+
+   | | Saat 1 | 201 | 401 | 601 | 801 | Spanne |
+   | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+   | 1 Spieler | 6 | 10 | 4 | 7 | 8 | **6** |
+   | 2 Spieler | 8 | 13 | 16 | 18 | 10 | **10** |
+   | 4 Spieler | 13 | 16 | 19 | 18 | 15 | **6** |
+
+   Die alten Sperren (10 / 15 / 16) lagen damit **mitten in der
+   Streuung**: Ob die Kette grün war, entschied die Saatbasis, nicht das
+   Spiel. Genau der Fall, der als **E4** im Fehlerbuch steht — dort
+   fiel er auf, weil eine echte Verbesserung die Prüfung rot machte;
+   hier, weil eine unabhängige Prüfung nachgerechnet hat.
+
+   **Warum trotzdem eine Sperre bleibt.** Über drei Basen gemittelt
+   (je 40 Läufe, mit dem heutigen Stand) sind es **9,0 / 13,0 / 17,7**.
+   Der Anstieg bei vier Spielern ist also echt und nicht nur Rauschen —
+   nur eben nicht auf einen Lauf genau messbar. Eine Prüfung, die drei
+   Basen misst, bräuchte 880 s statt 250; das kostet mehr, als sie wert
+   ist.
+
+   Deshalb steht die Grenze jetzt auf dem **schlechtesten der fünf
+   gemessenen Werte**, plus nichts. Sie fängt damit keine kleinen
+   Verschiebungen mehr — das konnte sie ohnehin nie, sie hat es nur
+   behauptet. Was sie fängt, ist eine grobe Verschlechterung, und das
+   sagt sie jetzt auch. */
+const ABBRUCH_SPERRE = { 1: 12, 2: 18, 4: 21 };
+
+/* Die gemessene Spanne je Spielerzahl — steht hier, damit die Meldung
+   ihre eigene Genauigkeit mitnennt statt eine vorzutäuschen. */
+const ABBRUCH_STREUUNG = { 1: 6, 2: 10, 4: 6 };
 
 for (const m of messungen) {
   const grenze = ABBRUCH_SPERRE[m.spieler] ?? 0;
+  const streu = ABBRUCH_STREUUNG[m.spieler] ?? 0;
   melde(m.abgebrochen <= grenze,
     `${m.spieler} Spieler: höchstens ${grenze} Läufe ohne Ende`,
-    `${m.abgebrochen} von ${m.laeufe} erreichten Welle ${WELLEN_DECKEL}`);
+    `${m.abgebrochen} von ${m.laeufe} — die Zahl schwankt allein durch die `
+    + `Saatbasis um ${streu}, taugt also nur für grobe Ausschläge`);
 }
 
 /* Was von „allein endet jeder Lauf" übrig bleibt, nachdem die Aussage

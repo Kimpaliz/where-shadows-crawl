@@ -3,6 +3,163 @@
 Oben das Neueste. Jeder Eintrag sagt **was**, **warum** und **womit
 gemessen** — nicht nur, dass etwas anders ist.
 
+## 0.9.6 — Salven und Splitter (06.09.2026)
+
+Janniks Ansage: *„benutzt bitte das design modul von claude um den
+angriffen richtige optische logische und unterschiedliche angriffe zu
+geben die cool sind. auch projektil angriffe sollen so aufgebaut werden
+das die angriffe **mehrere projektile einplanen**."* Dazu: *„auf
+jedenfall pixel design nutzten! aber **feine farbliche übergänge**."*
+
+### Der Befund, bevor etwas gebaut war
+
+Nichts davon war *kaputt*. Nichts hätte je eine Prüfung rot gemacht. Es
+war nur alles dasselbe — und genau das sieht man beim Spielen.
+
+| | vorher | jetzt |
+| --- | --- | --- |
+| Fernwaffen mit eigenem Salvenmuster | **0 von 5** | 5 von 5 |
+| verschiedene Geschoss-Silhouetten | 4 von 6 | **6 von 6** |
+| Fläche eines Geschosses | 5 bis 12 Bildpunkte | **11 bis 21** |
+| Sprites mit ungerader Kantenlänge | 4 von 6 | **6 von 6** |
+| Farbstufen je Schadensart | 2 — ein Sprung | **5** |
+
+Die fünf Fernwaffen unterschieden sich nur in `geschosstempo` und
+`reichweite` — Zahlen, die man beim Spielen nicht auseinanderhält.
+Frostrune, Bannstein und Gegnerspeichel waren alle dasselbe Kreuz
+`.#.|###|.#.` aus fünf Bildpunkten; nur die Farbe trennte sie.
+
+### Fünf Muster, jedes aus der Waffe begründet
+
+| Waffe | Form | warum |
+| --- | --- | --- |
+| Wurfmesser | `folge` 2 | ein Messerwerfer wirft nach, nicht nebeneinander |
+| Armbrust | `parallel` 2 | zwei Läufe; eine Armbrust streut nicht |
+| Frostrune | `faecher` 3 | Frost wirkt je Getroffenem — Breite schlägt Wucht |
+| Seuchenglas | `streu` 4 | der Text sagt seit jeher „zerspringt"; Scherben haben keine gleichen Abstände |
+| Bannstein | `ring` 3 | `suchend` holt jeden Stein zurück, der Umweg ist das Bild |
+
+**`folge` ist ein Startversatz, keine Verzögerung.** „In 0,09 s das
+zweite Messer" hätte eine Warteschlange gebraucht — neuen Zustand, der
+über Wellenenden, Tode und den Netz-Koop hinweg stimmen muss. Zwei
+Messer, von denen das zweite sieben Bildpunkte weiter hinten startet,
+sehen im Flug genauso aus und können nicht auseinanderlaufen.
+
+**`streu` ist die einzige Form, die würfelt** — aus `welt.zufall`, genau
+einmal je Geschoss. Jede Ziehung verschiebt den gesäten Strom für alles
+danach: Wellenpläne, Beute, Truhen. Eine Prüfung zählt die Züge.
+
+### Die eine Regel, ohne die das Ganze zerfällt
+
+**Ein Salvenmuster ist kein Schadensmultiplikator.** Der Grundschaden
+wird auf die Geschosse verteilt — sonst wären vier Scherben schlicht
+vierfacher Schaden, und die Waffe mit den meisten Geschossen wäre die
+einzige sinnvolle.
+
+Aufgeschlagen wird nur, was auch **verfehlt**: `folge` und `parallel`
+fliegen dieselbe Bahn und bekommen null, `faecher` und `ring` 20 %,
+`streu` 30 %. Ein einziger Wert für alle war der erste Anlauf — über 40
+Läufe je Spielerzahl machte er das Spiel allein und zu zweit besser, zu
+viert schlechter. Die Ursache: Wurfmesser und Armbrust sind die
+häufigsten Waffen und bekamen einen Aufschlag für ein Verfehlen, das bei
+ihnen nicht stattfindet.
+
+### Fünfstufige Rampen — und eine, die nicht geht
+
+Mit zwei Tönen gibt es keinen Übergang, nur einen Sprung. Neu sind
+`…Tief`, `…Mitte` und `…Glanz` für fünf Schadensarten; **die 43
+bestehenden Farben sind byteweise unverändert**, 15 kamen dazu. Dunkle
+Stufen ziehen ins Kühle, helle ins Warme — dieselbe Regel, die in
+`runtime/palette.js` schon stand. Engste Helligkeitstrennung 12,7
+(flamme) bis 17,1 (bann) von 255.
+
+`blut` hat **keine** bekommen: Seine beiden Töne liegen nur **19,5** von
+255 auseinander, für drei trennbare Stufen bräuchte es 24. Sie
+auseinanderzuziehen änderte den Lebensbalken und das Trefferzeichen für
+Schnitt — Stil, nicht Reparatur. Für die Angriffe wird es nicht
+gebraucht: Der Blutdorn ist eine Nahkampfwaffe ohne Geschoss.
+
+### Der Umbau war zuerst keiner
+
+`spiel/kampf.mjs` auf das Salvenmodul umzustellen, sollte nichts ändern —
+24 Läufe (1/2/4 Spieler, je 8 Saaten) mussten zeichengleich bleiben. Sie
+waren es nicht: **5 von 24 verschieden.** Der Anteil griff auch auf den
+Spielerwert `zusatzgeschosse` und entwertete ihn damit still — wer sich
+ein drittes Geschoss erkauft, hätte drei zu je einem Drittel bekommen,
+also nichts. Der Anteil kommt jetzt aus der **Waffe**; danach 174.490
+gegen 174.490 Bytes, zeichengleich.
+
+### Was eine unabhängige Prüfung danach fand
+
+125 Agenten in fünf Blickwinkeln, jeder Befund von drei Skeptikern
+gegengeprüft: **40 gefunden, 20 überlebten** — alle in meiner eigenen
+Arbeit. Die vier schwersten:
+
+**1 · Die Kette war rot, und ich hatte sie nicht laufen lassen.**
+`spiel/salven.mjs` trug den Tag `Kampf`, den die Systemtabelle nicht
+kennt. Der Wächter hat genau getan, wofür er gebaut ist.
+
+**2 · Eine erfundene Begründung schützte toten Code.** Der Re-Export
+`FAECHER` in `kampf.mjs` war mit „weil `pruefe-werte.mjs` ihn liest"
+begründet. Die Datei importiert `kampf.mjs` nicht, und
+`git log -S FAECHER -- werkzeuge/` ist leer — sie hat es nie getan.
+Ersatzlos entfernt.
+
+**3 · Der Bannstein bekam 40 % Schaden geschenkt.** Der Ring-Aufschlag
+bezahlt ein Verfehlen; bei `suchend: true` dreht das Geschoss in
+`bewegeGeschosse()` auf sein Ziel ein und trifft. Eine suchende Waffe
+bekommt jetzt nie einen Aufschlag — der Bannstein steht wieder bei
+1,00× statt 1,40×.
+
+**4 · Eine Prüfung maß eine mathematische Selbstverständlichkeit.**
+`[1,2,3,4,5,6].map(anteilJeGeschoss)` reicht den **Array-Index** als
+zweites Argument durch, also lief sie mit den „Formnamen" 0, 1, 2 …
+Keiner steht in der Aufschlagtabelle, der Rückfall griff jedes Mal, und
+heraus kam exakt `1/n`. Durch keinen Wert der Tabelle rot zu bekommen;
+fünf von sechs Formen waren von gar keiner Zusicherung berührt.
+
+Dazu: `flamme` und `flammeHell` standen nach dem Rampen-Einbau **zweimal
+im selben Objektliteral** (der spätere gewinnt still); „mindestens drei
+Rampenstufen" zählte Ziffern statt Farben, ein einfarbiges Geschoss
+hätte bestanden; die Ring-Prüfung ließ einen Viertelkreis durch; drei
+gemessene Zahlen waren falsch; und `pruefe-angriffe.mjs` fehlte in der
+Wegweiser-Tabelle.
+
+**Selbst dazu gefunden:** `rampen.mjs` warf beim Import aus einem
+`node -e`, weil `process.argv[1]` dort leer ist.
+
+### Eine Korrektur an meinem eigenen Bericht
+
+Zwischendurch stand hier und in zwei Kommentaren, die alten Geschosse
+seien „diagonal in fünf Einzelpunkte zerfallen". **Das war die falsche
+der beiden Messungen.** Unter der strengen Vierer-Nachbarschaft zerfallen
+5 von 6 — zählt man Diagonalen mit, und so sieht das Auge, hängen alle
+sechs zusammen. Der echte Befund ist nicht der Zerfall, sondern die
+**Winzigkeit samt Formwechsel**: fünf Punkte, aus denen die Drehung
+reihum ein Kreuz, ein X und wieder ein Kreuz baut.
+
+Die Prüfung, die daraus entstand, war deshalb zahnlos — die alten
+Sprites bestanden sie. Sie ist durch eine **Flächengrenze** von zehn
+Bildpunkten ersetzt, und die fängt **5 von 6** alten Sprites, während
+alle sechs neuen durchkommen.
+
+### Geprüft
+
+`werkzeuge/pruefe-angriffe.mjs`: **192 Prüfungen**, alle **14** neuen
+einzeln rot bewiesen (negativer Aufschlag, zu großer Aufschlag, ein
+Aufschlag der nicht wirkt, suchend mit Aufschlag, drei Ziffern auf einer
+Farbe, ein Viertelkreis statt Ring, ungleiche Ringabstände, ein Fächer
+der nicht fächert, eine verstellte Rampenstufe, ein veränderter
+Ankerton, zwei Waffen mit derselben Form, eine doppelte Zufallsziehung,
+ein Salvenmuster am Nahkampf, ein winziges Geschoss). Arbeitsbaum danach
+byteweise unverändert.
+
+Neu: `spiel/salven.mjs`, `werkzeuge/rampen.mjs`,
+`werkzeuge/pruefe-angriffe.mjs`. Fehlerbuch-Fall **F4**.
+
+Bericht mit Drehregler:
+<https://claude.ai/code/artifact/e0b2bd65-cdbe-49b7-9d5e-46cd08261271>
+
 ## 0.9.5 — Als App installierbar, Vollbild und quer (05.09.2026)
 
 Janniks Ansage: *„wenn ich dies spiel aus dem browser im handy

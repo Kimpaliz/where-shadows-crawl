@@ -9,4 +9,9 @@ werkstatt-auftraege/
 # Arbeitsweise-Waechter zaehlt sie sonst als offene Aenderung, was bei
 # jedem parallelen Bau die ganze Kette rot macht.
 .claude/worktrees/
+# Ein Ablageort fuer Seiten, die man im Vorschau-Server ansehen will,
+# ohne sie ins Repository zu legen — etwa ein Bericht, bevor er als
+# Artifact veroeffentlicht wird. Der Vorschau-Server liefert alles unter
+# der Projektwurzel aus, eine Datei muss also hier liegen, um im Browser
+# erreichbar zu sein; ins Repository gehoert sie deshalb noch lange nicht.
 .vorschau/
