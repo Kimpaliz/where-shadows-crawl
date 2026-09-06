@@ -28,6 +28,7 @@
 
 import { eroeffne, tritteBei, MAX_SPIELER } from "../netz/sitzung.mjs";
 import { pruefeCode } from "../netz/lobbycode.mjs";
+import { installierbar, beiAenderung as beiInstallAenderung, biteInstallieren } from "./installieren.js";
 
 const NAME_SPEICHER = "wsc.name";
 
@@ -51,7 +52,21 @@ export function macheLobby({ beiStart }) {
 
   const zeige = () => kasten.removeAttribute("hidden");
   const verstecke = () => kasten.setAttribute("hidden", "");
-  const leere = () => { while (kasten.firstChild) kasten.removeChild(kasten.firstChild); };
+
+  /* Der Installieren-Knopf horcht, weil die Zusage des Browsers
+     **später** eintrifft als der Bildaufbau. Verlässt der Spieler das
+     Bild, muss der Horcher mit — sonst schreibt er nach jedem Hin und
+     Her in ein Element, das es nicht mehr gibt, und die Liste wächst
+     bei jedem „ZURÜCK" um einen Eintrag. Deshalb hängt das Abmelden an
+     `leere()`: der einen Stelle, an der ein Bild wirklich abgeräumt
+     wird. */
+  let loeseInstallHorcher = null;
+
+  const leere = () => {
+    loeseInstallHorcher?.();
+    loeseInstallHorcher = null;
+    while (kasten.firstChild) kasten.removeChild(kasten.firstChild);
+  };
 
   const gemerkterName = () => {
     try { return localStorage.getItem(NAME_SPEICHER) || ""; } catch { return ""; }
@@ -82,9 +97,50 @@ export function macheLobby({ beiStart }) {
         bau("button", { text: "EINER LOBBY BEITRETEN", beiClick: () => { merkeName(nameJetzt()); zeigeBeitritt(nameJetzt()); } })
       ]),
       bau("button", { text: "ALLEIN SPIELEN", beiClick: () => { verstecke(); beiStart({ saat: wuerfleSaat(), spielerzahl: 1, eigenerPlatz: 0, sitzung: null }); } }),
+      baueInstallkasten(),
       meldungsfeld
     );
     zeige();
+  }
+
+  /* ── Der Installieren-Knopf ───────────────────────────────────────
+
+     Er steht **unter** den drei Knöpfen, die zum Spielen führen: Wer
+     hier ist, will meistens spielen und nicht installieren. Und er ist
+     nur da, wenn der Browser die Installation wirklich anbietet — ein
+     Knopf, der auf einem Rechner oder in Firefox nichts tut, wäre
+     schlimmer als gar keiner (`runtime/installieren.js`). */
+  function baueInstallkasten() {
+    const knopf = bau("button", {
+      id: "installknopf",
+      text: "ALS APP INSTALLIEREN",
+      beiClick: async () => {
+        /* Der Klick **ist** die Nutzergeste, die der Browser verlangt —
+           deshalb wird hier nichts vorher abgewartet. */
+        const ausgang = await biteInstallieren();
+        if (ausgang === "angenommen") return;   /* der Browser übernimmt */
+        meldeInLobby(ausgang === "abgelehnt"
+          ? "Nicht installiert. Du kannst einfach weiterspielen."
+          : "Dein Browser bietet die Installation gerade nicht an.");
+      }
+    });
+
+    const kastenchen = bau("div", { id: "installkasten" }, [
+      knopf,
+      bau("p", {
+        klasse: "matt",
+        text: "Dann liegt das Spiel als Symbol auf dem Startbildschirm und startet ohne Browserleiste, quer und im Vollbild."
+      })
+    ]);
+
+    const richteAus = (jetzt) => { kastenchen.hidden = !jetzt; };
+    richteAus(installierbar());
+    /* Die Zusage des Browsers trifft oft erst ein, wenn dieses Bild
+       schon steht. Ohne den Horcher bliebe der Knopf bis zum nächsten
+       Bildwechsel verborgen. */
+    loeseInstallHorcher = beiInstallAenderung(richteAus);
+
+    return kastenchen;
   }
 
   /* ── Bild 2: beitreten ────────────────────────────────────────── */

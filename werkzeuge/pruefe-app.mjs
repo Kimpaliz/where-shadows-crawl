@@ -217,6 +217,68 @@ melde(manifest.icons.some((s) => s.purpose === "maskable"),
     bericht.nachzuegler ? "ja" : "der fullscreenchange-Horcher greift nicht");
 }
 
+/* ── 8 · Das Spiel bietet die Installation selbst an ────────────────
+
+   **Der Fall, der ohne diese Prüfung still durchkäme:** Das Spiel war
+   seit Fassung 0.9.5 installierbar — und hat es nie gesagt. Wer die App
+   wollte, musste sie im Drei-Punkte-Menü von Chrome suchen. Ein Angebot,
+   das niemand findet, ist keins, und nichts daran wird jemals rot.
+
+   Geprüft wird auch hier durch **Ausführen**, nicht durch Textsuche.
+   Der eine Fehler, der alles kostet, ist unsichtbar: Ohne
+   `preventDefault()` verwirft der Browser seine Zusage, und das spätere
+   `prompt()` läuft ins Leere — die Datei sieht dabei völlig richtig aus. */
+
+{
+  const b = await messeInstallation();
+
+  melde(b.preventDefaultGerufen,
+    "die Zusage des Browsers wird abgefangen, statt sie verfallen zu lassen",
+    b.preventDefaultGerufen ? "ja" : "preventDefault() wurde nie gerufen — prompt() liefe später ins Leere");
+  melde(b.knopfDarfErscheinen,
+    "nach der Zusage darf der Knopf erscheinen");
+  melde(b.horcherGerufen,
+    "ein Bild, das schon steht, erfährt davon",
+    b.horcherGerufen ? "ja" : "der Horcher schlägt nicht an — der Knopf bliebe bis zum Bildwechsel verborgen");
+  melde(b.promptGerufen,
+    "der Klick fragt wirklich den Browser");
+  melde(b.ausgang === "angenommen",
+    "und meldet zurück, wie der Spieler sich entschieden hat", b.ausgang);
+  melde(!b.knopfDanach,
+    "ein verbrauchtes Angebot verschwindet — ein zweiter Klick liefe ins Leere");
+  melde(!b.knopfNachInstallation,
+    "nach der Installation ist der Knopf weg, ohne Neuladen");
+  melde(!b.knopfAlsApp,
+    "in der installierten App wird die Installation nicht noch einmal angeboten");
+  melde(b.ohneBrowserStumm,
+    "ohne Zusage gibt es keinen Knopf — Firefox und iPhone sehen nichts, was nicht ginge");
+}
+
+/* Und die Stelle, an der er hängt: Ein Knopf im Modul nützt nichts,
+   wenn ihn kein Bildschirm zeigt. */
+{
+  const l = liesDatei("runtime/lobby.js").replace(/\/\*[\s\S]*?\*\//g, "");
+  melde(/biteInstallieren/.test(l), "das Vorspiel ruft die Installation");
+  melde(/installierbar\(\)/.test(l), "und zeigt den Knopf nur, wenn sie möglich ist");
+  melde(/loeseInstallHorcher/.test(l),
+    "der Horcher wird beim Bildwechsel wieder abgemeldet — sonst wächst die Liste bei jedem ZURÜCK");
+
+  /* ⚠️ **Gebaut heißt nicht angehängt.** Beim ersten Anlauf suchten die
+     drei Zeilen oben nur nach Namen — und blieben grün, als der Kasten
+     absichtlich aus `kasten.append(…)` genommen wurde: Die Funktion
+     stand ja noch da, nur rief sie niemand mehr. Ein Knopf, den kein
+     Bildschirm zeigt, ist genau der Zustand von vorher. Deshalb wird
+     gezählt: einmal die Erklärung, mindestens einmal der Aufruf. */
+  const stellen = (l.match(/baueInstallkasten/g) ?? []).length;
+  melde(stellen >= 2,
+    "und der Kasten hängt wirklich im Vorspiel, nicht nur im Quelltext",
+    `${stellen} Stellen — bei 1 ist er gebaut, aber nirgends angehängt`);
+
+  const html = liesDatei("index.html");
+  melde(/#installkasten\[hidden\]/.test(html),
+    "der Kasten ist über `hidden` schaltbar und nicht über `style`");
+}
+
 /* Der Browser aus der Hand. Er tut genau zwei Dinge falsch — beide
    absichtlich: Sein `requestFullscreen` antwortet nie, und sein
    `orientation.lock` schlägt fehl, solange kein Vollbild aktiv ist
@@ -282,6 +344,90 @@ async function messeVollbild() {
     lockGerufen: !!lock,
     abstand: lock ? lock.t - start : null,
     nachzuegler: nachher > vorher
+  };
+}
+
+/* Der zweite Browser aus der Hand — für das Installationsangebot.
+
+   Er schickt dieselbe Zusage, die Chrome auf Android schickt, und merkt
+   sich, was das Modul damit macht. Ein Textmuster käme hier nicht weit:
+   Ob `preventDefault()` **vor** dem Aufheben steht, ob ein verbrauchtes
+   Angebot wirklich verschwindet und ob der Horcher anspringt, steht in
+   keiner Zeile, die man suchen könnte — das zeigt sich erst im Ablauf. */
+async function messeInstallation() {
+  const listen = new Map();
+  globalThis.addEventListener = (art, fn) => {
+    if (!listen.has(art)) listen.set(art, []);
+    listen.get(art).push(fn);
+  };
+  const feuere = (art, e) => { for (const fn of listen.get(art) ?? []) fn(e); };
+
+  /* Die Umschaltung zwischen „im Tab" und „als installierte App". */
+  let alsApp = false;
+  globalThis.matchMedia = () => ({ matches: alsApp });
+  Object.defineProperty(globalThis, "navigator",
+    { value: { standalone: false }, configurable: true });
+  globalThis.document = { addEventListener() {}, documentElement: {}, fullscreenElement: null };
+
+  /* Eine Zusage, wie der Browser sie schickt. Jede meldet für sich,
+     was mit ihr geschehen ist. */
+  const macheZusage = () => {
+    const z = {
+      abgefangen: false, gefragt: false,
+      preventDefault() { z.abgefangen = true; },
+      prompt() { z.gefragt = true; return Promise.resolve(); },
+      userChoice: Promise.resolve({ outcome: "accepted" })
+    };
+    return z;
+  };
+
+  const modul = await import(`../runtime/installieren.js?t=${Date.now()}`);
+
+  /* Vor jeder Zusage darf es keinen Knopf geben — das ist der Zustand
+     auf jedem Browser, der die Installation nicht anbietet. */
+  const ohneBrowserStumm = modul.installierbar() === false;
+
+  /* Anmelden wie die Lobby: Das Bild steht schon, wenn die Zusage kommt. */
+  let horcherGerufen = false;
+  const loese = modul.beiAenderung(() => { horcherGerufen = true; });
+
+  const erste = macheZusage();
+  feuere("beforeinstallprompt", erste);
+
+  /* ⚠️ **Sofort ablesen, nicht am Ende.** Beim ersten Anlauf stand
+     dieser Griff hinter `biteInstallieren()` — und das benachrichtigt
+     die Horcher ebenfalls. Die Prüfung war deshalb grün, als der
+     Aufruf in `beforeinstallprompt` absichtlich entfernt wurde: Sie
+     maß den zweiten Weg statt den, um den es geht. */
+  const horcherSofort = horcherGerufen;
+
+  const knopfDarfErscheinen = modul.installierbar();
+  const ausgang = await modul.biteInstallieren();
+  const knopfDanach = modul.installierbar();
+
+  /* Eine frische Zusage, dann meldet der Browser die Installation. */
+  feuere("beforeinstallprompt", macheZusage());
+  feuere("appinstalled", {});
+  const knopfNachInstallation = modul.installierbar();
+
+  /* Und derselbe Fall noch einmal, diesmal in der installierten App. */
+  feuere("beforeinstallprompt", macheZusage());
+  alsApp = true;
+  const knopfAlsApp = modul.installierbar();
+  alsApp = false;
+
+  if (typeof loese === "function") loese();
+
+  return {
+    ohneBrowserStumm,
+    preventDefaultGerufen: erste.abgefangen,
+    promptGerufen: erste.gefragt,
+    horcherGerufen: horcherSofort,
+    knopfDarfErscheinen,
+    ausgang,
+    knopfDanach,
+    knopfNachInstallation,
+    knopfAlsApp
   };
 }
 

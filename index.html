@@ -149,6 +149,24 @@
     padding: 10px 4px 10px 14px;
     border: 1px dashed rgba(214,178,102,.4); border-radius: 6px;
   }
+  /* Der Installieren-Knopf. Bewusst leiser als die drei Knöpfe darüber:
+     Wer im Vorspiel steht, will meistens spielen. Er ist nur da, wenn
+     der Browser die Installation wirklich anbietet — geschaltet über
+     `hidden` aus `runtime/lobby.js`, nicht über `style`. */
+  #installkasten {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    margin-top: 6px;
+  }
+  #installkasten[hidden] { display: none !important; }
+  #installkasten p { font-size: 12px; max-width: 26em; }
+  #lobby button#installknopf {
+    min-height: 44px;
+    border-color: rgba(214,178,102,.28);
+    background: transparent;
+    color: rgba(232,182,97,.75);
+    font-size: 13px;
+  }
+
   #lobbyliste { list-style: none; padding: 0; margin: 0; font-size: 13px; }
   #lobbyliste li { padding: 3px 0; }
   #lobbymeldung { color: #c2607a; font-size: 13px; min-height: 1.2em; max-width: 30em; }

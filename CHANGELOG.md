@@ -3,6 +3,90 @@
 Oben das Neueste. Jeder Eintrag sagt **was**, **warum** und **womit
 gemessen** — nicht nur, dass etwas anders ist.
 
+## 0.9.7 — Das Spiel bietet sich selbst zur Installation an (06.09.2026)
+
+Janniks Ansage: *„mach es auch zu einer app die msn aus dem browser
+installieren kann auf Android. vollbild"*
+
+### Der Befund, bevor etwas gebaut war
+
+**Installierbar war es längst — es hat es nur nie gesagt.** Seit
+Fassung 0.9.5 liegen `manifest.webmanifest` (`fullscreen` +
+`landscape`, vier Symbole) und `sw.js` an ihrem Platz, und 41 Prüfungen
+hielten sie fest. Wer die App wollte, musste in Chrome das
+Drei-Punkte-Menü öffnen und dort „App installieren" finden.
+
+| | vorher | jetzt |
+| --- | ---: | ---: |
+| Stellen im Quelltext, die `beforeinstallprompt` kennen | **0** | 3 |
+| sichtbares Angebot im Spiel | **keins** | ein Knopf im Vorspiel |
+| Prüfungen in `pruefe-app.mjs` | 41 | **55** |
+
+Ein Angebot, das niemand findet, ist keins — und nichts daran wird
+jemals rot. Genau das war die Lücke: kein Fehler, sondern eine
+fehlende Zeile Einladung.
+
+### Gebaut
+
+| Datei | was sie tut |
+| --- | --- |
+| `runtime/installieren.js` | fängt die Zusage des Browsers ab, hält sie und reicht sie an einen Klick weiter |
+| `runtime/lobby.js` | zeigt den Knopf im Vorspiel — aber nur, wenn er wirklich etwas tut |
+| `index.html` | seine Gestalt: leiser als die drei Knöpfe, die zum Spielen führen |
+| `werkzeuge/pruefe-app.mjs` | Abschnitt 8, 14 neue Prüfungen |
+
+### Die eine Regel, ohne die es nicht funktioniert
+
+**`preventDefault()` sofort, sonst ist die Zusage verbraucht.** Chrome
+auf Android meldet mit `beforeinstallprompt`: „Diese Seite erfüllt alle
+Bedingungen, ich könnte sie jetzt anbieten." Wer den Aufruf vergisst,
+lässt den Browser seinen eigenen Hinweisbalken zeigen und die Zusage
+verfallen — ein späteres `prompt()` läuft dann ins Leere, und die Datei
+sieht dabei völlig richtig aus.
+
+Und `prompt()` verlangt eine **echte Nutzergeste**, dieselbe Regel wie
+beim Vollbild. Deshalb steht der Aufruf im Klick auf den Knopf und
+nirgends sonst.
+
+### Was still ausbleibt
+
+**Kein Drängen und kein toter Knopf.** Wer keine Zusage schickt —
+Firefox, Safari auf dem iPhone, ein Rechner ohne Installationsweg —,
+sieht schlicht nichts. Ein Knopf, der nichts tut, wäre schlimmer als
+keiner. Und kein eigener Merker im Speicher: Ob die App installiert
+ist, weiß der Browser besser als wir, er schickt das Ereignis dann gar
+nicht erst.
+
+### Zwei Prüfungen, die grün blieben, obwohl sie rot sein mussten
+
+Nach Projektregel wird jede neue Prüfung **absichtlich rot gemacht**.
+Sieben Sabotagen, und zwei davon kamen ungestraft durch — beide Male
+war die Prüfung schuld, nicht der Code:
+
+| Sabotage | erster Anlauf | Ursache |
+| --- | --- | --- |
+| `sageBescheid()` aus `beforeinstallprompt` entfernt | **grün** | der Griff stand hinter `biteInstallieren()`, und das benachrichtigt die Horcher ebenfalls — gemessen wurde der zweite Weg statt der gesuchte |
+| den Kasten aus `kasten.append(…)` genommen | **grün** | die drei Prüfungen suchten nur Namen; die Funktion stand ja noch da, nur rief sie niemand mehr |
+
+Die erste liest jetzt **sofort** nach dem Ereignis ab. Die zweite
+zählt: einmal die Erklärung, mindestens einmal der Aufruf — bei genau
+einer Stelle ist der Knopf gebaut, aber nirgends angehängt, und das ist
+Wort für Wort der Zustand von vorher.
+
+Danach schlagen alle sieben an: fehlendes `preventDefault`,
+verschwiegener Horcher, ein Angebot, das nach dem Klick liegen bleibt,
+ein `installierbar()`, das immer ja sagt (4 Prüfungen auf einmal), ein
+Kasten ohne Bildschirm, ein Kasten ohne `hidden`, und ein Klick, der
+den Browser gar nicht erst fragt.
+
+### Ehrlich vermerkt
+
+Gemessen wurde gegen einen **Browser aus der Hand**, nicht gegen ein
+Telefon. Dass Chrome die Zusage genau so schickt, steht in der
+Beschreibung des Ereignisses; dass sie auf *Janniks* Gerät eintrifft,
+zeigt erst sein Startbildschirm. Der Weg dorthin ist ein Knopf statt
+eines Menüs — mehr behauptet diese Fassung nicht.
+
 ## 0.9.6 — Salven und Splitter (06.09.2026)
 
 Janniks Ansage: *„benutzt bitte das design modul von claude um den
