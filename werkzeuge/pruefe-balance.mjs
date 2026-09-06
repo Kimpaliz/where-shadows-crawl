@@ -68,8 +68,15 @@ const REIHEN = [
 ];
 
 /* Die gemessene Wand je Spielerzahl — Erläuterung bei Prüfung 4 unten.
-   Sperrklinke: darf sinken, nie steigen. */
-const WAND_SPERRE = { 1: 0.59, 2: 0.41, 4: 0.79 };
+   Der **schlimmste von fünf** gemessenen Saatbasen, nicht der einer
+   einzigen. Warum das der Unterschied zwischen einem Wächter und einem
+   Würfel ist, steht dort. */
+const WAND_SPERRE = { 1: 0.61, 2: 0.40, 4: 0.79 };
+
+/* Die gemessene Spanne in Prozentpunkten — steht hier, damit die
+   Meldung ihre eigene Genauigkeit mitnennt, statt eine vorzutäuschen.
+   Dieselbe Bauart wie `ABBRUCH_STREUUNG` weiter unten. */
+const WAND_STREUUNG = { 1: 12, 2: 9, 4: 13 };
 
 const messungen = REIHEN.map((r) => ({
   ...r, ...messreihe({ laeufe: r.laeufe, spielerzahl: r.spieler, saat: 1 })
@@ -99,39 +106,51 @@ for (const m of messungen) {
      **einer** Welle, ist das kein Anstieg, sondern ein Riegel — genau
      der Fall, den der Hauptmann in Welle 4 einmal gebaut hat.
 
-     ⚠️ **Hier stand eine feste Grenze von 0,78, und sie war bei sechs
-     Läufen je Reihe nicht zu halten.** Über 40 Läufe gemessen (Saat 1):
+     ⚠️ **Diese Grenze war ein Würfel mit Meinung — derselbe Fall
+     wie bei `ABBRUCH_SPERRE` unten, Fehlerbuch E4.** Sie stand auf
+     0,59 / 0,41 / 0,79 und war an **einer** Saatbasis gemessen. Fünf
+     Basen zu je 40 Läufen, am selben Code, Anteil der schlimmsten
+     Welle an allen Toten (gemessen am 06.09.2026):
 
-     | Spieler | schlimmste Welle | Anteil | Stand |
-     | ---: | ---: | ---: | --- |
-     | 1 | 6 | 50,0 % | 06.09.2026 |
-     | 2 | 6 | 40,0 % | 06.09.2026 |
-     | 4 | 8 | **75,0 %** | 06.09.2026 |
+     | Spieler | Saat 1 | 201 | 401 | 601 | 801 | schlimmster | Spanne |
+     | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+     | 1 | 50,0 | **60,7** | 48,5 | 50,0 | **60,7** | 60,7 | **12,2** |
+     | 2 | **40,0** | 38,5 | 31,0 | 39,3 | 37,0 | 40,0 | **9,0** |
+     | 4 | 75,0 | 70,8 | 67,9 | 65,5 | **78,9** | 78,9 | **13,4** |
 
-     ⚠️ **Die vorige Fassung dieser Tabelle nannte 58,8 / 40,0 / 78,1 %
-     und die schlimmste Welle für einen Spieler mit 6, für zwei mit 8.**
-     Diese Zahlen stammten von *vor* der Kartenhand und wurden beim
-     Nachziehen der Sperren nicht mitgemessen — die Tabelle beschrieb
-     also einen Stand, den die Datei zwanzig Zeilen weiter selbst für
-     überholt erklärt. Wer die Wand beurteilen wollte, las 58,8 % und
-     maß 50,0 %. Von einer unabhängigen Prüfung am 06.09.2026 gefunden,
-     an den Nennern erkannt.
+     Die alte Grenze für einen Spieler lag damit **mitten** in der
+     Streuung: Zwei der fünf Basen reißen sie, ohne dass am Spiel eine
+     Zeile anders wäre. Ob die Kette grün ist, entschied die Saatbasis
+     und nicht das Spiel — und genau dieser Wächter sollte den Umbau
+     der Nahkampfangriffe beurteilen.
 
-     Für die Streuung dieser Werte gilt dasselbe wie für die
-     Abbruchzahl weiter unten: Sie sind mit **einer** Saatbasis
-     gemessen und auf einen Prozentpunkt genau nicht zu lesen.
+     ⚠️ **Für einen Spieler steigt die Grenze von 0,59 auf 0,61, und
+     das ist eine Lockerung.** Sie wird hier ausdrücklich so genannt,
+     statt als Reparatur verkauft: Eine Sperrklinke darf sinken und
+     nicht steigen. Diese hier stand auf einem Wert, den der Code nie
+     eingehalten hat — nur an der einen Saat, an der zufällig gemessen
+     wurde. Für zwei Spieler sinkt sie (0,41 → 0,40), für vier bleibt
+     sie (0,79). Ab hier gilt die Regel wieder.
 
-     Die Zahlen sind keine Panne, sondern zwei Befunde: Zu viert stirbt
-     man fast nur noch auf Bosswellen (Welle 8 ist die erste mit zwei
-     Hauptleuten und trägt bei vier Spielern **19.270** Lebenspunkte
-     gegen 9.157 in Welle 7 — eine Verdopplung in einer Welle). Allein
-     dagegen steht die Wand auf einer **gewöhnlichen** Welle.
+     Die schlimmste Welle ist über alle fünf Basen dieselbe: **Welle 6**
+     allein und zu zweit, **Welle 8** zu viert. Das ist keine Panne,
+     sondern zwei Befunde: Zu viert stirbt man fast nur noch auf
+     Bosswellen (Welle 8 ist die erste mit zwei Hauptleuten und trägt
+     bei vier Spielern **19.270** Lebenspunkte gegen 9.157 in Welle 7 —
+     eine Verdopplung in einer Welle). Allein dagegen steht die Wand auf
+     einer **gewöhnlichen** Welle.
 
      Eine feste Grenze müsste eines von beidem für falsch erklären. Sie
      ist deshalb dieselbe Sperrklinke wie `ABBRUCH_SPERRE` unten: die
      gemessene Wirklichkeit, die sinken darf und nicht steigen. Ob eine
      Bosswelle eine Wand sein *soll*, ist Janniks Entscheidung (#52) —
      nicht die einer Prüfung, die sie stillschweigend wegdefiniert.
+
+     ⚠️ **Was sie nach der Reparatur fängt und was nicht.** Bei einer
+     Spanne von 9 bis 13 Prozentpunkten fängt sie keine kleine
+     Verschiebung mehr — das konnte sie vorher auch nicht, sie hat es
+     nur behauptet. Was sie fängt, ist ein neuer Riegel: eine Welle, an
+     der plötzlich vier von fünf Läufen enden.
 
      Ein Gegenversuch ist gemessen und verworfen: den Knochenritter von
      Welle 8 auf 9 zu schieben (er betritt den Topf genau in der zweiten
@@ -140,9 +159,11 @@ for (const m of messungen) {
   const tote = m.stirbtIn.reduce((a, b) => a + b, 0);
   const schlimmste = Math.max(...m.stirbtIn);
   const grenze = WAND_SPERRE[n] ?? 0.78;
+  const wandStreu = WAND_STREUUNG[n] ?? 13;
   melde(tote === 0 || schlimmste / tote <= grenze,
     `${n} Spieler: die Wand ist nicht schlimmer als gemessen (${(grenze * 100).toFixed(0)} %)`,
-    `${schlimmste} von ${tote} in Welle ${m.stirbtIn.indexOf(schlimmste)}`);
+    `${schlimmste} von ${tote} in Welle ${m.stirbtIn.indexOf(schlimmste)} — der Anteil `
+    + `schwankt allein durch die Saatbasis um ${wandStreu} Prozentpunkte`);
 }
 
 /* ── Koop darf nicht schwerer sein als allein ─────────────────────── */
@@ -226,12 +247,41 @@ for (const m of messungen.slice(1)) {
    gemessenen Werte**, plus nichts. Sie fängt damit keine kleinen
    Verschiebungen mehr — das konnte sie ohnehin nie, sie hat es nur
    behauptet. Was sie fängt, ist eine grobe Verschlechterung, und das
-   sagt sie jetzt auch. */
+   sagt sie jetzt auch.
+
+   ── Nachgemessen, und die Tabelle oben ist überholt ────────────────
+
+   ⚠️ **Am 06.09.2026 noch einmal gemessen, nach `ff00062` (Salvenmuster
+   je Waffe) und `7a06469`.** Dieselben fünf Basen, derselbe Befehl,
+   heutiger Code:
+
+   | | Saat 1 | 201 | 401 | 601 | 801 | schlimmster |
+   | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+   | 1 Spieler | 8 | 12 | 7 | 8 | 12 | **12** |
+   | 2 Spieler | 15 | 14 | 11 | 12 | 13 | **15** |
+   | 4 Spieler | 20 | 16 | 12 | 11 | 21 | **21** |
+
+   Zwei Dinge stehen damit fest, und keines davon ist hier erledigt:
+
+   **1 · Die Sperre sitzt auf der Kante.** Allein und zu viert ist der
+   schlimmste gemessene Wert **genau** die Grenze (12 von 12, 21 von
+   21). Die nächste Änderung, die den Spieler stärker macht, macht diese
+   Kette rot — nicht weil etwas kaputtgeht, sondern weil #52 („Was
+   kostet ein Sturz im endlosen Modus?") weiter offen ist. Wer sie dann
+   anhebt, statt #52 zu beantworten, hat den Wächter abgeschafft.
+
+   **2 · Die Zahlen sind trotzdem nicht angezogen worden.** 15 statt 18
+   zu zweit wäre eine echte Verschärfung — sie zu nehmen, während
+   dieselbe Messung allein und zu viert **gestiegen** ist, wäre
+   Rosinenpickerei. Die drei Sperren bleiben, wo sie stehen, und dieser
+   Absatz sagt, warum. */
 const ABBRUCH_SPERRE = { 1: 12, 2: 18, 4: 21 };
 
 /* Die gemessene Spanne je Spielerzahl — steht hier, damit die Meldung
-   ihre eigene Genauigkeit mitnennt statt eine vorzutäuschen. */
-const ABBRUCH_STREUUNG = { 1: 6, 2: 10, 4: 6 };
+   ihre eigene Genauigkeit mitnennt statt eine vorzutäuschen. Aus der
+   **zweiten** Tabelle oben (06.09.2026, heutiger Code): 12−7, 15−11,
+   21−11. */
+const ABBRUCH_STREUUNG = { 1: 5, 2: 4, 4: 10 };
 
 for (const m of messungen) {
   const grenze = ABBRUCH_SPERRE[m.spieler] ?? 0;

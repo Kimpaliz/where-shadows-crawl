@@ -3,6 +3,134 @@
 Oben das Neueste. Jeder Eintrag sagt **was**, **warum** und **womit
 gemessen** — nicht nur, dass etwas anders ist.
 
+## 0.9.9 — Zwei Wächter, bevor der erste Schlag umgebaut wird (06.09.2026)
+
+Janniks Ansage zu den Angriffen lautet wörtlich: *„wo sind die
+eindeutigen initial attack animationnen? angriffe finde immer in
+richtigung der gegner statt und tgreffen nur wenn die Animation trifft.
+mehr passende partikeleffeke!"* — und dazu *„2 feuerwaffen / 2 schnitt /
+2 stumpf / 2 gift / 2 eis"*.
+
+Dieser Eintrag baut davon **nichts**. Er repariert zuerst die beiden
+Prüfungen, die den Umbau hinterher beurteilen sollen. Beide waren
+genau dort blind oder unzuverlässig, wo der Umbau ansetzt — und eine
+Prüfung, die man erst *nach* der Änderung anfasst, ist keine Prüfung
+mehr, sondern eine Meinung über das eigene Werk.
+
+### Der Gleichlauf sah dem Schlag beim Auseinanderlaufen zu
+
+`pruefe-netz.mjs` vergleicht zwei Läufe mit gleicher Saat und gleichen
+Eingaben. Das tat er auch — nur nicht an den Feldern, um die es geht.
+
+| gemessen am 06.09.2026 | Felder vorhanden | im Abdruck |
+| --- | ---: | ---: |
+| ein Spieler | 34 | **13** |
+| eine Waffe | 4 | **0** |
+| ein Gegner (Zeitschaden) | 3 | **0** |
+
+Nicht enthalten waren ausgerechnet `schlagZeit`, `schlagWaffe`,
+`blickX`, `blickY`, die Angriffsuhr jeder Waffe (`bereitIn`) und Brand,
+Gift und Frost am Gegner. Ein Schlag, der auf zwei Rechnern verschieden
+lang läuft oder in eine andere Richtung zeigt, wäre nicht aufgefallen —
+und wenn die Welten davon irgendwann doch auseinanderliefen, hätte der
+Wächter den **Zufallsstand** gemeldet, also die Folge statt der Ursache.
+
+Der zweite Fehler war schlimmer als der erste: Der Abdruck wurde bei
+**drei** von 3600 Schritten genommen (t = 599, 1799, Ende). Vier
+eingebaute Abweichungen bei t = 700 blieben deshalb alle vier grün —
+nicht weil sie fehlten, sondern weil sie bis zur nächsten Marke längst
+verheilt waren. `schlagZeit` läuft in 0,14 s ab, `blickX` überschreibt
+die nächste Eingabe, Brand verglimmt.
+
+Jetzt wandert **jeder** Schritt in eine laufende Summe (FNV-1a,
+32 Bit). Rot-Beweis, sieben Sabotagen — jede verändert **ein** Feld für
+**einen** Tick, und nur im zweiten Lauf:
+
+| Sabotage | alter Wächter | neuer Wächter |
+| --- | --- | --- |
+| `schlagZeit` + 0,001 | grün | **rot** |
+| `schlagWaffe` → `sense` | grün | **rot** |
+| `blickX` + 0,001 | grün | **rot** |
+| `waffe.bereitIn` + 0,001 | grün | **rot** |
+| `gegner.brand` + 0,001 | grün | **rot** |
+| `gegner.gift` + 0,001 | grün | **rot** |
+| `gegner.frost` + 0,001 | grün | **rot** |
+
+Sieben von sieben blind, sieben von sieben gefangen. Ein erster Anlauf
+setzte die Sabotage an den **Anfang** des Ticks — drei der fünf wurden
+im selben Tick wieder überschrieben und kamen nie beim Abdruck an. Das
+ist dieselbe Falle wie oben, eine Ebene höher: eine Sabotage, die nichts
+sabotiert, beweist so wenig wie eine Prüfung, die nichts prüft.
+
+### Die Wand-Sperre war ein Würfel mit Meinung
+
+`pruefe-balance.mjs` prüft, ob sich die Niederlagen auf **einer** Welle
+häufen — ein Riegel statt eines Anstiegs. Die Grenze dafür stand auf
+0,59 / 0,41 / 0,79 und war an **einer** Saatbasis gemessen. Fünf Basen
+zu je 40 Läufen, am selben Code:
+
+| Spieler | Saat 1 | 201 | 401 | 601 | 801 | schlimmster | Spanne |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 50,0 | **60,7** | 48,5 | 50,0 | **60,7** | 60,7 | **12,2** |
+| 2 | **40,0** | 38,5 | 31,0 | 39,3 | 37,0 | 40,0 | **9,0** |
+| 4 | 75,0 | 70,8 | 67,9 | 65,5 | **78,9** | 78,9 | **13,4** |
+
+Zwei der fünf Basen reißen die alte Grenze für einen Spieler. Rot-Beweis
+an einer Kopie, an der **eine Zeile** anders ist (`saat: 1` → `saat:
+201`):
+
+```
+FEHLER  1 Spieler: die Wand ist nicht schlimmer als gemessen (59 %)
+        ·  17 von 28 in Welle 6
+```
+
+Ob die Kette grün war, entschied also die Saatbasis und nicht das Spiel.
+Genau dieser Wächter sollte den Nahkampf-Umbau beurteilen.
+
+Die Grenze steht jetzt auf dem **schlimmsten der fünf** gemessenen
+Werte: 0,61 / 0,40 / 0,79. Für zwei Spieler ist das eine Verschärfung,
+für vier bleibt sie gleich — **für einen Spieler ist es eine
+Lockerung**, von 0,59 auf 0,61, und das wird hier so genannt statt als
+Reparatur verkauft. Eine Sperrklinke darf sinken und nicht steigen;
+diese hier stand auf einem Wert, den der Code nie eingehalten hat,
+sondern nur an der einen Saat, an der zufällig gemessen wurde.
+
+Gegenprobe, dass die neue Grenze kein Freibrief ist: eine echte Wand in
+Welle 6 einbauen (Dichte mal vier) — alle drei Spielerzahlen werden rot,
+mit 92 / 92 / 91 Prozent.
+
+### Nebenbefund: die Abbruch-Sperre sitzt auf der Kante
+
+Beim Nachmessen fiel auf, dass die Abbruchtabelle in derselben Datei
+einen überholten Stand beschreibt — sie stammt von **vor** `ff00062`
+(Salvenmuster je Waffe). Dieselben fünf Basen, heutiger Code:
+
+| | Saat 1 | 201 | 401 | 601 | 801 | schlimmster | Sperre |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 Spieler | 8 | 12 | 7 | 8 | 12 | **12** | 12 |
+| 2 Spieler | 15 | 14 | 11 | 12 | 13 | **15** | 18 |
+| 4 Spieler | 20 | 16 | 12 | 11 | 21 | **21** | 21 |
+
+Allein und zu viert liegt der schlimmste gemessene Wert **genau** auf
+der Grenze. Die nächste Änderung, die den Spieler stärker macht, macht
+die Kette rot — nicht weil etwas kaputtgeht, sondern weil Vorgang #52
+(„Was kostet ein Sturz im endlosen Modus?") weiter offen ist. Die
+Sperren wurden **nicht** nachgezogen: 15 statt 18 zu zweit wäre eine
+echte Verschärfung, sie zu nehmen, während dieselbe Messung allein und
+zu viert gestiegen ist, wäre Rosinenpickerei.
+
+### Was das gekostet hat
+
+Gemessen wurden **600 Läufe** (5 Saatbasen × 3 Spielerzahlen × 40
+Läufe), dazu zwei volle Rot-Beweise — zusammen rund eine Stunde
+Rechenzeit, verteilt auf mehrere Kerne.
+
+Die Wächter selbst bleiben billig. `pruefe-netz.mjs` steigt von
+**0,298 s auf 0,437 s** — das ist der Preis dafür, dass die Summe über
+alle 3600 Schritte läuft statt über drei Marken.
+`pruefe-balance.mjs` ändert nur Konstanten und Text; an seiner Laufzeit
+(rund vier Minuten für 120 Läufe) ändert sich nichts.
+
 ## 0.9.8 — Die App trägt wirklich (06.09.2026)
 
 Nachtrag zu 0.9.7. Eine unabhängige Gegenprüfung mit 34 Agenten hat den

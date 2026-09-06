@@ -141,11 +141,35 @@ function abdruck(welt) {
     welt.planIndex, welt.zufall.zustand(), welt.verloreneBeute,
     welt.gegner.length, welt.geschosse.length, welt.beute.length
   ];
-  for (const s of welt.spieler)
+  /* ⚠️ **Was hier fehlt, faellt nicht auf — es faellt spaeter auf.**
+     Gemessen am 06.09.2026: Ein Spieler traegt 34 Felder, im Abdruck
+     standen 13. Nicht darunter waren ausgerechnet die vier, an denen
+     der Schlag haengt (`schlagZeit`, `schlagWaffe`, `blickX`,
+     `blickY`), und `waffe.bereitIn` — die Angriffsuhr — stand
+     ueberhaupt nicht drin (Waffe: 4 Felder, 0 im Abdruck).
+
+     Das ist kein Schoenheitsfehler. Ein Schlag, der auf zwei Rechnern
+     verschieden lang laeuft oder in eine andere Richtung zeigt, bliebe
+     unbemerkt, solange die Toten zufaellig gleich fallen. Und wenn sie
+     es einmal nicht tun, meldet der Waechter `welt.zufall.zustand()` —
+     also die **Folge** statt der Ursache, und man sucht am falschen
+     Ende.
+
+     Dasselbe fuer die Zeitschaeden am Gegner: Brand, Gift und Frost
+     entscheiden, wann er stirbt, und ein Toter zieht neun Zahlen aus
+     dem gesaeten Strom (`spiel/beute.mjs`). */
+  for (const s of welt.spieler) {
     teile.push(s.id, z(s.x), z(s.y), z(s.vx), z(s.vy), s.leben, s.lebenMax,
-      s.gold, s.wissen, s.stufe, s.zustand, s.getoetet, z(s.aufheben));
+      s.gold, s.wissen, s.stufe, s.zustand, s.getoetet, z(s.aufheben),
+      z(s.schlagZeit), s.schlagWaffe ?? "", z(s.blickX), z(s.blickY));
+    /* Die Uhr jeder Waffe: Sie entscheidet, in welchem Bild der
+       naechste Schlag faellt. Zwei Rechner, die sie verschieden
+       herunterzaehlen, schlagen in verschiedenen Bildern zu. */
+    for (const w of s.waffen) teile.push(w.id, w.stufe, z(w.bereitIn));
+  }
   for (const g of welt.gegner)
-    teile.push(g.art.id, z(g.x), z(g.y), z(g.leben), z(g.bereitIn));
+    teile.push(g.art.id, z(g.x), z(g.y), z(g.leben), z(g.bereitIn),
+      z(g.brand), z(g.gift), z(g.frost));
   for (const p of welt.geschosse) teile.push(z(p.x), z(p.y));
   for (const b of welt.beute) teile.push(z(b.x), z(b.y), b.art ?? "");
   return teile.join("|");
@@ -206,18 +230,47 @@ function schalteWeiter(welt) {
   }
 }
 
+/* Eine Summe über **jeden** Schritt, nicht nur über drei Marken.
+
+   ⚠️ **Der Grund, gemessen am 06.09.2026:** Vorher wurde der Abdruck bei
+   t = 599, 1799 und am Ende genommen. Vier eingebaute Abweichungen —
+   `schlagZeit`, `waffe.bereitIn`, `blickX` und der Brand eines Gegners,
+   jeweils bei t = 700 — blieben **alle vier grün**. Nicht weil der
+   Abdruck sie nicht enthält, sondern weil sie bis zur nächsten Marke
+   längst wieder verheilt waren: `schlagZeit` läuft in 0,14 s ab,
+   `blickX` überschreibt die nächste Eingabe, Brand verglimmt.
+
+   Ein Gleichlauf, der nur dreimal hinsieht, prüft nicht den Gleichlauf,
+   sondern drei Augenblicke. Deshalb wandert jeder Schritt in eine
+   Summe. FNV-1a, 32 Bit — billig genug für 3600 Schritte und
+   empfindlich für ein einziges geändertes Zeichen. */
+function summe(bisher, text) {
+  let h = bisher;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  return h >>> 0;
+}
+
 function spieleDurch(folge) {
   const welt = starteLauf({ spielerzahl: SPIELERZAHL, saat: SAAT });
   naechsteWelle(welt);
   const marken = [];
+  let laufendeSumme = 2166136261;
   for (let t = 0; t < folge.length; t++) {
     schrittImLauf(welt, folge[t]);
     schalteWeiter(welt);
+    laufendeSumme = summe(laufendeSumme, abdruck(welt));
     /* Zwischenmarken: Läuft es erst spät auseinander, will man den
        Tick wissen und nicht bloß „am Ende verschieden". */
     if (t === 599 || t === 1799 || t === folge.length - 1) marken.push(abdruck(welt));
   }
-  return marken;
+  /* Die Summe steht **vorn**: Sie ist die schärfste Marke, und wenn sie
+     abweicht, ist `ersteAbweichung === 0` — das liest sich als „gleich
+     zu Beginn verschieden" und ist genau richtig, denn sie deckt den
+     ganzen Lauf ab. */
+  return [String(laufendeSumme), ...marken];
 }
 
 const laufA = spieleDurch(macheFolge(SCHRITTE, 0));

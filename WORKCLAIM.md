@@ -12,7 +12,8 @@ einzige Stelle, an der sich zwei Sitzungen sehen.
 
 | Bereich | Besitzer | Ziel | Seit |
 | --- | --- | --- | --- |
-| frei | frei | – | – |
+| `werkzeuge/pruefe-netz.mjs`, `werkzeuge/pruefe-balance.mjs`, `werkzeuge/pruefe-angriffe.mjs` | Claude (Sitzung Angriffe) | Schritt 0: die zwei Waechter reparieren, die den Angriffs-Umbau beurteilen sollen; danach die Nahkampfpruefungen dazu | 06.09.2026 19:00 |
+| `spiel/kampf.mjs`, `spiel/schwung.mjs`, `spiel/welt.mjs`, `spiel/katalog/waffen.mjs`, `runtime/zeichnen.js`, `runtime/sprite-daten.js`, `runtime/sprites.js` | Claude (Sitzung Angriffe) | Nahkampf: der Schlag zeigt auf den Gegner, trifft nur wo die Animation liegt, je Schadensart eigene Form und Partikel | 06.09.2026 21:55 |
 
 ## Format
 
