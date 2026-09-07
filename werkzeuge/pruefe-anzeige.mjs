@@ -59,6 +59,8 @@ import { bildIndex, mische, artFarbe, zahlStil, ziffernBreite, FUNKE_LEBEN, TOD_
 import { bereitAnteil, verstummt, istRegung, fristRest, FRIST_SEKUNDEN, macheMenue }
   from "../runtime/oberflaeche.js";
 import { ART_IDS, SCHADENSARTEN, STANDARD_ART } from "../spiel/schadensarten.mjs";
+import { zeichneStaub, zeichneSchweif } from "../runtime/zeichnen.js";
+import { SCHWUNG_DAUER } from "../spiel/schwung.mjs";
 import { SCHRITT } from "../spiel/welt.mjs";
 
 const { melde, ende } = macheMelder({ still: true });
@@ -381,5 +383,187 @@ const ersteAnzeige = Array.from({ length: FRIST_TICKS + 1 }, (_, t) => t)
 melde(ersteAnzeige != null && ersteAnzeige < FRIST_TICKS,
   `der Zähler erscheint ${((FRIST_TICKS - ersteAnzeige) * SCHRITT).toFixed(0)} s bevor die Frist greift`,
   "der Zähler erscheint nicht vor dem Ablauf");
+
+/* ── Der Staub: fünf Arten, fünf Bewegungen ────────────────────────
+
+   ⚠️ **Bis zum 06.09.2026 flogen alle fünf gleich.** Derselbe Kranz,
+   derselbe Radius, dieselbe Kurve — unterschieden nur durch Farbe und
+   Menge, fünf bis zehn Körner in einem 9 x 9 großen Zeichen. Das ist
+   dieselbe Falle, die diese Datei für die Trefferzeichen schon einmal
+   gestellt hat: Jedes für sich tadellos, alle zusammen ununterscheidbar.
+
+   Geprüft wird deshalb die **Bewegung**, nicht das Aussehen. Gezeichnet
+   wird dafür auf ein Blatt Papier: ein Zeichenzusammenhang, der seine
+   `fillRect`-Aufrufe nur aufschreibt. Was das Bild wirklich malt, sieht
+   man damit als Punktwolke — und zwei Wolken lassen sich vergleichen,
+   ein Eindruck nicht. */
+
+function papier() {
+  const punkte = [];
+  return {
+    punkte,
+    set fillStyle(f) { this._f = f; },
+    get fillStyle() { return this._f; },
+    fillRect(x, y, b, h) { punkte.push({ x, y, b, h, farbe: this._f }); }
+  };
+}
+
+function staubWolke(art, alter, { x = 100, y = 100, rx = 1, ry = 0 } = {}) {
+  const leben = art === "tod" ? TOD_LEBEN : FUNKE_LEBEN;
+  const c = papier();
+  zeichneStaub(c, { funken: [{ x, y, zeit: leben * (1 - alter), art, rx, ry }] });
+  return c.punkte.map((p) => ({ ...p, dx: p.x - x, dy: p.y - y }));
+}
+
+{
+  /* 1 · Jede Art wirft überhaupt Staub, und zwar mehr als vorher.
+     Die Menge ist das schwächste der Merkmale, aber ein Einschlag ohne
+     Staub wäre gar keiner. */
+  for (const art of [...ART_IDS, "tod"]) {
+    const wolke = staubWolke(art, 0.5);
+    melde(wolke.length >= 9, `${art}: der Einschlag wirft mindestens neun Körner`,
+      `${wolke.length}`);
+  }
+}
+
+{
+  /* 2 · Schnitt ist ein **Strahl** in Schlagrichtung, kein Kranz.
+     Ohne diese Prüfung wäre der alte Rundumkranz eine Zeile weit
+     entfernt — und niemand sähe mehr, wohin die Klinge ging. */
+  const wolke = staubWolke("schnitt", 0.8, { rx: 1, ry: 0 });
+  const winkel = wolke.map((p) => Math.abs(Math.atan2(p.dy, p.dx)));
+  melde(winkel.every((w) => w < 0.9), "Schnitt: der Staub bleibt im Strahl nach vorn",
+    `weitester ${Math.round((Math.max(...winkel) * 180) / Math.PI)}° daneben`);
+
+  /* Und der Strahl folgt der Richtung wirklich — dieselbe Wolke nach
+     links gedreht muss nach links zeigen. */
+  const links = staubWolke("schnitt", 0.8, { rx: -1, ry: 0 });
+  melde(links.every((p) => p.dx <= 0), "Schnitt: nach links geschlagen spritzt es nach links",
+    `${links.filter((p) => p.dx > 0).length} Körner nach rechts`);
+}
+
+{
+  /* 3 · Wucht ist ein **Ring**: gleicher Abstand, gleichmäßig verteilt.
+     Ein Ring mit zufälligen Winkeln wäre wieder ein Kranz. */
+  const wolke = staubWolke("wucht", 0.7);
+  const weiten = wolke.map((p) => Math.hypot(p.dx, p.dy / 0.8));
+  const spanne = Math.max(...weiten) - Math.min(...weiten);
+  melde(spanne <= 2, "Wucht: alle Körner liegen auf demselben Ring",
+    `${spanne.toFixed(1)} Bildpunkte Unterschied`);
+
+  const winkel = wolke.map((p) => Math.atan2(p.dy / 0.8, p.dx)).sort((a, b) => a - b);
+  const luecken = winkel.slice(1).map((w, i) => w - winkel[i]);
+  const soll = (Math.PI * 2) / wolke.length;
+  melde(Math.max(...luecken) < soll * 2, "Wucht: der Ring hat keine Lücke",
+    `größte Lücke ${((Math.max(...luecken) * 180) / Math.PI).toFixed(0)}°`);
+}
+
+{
+  /* 4 · Feuer steigt, Frost fällt. Das ist der Kanal, den man auch im
+     Dunkeln liest, wo Orange und Hellblau beide grau aussehen. */
+  const glut = staubWolke("feuer", 0.9);
+  const mitteGlut = glut.reduce((a, p) => a + p.dy, 0) / glut.length;
+  melde(mitteGlut < -2, "Feuer: die Funken steigen", `Mitte bei ${mitteGlut.toFixed(1)}`);
+
+  const eis = staubWolke("frost", 0.9);
+  const mitteEis = eis.reduce((a, p) => a + p.dy, 0) / eis.length;
+  melde(mitteEis > 2, "Frost: die Splitter fallen", `Mitte bei ${mitteEis.toFixed(1)}`);
+  melde(eis.every((p) => p.h === 2), "Frost: ein Splitter ist zwei Bildpunkte hoch",
+    `${eis.filter((p) => p.h !== 2).length} einzelne`);
+}
+
+{
+  /* 5 · Fluch dreht sich beim Fliegen. Gemessen am Winkel desselben
+     Korns zu zwei Zeitpunkten — dreht er sich nicht, ist es wieder ein
+     gewöhnlicher Kranz. */
+  const frueh = staubWolke("fluch", 0.35);
+  const spaet = staubWolke("fluch", 0.95);
+  const dreh = frueh.map((p, i) => {
+    const a = Math.atan2(p.dy / 0.8, p.dx);
+    const b = Math.atan2(spaet[i].dy / 0.8, spaet[i].dx);
+    return Math.abs(((b - a + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+  });
+  const mittel = dreh.reduce((a, b) => a + b, 0) / dreh.length;
+  melde(mittel > 0.5, "Fluch: die Punkte drehen sich, während sie fliegen",
+    `im Mittel ${((Math.PI - mittel) * 180 / Math.PI).toFixed(0)}° Drehung`);
+}
+
+{
+  /* 6 · Und keine zwei Arten sehen gleich aus. Das ist die Prüfung, um
+     die es geht; die fünf darüber sagen nur, **warum** sie verschieden
+     sind. */
+  const wolken = new Map();
+  for (const art of ART_IDS) {
+    wolken.set(art, staubWolke(art, 0.7).map((p) => `${p.dx},${p.dy},${p.h}`).join("|"));
+  }
+  for (let i = 0; i < ART_IDS.length; i++) {
+    for (let j = i + 1; j < ART_IDS.length; j++) {
+      const a = ART_IDS[i], b = ART_IDS[j];
+      melde(wolken.get(a) !== wolken.get(b),
+        `${a} und ${b} stauben verschieden`);
+    }
+  }
+}
+
+{
+  /* 7 · Zweimal dasselbe Bild.
+
+     ⚠️ Der Zeichner darf nicht würfeln. Ein `Math.random` im Staub
+     wäre nirgends rot, würde nichts kaputt machen — und nähme der
+     Wiederholbarkeit den halben Wert: Zwei Rechner im Netz-Koop sähen
+     verschiedene Nächte, und eine Aufnahme ließe sich nicht
+     nachstellen. */
+  const a = staubWolke("feuer", 0.6).map((p) => `${p.x},${p.y}`).join("|");
+  const b = staubWolke("feuer", 0.6).map((p) => `${p.x},${p.y}`).join("|");
+  melde(a === b, "derselbe Einschlag wirft zweimal denselben Staub");
+
+  const anderswo = staubWolke("feuer", 0.6, { x: 137, y: 91 })
+    .map((p) => `${p.x - 137},${p.y - 91}`).join("|");
+  melde(anderswo !== a, "an einer anderen Stelle sieht er anders aus",
+    "der Staub hängt nicht am Ort — dann wäre jeder Einschlag derselbe");
+}
+
+/* ── Der Schweif hinter den Klingen ────────────────────────────────── */
+
+function schweifWolke(sw) {
+  const c = papier();
+  zeichneSchweif(c, {
+    spieler: [{ x: 0, y: 0, zustand: "lebt", schwuenge: sw ? [sw] : [] }]
+  });
+  return c.punkte;
+}
+
+{
+  const sw = {
+    waffe: "sense", art: "schnitt", rx: 1, ry: 0,
+    bogen: (200 * Math.PI) / 180, reichweite: 46,
+    zeit: SCHWUNG_DAUER * 0.8, offen: 3
+  };
+
+  melde(schweifWolke(null).length === 0, "ohne Schwung gibt es keinen Schweif");
+  melde(schweifWolke({ ...sw, zeit: -0.02 }).length === 0,
+    "ein Nachschlag, der noch nicht dran ist, hat auch keinen Schweif");
+
+  const punkte = schweifWolke(sw);
+  melde(punkte.length > 0, "ein laufender Schwung zieht einen Schweif", `${punkte.length}`);
+
+  /* Der Schweif liegt **hinter** der Klinge, also innerhalb der
+     Reichweite. Ein Schweif, der weiter fliegt als die Waffe trifft,
+     wäre wieder Bild ohne Wirkung — genau das, was der Umbau beseitigt
+     hat. */
+  const zuWeit = punkte.filter((p) => Math.hypot(p.x, p.y) > sw.reichweite + 4);
+  melde(zuWeit.length === 0, "kein Schweifkorn liegt weiter draußen als die Waffe reicht",
+    `${zuWeit.length} von ${punkte.length}`);
+
+  /* Am Anfang des Schwungs gibt es noch nichts zu schleppen. */
+  melde(schweifWolke({ ...sw, zeit: SCHWUNG_DAUER * 0.05 }).length
+    < schweifWolke({ ...sw, zeit: SCHWUNG_DAUER * 0.9 }).length,
+    "der Schweif wächst mit dem Schwung");
+
+  /* Und er trägt die Farbe seiner Schadensart. */
+  const feuer = schweifWolke({ ...sw, art: "feuer" }).map((p) => p.farbe);
+  const frost = schweifWolke({ ...sw, art: "frost" }).map((p) => p.farbe);
+  melde(feuer.join() !== frost.join(), "der Schweif trägt die Farbe der Schadensart");
+}
 
 ende();

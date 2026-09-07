@@ -38,6 +38,10 @@
    `spiel/katalog/waffen.mjs` (die Daten). */
 
 import {
+  SCHWUNG_DAUER, SCHWUNG_BAND, GROESSTER_GEGNER, bogenDerWaffe, schwungRadius,
+  schwungAnteil, imAusschnitt, imBand
+} from "./schwung.mjs";
+import {
   abklingzeit, merkmalZaehlung, gruppenAufschlag, berechneSchaden,
   schadenAmSpieler, widerstandAus, waffenReichweite, angriffeJeSchlag,
   geschosseJeAngriff, durchschlaege, regenerationJeSekunde, wert
@@ -106,21 +110,134 @@ export function feuereWaffen(welt, dt) {
       };
 
       for (let n = 0; n < angriffeJeSchlag(s.werte); n++) {
-        if (v.art === "nahkampf") {
-          s.schlagZeit = 0.14;
-          s.schlagWaffe = waffe.id;
-          for (const g of ziele) {
-            /* Ein zweiter Schlag auf eine Leiche wäre verschenkt —
-               ohne diese Zeile wäre `zusatzangriffe` genau dort am
-               schwächsten, wo es am meisten trifft. */
-            if (g.tot) continue;
-            schlageZu(welt, s, g, schlag, v.wirkung, waffe.id);
-          }
-        } else {
-          wirfSalve(welt, s, ziele[0], schlag, v, waffe, reichweite);
-        }
+        if (v.art === "nahkampf") holeAus(s, ziele[0], schlag, v, waffe, reichweite, n);
+        else wirfSalve(welt, s, ziele[0], schlag, v, waffe, reichweite);
       }
     }
+  }
+}
+
+/* ── Der Nahkampf: ausholen, dann treffen ─────────────────────────
+
+   ⚠️ **Bis zum 06.09.2026 stand hier etwas anderes**, und Jannik hat
+   genau das gesehen: `s.schlagZeit = 0.14` setzen und im **selben
+   Bild** allen Zielen im **vollen Kreis** Schaden geben. Gezeichnet
+   wurde dazu ein Bogen von 11 x 11 Bildpunkten in **Laufrichtung**.
+
+   Drei Dinge waren damit falsch, und alle drei stehen in seiner Ansage:
+   Der Schlag zeigte nicht auf den Gegner, die Animation hatte mit dem
+   Treffer nichts zu tun (sie reichte 11,8 Bildpunkte weit, die Waffen
+   30 bis 52), und jede Nahkampfwaffe sah gleich aus.
+
+   Jetzt ist der Schlag eine **Bewegung**: `holeAus()` legt Richtung,
+   Öffnung und Reichweite fest, `schwungSchritt()` fährt das Band nach
+   außen und trifft, wer dort gerade steht. Die Geometrie steht in
+   `spiel/schwung.mjs` und wird vom Zeichner **noch einmal** benutzt —
+   deshalb kann die gemalte Form nicht mehr von der treffenden
+   abweichen. */
+
+/* Wie weit zwei Schläge desselben Bereitwerdens auseinanderliegen.
+
+   `angriffeJeSchlag` gibt bei genug `zusatzangriffe` zwei oder drei
+   Schwünge auf einmal. Ohne Verzug lägen sie exakt übereinander: Der
+   Schaden wäre da, aber zu sehen wäre ein einziger Bogen. 0,05 s sind
+   drei Bilder — genug, dass man sie zählt, und wenig genug, dass der
+   letzte noch vor der nächsten Abklingzeit fertig ist. */
+const NACHSCHLAG_VERZUG = 0.05;
+
+/* Ausholen. Der Schaden fällt hier **nicht** — er fällt, wenn das Band
+   beim Gegner vorbeikommt.
+
+   Die Richtung ist die zum **nächsten** Gegner (`ziele[0]`, nach
+   Abstand sortiert). Das ist Janniks „angriffe finde immer in
+   richtigung der gegner statt", und es kostet nichts: Die Zielsuche
+   lief ohnehin schon. */
+function holeAus(s, ziel, schlag, v, waffe, reichweite, nummer) {
+  const dx = ziel.x - s.x, dy = ziel.y - s.y;
+  /* Steht der Gegner exakt auf der Figur, gibt es keine Richtung.
+     Dann die Blickrichtung nehmen — irgendwohin muss der Bogen zeigen,
+     und `0/0` wäre `NaN` und damit ein Bogen, der nie trifft. */
+  const d = Math.hypot(dx, dy);
+  const rx = d > 0 ? dx / d : s.blickX;
+  const ry = d > 0 ? dy / d : s.blickY;
+
+  s.schwuenge.push({
+    waffe: waffe.id, art: schlag.art,
+    rx, ry,
+    bogen: bogenDerWaffe(v),
+    reichweite,
+    /* Wie viele Gegner dieser Schwung noch treffen darf. `v.ziele` galt
+       vorher für den ganzen Kreis auf einmal; jetzt gilt es für die
+       ganze Bewegung, und wer zuerst im Band liegt, wird zuerst
+       getroffen. */
+    offen: v.ziele,
+    zeit: -nummer * NACHSCHLAG_VERZUG,
+    schlag, wirkung: v.wirkung,
+    /* Ein Gegner wird von **einem** Schwung genau einmal getroffen.
+       Ohne diese Menge träfe das Band ihn in jedem Bild neu, in dem es
+       ihn überdeckt — bei ±10 Bildpunkten Banddicke wären das drei bis
+       vier Bilder und damit der drei- bis vierfache Schaden. */
+    getroffen: new Set()
+  });
+}
+
+/* Ein Bild Schwung: Band nach außen schieben, treffen, Abgelaufenes
+   wegräumen. */
+export function schwungSchritt(welt, dt) {
+  for (const s of welt.spieler) {
+    if (s.schwuenge.length === 0) continue;
+    /* Wer fällt, hört auf zu schlagen. Ein Bogen, der über einem
+       Knienden weiterfährt, wäre ein Treffer aus dem Nichts. */
+    if (s.zustand !== "lebt") { s.schwuenge.length = 0; continue; }
+
+    for (const sw of s.schwuenge) {
+      sw.zeit += dt;
+      /* Noch nicht dran (Nachschlag) oder schon satt. Beides malt der
+         Zeichner trotzdem — die Bewegung läuft zu Ende. */
+      if (sw.zeit <= 0 || sw.offen <= 0) continue;
+      const radius = schwungRadius(sw, schwungAnteil(sw));
+
+      /* Wer jetzt im Band liegt. Über das Raster gesucht, damit ein
+         Schwung nicht mit der Gegnerzahl teurer wird — dieselbe
+         Begründung wie bei `zieleInReichweite`. */
+      const kandidaten = [];
+      welt.gitter.umkreis(s.x, s.y, radius + SCHWUNG_BAND + GROESSTER_GEGNER, (g) => {
+        if (g.tot || sw.getroffen.has(g)) return;
+        const dx = g.x - s.x, dy = g.y - s.y;
+        const d = Math.hypot(dx, dy);
+        if (!imBand(sw, d, g.radius, radius)) return;
+        if (!imAusschnitt(sw, dx, dy)) return;
+        kandidaten.push([d, g]);
+      });
+      /* Der nächste zuerst. `sort` ist seit ES2019 stabil, und das
+         Raster liefert immer dieselbe Reihenfolge — zwei Rechner im
+         Netz-Koop treffen deshalb dieselben Gegner in derselben
+         Reihenfolge. */
+      if (kandidaten.length > 1) kandidaten.sort((a, b) => a[0] - b[0]);
+
+      for (const [, g] of kandidaten) {
+        if (sw.offen <= 0) break;
+        /* ⚠️ **Derselbe Gegner kann zweimal in der Liste stehen.** Das
+           Raster schluesselt seine Zellen mit `cx * 73856093 ^ cy *
+           19349663` und prueft die Zelle danach nicht nach — zwei
+           verschiedene Zellen koennen sich also eine Liste teilen, und
+           `umkreis()` reicht sie dann zweimal durch. Der Filter beim
+           Sammeln oben hilft nicht: Dort ist der Gegner noch in keiner
+           `getroffen`-Menge.
+
+           Gemessen am 06.09.2026 auf einem Ring aus 24 Gegnern: Die
+           Pechfackel (drei Ziele) verbrauchte alle drei, aber nur zwei
+           Gegner nahmen Schaden — einer bekam ihn doppelt. Ein
+           Rundumschlag haette so die Haelfte seiner Ziele an einen
+           einzigen verschenkt. */
+        if (sw.getroffen.has(g)) continue;
+        sw.getroffen.add(g);
+        sw.offen--;
+        schlageZu(welt, s, g, sw.schlag, sw.wirkung, sw.waffe);
+      }
+    }
+
+    s.schwuenge = s.schwuenge.filter((sw) => sw.zeit < SCHWUNG_DAUER);
   }
 }
 
@@ -208,7 +325,16 @@ export function schlageZu(welt, spieler, g, schlag, wirkung, waffenId, anteil = 
 export function trefferAufGegner(welt, spieler, g, treffer, wirkung, waffenId) {
   const menge = treffer.menge;
   g.leben -= menge;
-  welt.funken.push({ x: g.x, y: g.y, zeit: 0.18, art: treffer.art ?? STANDARD_ART, waffe: waffenId });
+  /* Die Richtung des Schlages wandert mit in den Funken — der Zeichner
+     braucht sie für den Schnittstrahl (`runtime/zeichnen.js`,
+     `zeichneStaub`) und kennt den Angreifer sonst nicht mehr. Sie ist
+     reine Optik und steht deshalb **nicht** im Netz-Abdruck. */
+  const fx = g.x - spieler.x, fy = g.y - spieler.y;
+  const fd = Math.hypot(fx, fy) || 1;
+  welt.funken.push({
+    x: g.x, y: g.y, zeit: 0.18, art: treffer.art ?? STANDARD_ART, waffe: waffenId,
+    rx: fx / fd, ry: fy / fd
+  });
   welt.zahlen.push({
     x: g.x, y: g.y - g.radius, wert: Math.round(menge), zeit: 0.7, hoch: 0,
     krit: treffer.krit === true, art: treffer.art ?? STANDARD_ART

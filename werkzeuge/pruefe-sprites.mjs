@@ -36,7 +36,7 @@
 
 import { macheMelder } from "./helfer.mjs";
 import { FARBEN, JAEGER_FARBEN } from "../runtime/palette.js";
-import { JAEGER, SCHLAGBOGEN, GEGNER_BILDER, DINGE, GESCHOSSE, TREFFER } from "../runtime/sprite-daten.js";
+import { JAEGER, SCHLAGBOEGEN, GEGNER_BILDER, DINGE, GESCHOSSE, TREFFER } from "../runtime/sprite-daten.js";
 import { pruefeRaster, dreheRaster, drehGroesse, richtungsIndex, RICHTUNGEN } from "../runtime/sprites.js";
 import { GEGNER } from "../spiel/katalog/gegner.mjs";
 
@@ -60,7 +60,8 @@ melde(JAEGER_FARBEN.length === 4, "vier Jägerfarben für vier Spieler");
 /* ── Die Raster ──────────────────────────────────────────────────── */
 
 const ALLE = [
-  ["jaeger", JAEGER], ["schlagbogen", SCHLAGBOGEN],
+  ["jaeger", JAEGER],
+  ...Object.entries(SCHLAGBOEGEN).map(([k, v]) => [`schlagbogen/${k}`, v]),
   ...Object.entries(GEGNER_BILDER).map(([k, v]) => [`gegner/${k}`, v]),
   ...Object.entries(DINGE).map(([k, v]) => [`dinge/${k}`, v]),
   ...Object.entries(GESCHOSSE).map(([k, v]) => [`geschoss/${k}`, v]),

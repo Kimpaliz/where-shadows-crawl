@@ -256,4 +256,39 @@ function laufeKurz(saat, spielerzahl, schritte) {
   melde(welt.phase !== "welle", "eine Welle endet von allein", `nach ${(n / 60).toFixed(1)} s: ${welt.phase}`);
 }
 
+/* ── Eine neue Welle fängt sauber an ─────────────────────────────── */
+
+/* ⚠️ **Zwischen zwei Wellen läuft kein Schritt.** Alles, was auf einer
+   Uhr steht, verfällt deshalb nicht von selbst — es wartet. Für Gegner,
+   Geschosse, Beute und Funken steht die Aufräumzeile in
+   `starteWelle()` seit jeher da; für die Schwünge der Nahkampfwaffen
+   (`spiel/schwung.mjs`) kam sie am 06.09.2026 dazu.
+
+   Der Fall ohne sie: Eine Waffe wird im **letzten** Bild einer Welle
+   bereit, holt aus — und die Welle endet. Der Schwung überlebt die
+   Kartenwahl und den Krämer und eröffnet die nächste Welle: in einer
+   Richtung, in der der Gegner von vorhin stand, mit dem Schaden von
+   **vor** dem Aufstieg. Nichts stürzt ab, nichts wird rot, und niemand
+   käme je darauf, danach zu suchen. */
+{
+  const welt = starteLauf({ spielerzahl: 1, saat: 5 });
+  naechsteWelle(welt);
+  const s = welt.spieler[0];
+  /* Von Hand einen Schwung stehen lassen — genau der Zustand, in dem
+     eine Welle enden kann. */
+  s.schwuenge.push({
+    waffe: "sichel", art: "schnitt", rx: 1, ry: 0, bogen: 1.2,
+    reichweite: 34, offen: 1, zeit: 0.02,
+    schlag: { art: "schnitt", grund: 5, gruppenBonus: 0, zusatzProzent: 0 },
+    wirkung: {}, getroffen: new Set()
+  });
+  /* Direkt `starteWelle`, nicht `naechsteWelle`: Letzteres tut in der
+     Phase „welle" gar nichts und die Prüfung prüfte dann sich selbst. */
+  starteWelle(welt, welt.welle + 1);
+  melde(s.schwuenge.length === 0, "eine neue Welle fängt ohne alte Schwünge an",
+    `${s.schwuenge.length} Schwung/Schwünge überlebt`);
+  melde(welt.gegner.length === 0 || welt.plan.length > 0,
+    "und der Wellenplan steht");
+}
+
 ende();

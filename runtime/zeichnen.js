@@ -28,6 +28,7 @@
    was Text ist). Kennt vom Regelkern nur die Weltstruktur — es
    verändert **nichts** daran. */
 
+import { schwungRadius, schwungAnteil, keulen } from "../spiel/schwung.mjs";
 import { FARBEN, JAEGER_FARBEN } from "./palette.js";
 import { richtungsIndex } from "./sprites.js";
 import { macheZufall } from "../spiel/zufall.mjs";
@@ -240,7 +241,28 @@ export const TOD_LEBEN = 0.3;
 /* Wie viele Staubkörner ein Einschlag wirft. Je Art verschieden, weil
    ein Flammenstoß anders staubt als ein Schnitt — und weil die Menge
    das zweite Erkennungsmerkmal neben der Form ist. */
-const STAUB = { schnitt: 5, wucht: 8, feuer: 10, frost: 7, fluch: 6, tod: 12 };
+const STAUB = { schnitt: 9, wucht: 14, feuer: 14, frost: 12, fluch: 12, tod: 16 };
+
+/* ⚠️ **Die Zahl allein war nie das Erkennungsmerkmal.** Bis zum
+   06.09.2026 flogen alle fünf Arten in demselben Kranz auseinander —
+   gleiche Kurve, gleicher Radius, gleiche Form, nur die Farbe und die
+   Menge unterschieden sich. Bei fünf bis zehn Körnern in einem
+   9 x 9 großen Zeichen hält das niemand auseinander.
+
+   Jetzt hat jede Art ihre eigene **Bewegung**, und das ist der Kanal,
+   den man auch dann noch liest, wenn die Farbe im Dunkeln untergeht:
+
+   | Art | was der Staub tut | warum |
+   | --- | --- | --- |
+   | Schnitt | schmaler Strahl in Schlagrichtung | ein Schnitt spritzt dorthin, wo die Klinge hinwill |
+   | Wucht | Ring, gleichmäßig, schnell | ein Schlag stößt in alle Richtungen gleich |
+   | Feuer | Funken steigen auf und werden langsamer | Glut fällt nicht, sie steigt |
+   | Frost | Splitter fliegen und fallen | Eis bricht ab und geht zu Boden |
+   | Fluch | Punkte drehen sich beim Fliegen | nichts daran läuft geradeaus |
+
+   Der Fall ohne diese Arbeit wäre nicht „hässlich", sondern
+   „ununterscheidbar" — derselbe Befund, den `pruefe-angriffe.mjs`
+   für die Geschosse festhält. */
 
 /* Der Rahmen einer Bildfolge zur Restzeit. Bewusst über das **Alter**
    und nicht über die Restzeit gerechnet: So läuft die Folge vorwärts,
@@ -407,7 +429,7 @@ function streu(a, b, k) {
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 }
 
-function zeichneStaub(c, welt) {
+export function zeichneStaub(c, welt) {
   for (const f of welt.funken) {
     const tod = f.art === "tod";
     const leben = tod ? TOD_LEBEN : FUNKE_LEBEN;
@@ -415,20 +437,104 @@ function zeichneStaub(c, welt) {
     const anzahl = STAUB[f.art] ?? STAUB.schnitt;
     const grund = tod ? FARBEN.blut : artFarbe(f.art);
     const hell = tod ? FARBEN.blutHell : mische(grund, "#ffffff", 0.35);
+
+    /* Die Richtung des Schlages. Fehlt sie (Tod, ältere Funken), zeigt
+       der Strahl nach rechts — das ist immer noch besser als `NaN`. */
+    const rx = f.rx ?? 1, ry = f.ry ?? 0;
+
     for (let k = 0; k < anzahl; k++) {
-      const w = streu(f.x, f.y, k) * Math.PI * 2;
-      /* Die Reichweite steht in **Bildpunkten**, nicht in Tempo mal
-         Lebensdauer. Der erste Entwurf rechnete `tempo * leben` und kam
-         damit auf 3 bis 9 Bildpunkte — der Staub blieb innerhalb des
-         9 x 9 großen Zeichens und war schlicht nicht zu sehen. Jetzt
-         7 bis 18, also ein Kranz **um** das Zeichen herum. */
-      const reichweite = 7 + streu(f.x, f.y, k + 64) * 11;
+      const zufall = streu(f.x, f.y, k);
+      const zufall2 = streu(f.x, f.y, k + 64);
       /* Die Wurzel bremst: Ein Korn schießt weg und wird langsamer,
          statt gleichmäßig zu fliegen wie ein Bauteil. */
-      const weg = Math.sqrt(alter) * reichweite;
+      const gebremst = Math.sqrt(alter);
+      let dx, dy, hoch = 1;
+
+      if (f.art === "schnitt") {
+        /* Ein schmaler Strahl in Schlagrichtung, ±25 Grad. Die
+           Reichweite steht in **Bildpunkten**, nicht in Tempo mal
+           Lebensdauer: Der erste Entwurf rechnete `tempo * leben` und
+           kam auf 3 bis 9 — der Staub blieb innerhalb des 9 x 9 großen
+           Zeichens und war schlicht nicht zu sehen. */
+        const ab = (zufall - 0.5) * 0.87;
+        const kos = Math.cos(ab), sin = Math.sin(ab);
+        const weg = (9 + zufall2 * 13) * gebremst;
+        dx = (rx * kos - ry * sin) * weg;
+        dy = (rx * sin + ry * kos) * weg;
+      } else if (f.art === "wucht") {
+        /* Ein Ring: gleicher Abstand für alle, gleichmäßig verteilt.
+           Kein Zufall im Winkel — sonst wäre es wieder ein Kranz. */
+        const w = (k / anzahl) * Math.PI * 2;
+        const weg = 4 + gebremst * 15;
+        dx = Math.cos(w) * weg;
+        dy = Math.sin(w) * weg * 0.8;
+      } else if (f.art === "feuer") {
+        /* Glut steigt. `alter * alter` zieht nach oben und wird dabei
+           schneller — Funken, die gleichmäßig steigen, sehen aus wie
+           Blasen unter Wasser. */
+        const w = (zufall - 0.5) * Math.PI * 1.1;
+        dx = Math.sin(w) * (5 + zufall2 * 8) * gebremst;
+        dy = -(3 + zufall2 * 12) * (alter * 0.4 + alter * alter * 0.6);
+      } else if (f.art === "frost") {
+        /* Splitter: erst weg, dann herunter. Sie sind zwei Bildpunkte
+           hoch — eine Scherbe ist kein Korn. */
+        const w = zufall * Math.PI * 2;
+        const weg = (7 + zufall2 * 10) * gebremst;
+        dx = Math.cos(w) * weg;
+        dy = Math.sin(w) * weg * 0.6 + alter * alter * 11;
+        hoch = 2;
+      } else if (f.art === "fluch") {
+        /* Die Punkte drehen sich, während sie fliegen. Anderthalb
+           Umdrehungen über die ganze Lebensdauer: genug, dass man die
+           Drehung sieht, wenig genug, dass man den Punkt verfolgen
+           kann. */
+        const w = zufall * Math.PI * 2 + alter * Math.PI * 1.5;
+        const weg = (6 + zufall2 * 11) * gebremst;
+        dx = Math.cos(w) * weg;
+        dy = Math.sin(w) * weg * 0.8;
+      } else {
+        const w = zufall * Math.PI * 2;
+        const weg = (7 + zufall2 * 11) * gebremst;
+        dx = Math.cos(w) * weg;
+        dy = Math.sin(w) * weg * 0.8;
+      }
+
       c.fillStyle = alter < 0.5 ? hell : grund;
-      c.fillRect(Math.round(f.x + Math.cos(w) * weg),
-        Math.round(f.y + Math.sin(w) * weg * 0.8), 1, 1);
+      c.fillRect(Math.round(f.x + dx), Math.round(f.y + dy), 1, hoch);
+    }
+  }
+}
+
+/* Der Schweif hinter den Klingen.
+
+   Er hängt an **nichts** außer am Schwung selbst: Ort und Zeit gehen in
+   `streu()`, herauskommt immer dasselbe Bild. Kein Eintrag in
+   `welt.funken`, kein Zustand, kein Wurf aus `welt.zufall` — sonst
+   würden zwei Rechner im Netz-Koop verschiedene Ströme ziehen und die
+   Runde liefe auseinander, weil jemand einen Funken malen wollte. */
+export function zeichneSchweif(c, welt) {
+  for (const s of welt.spieler) {
+    if (s.zustand !== "lebt") continue;
+    for (const sw of s.schwuenge) {
+      if (sw.zeit <= 0) continue;
+      const t = schwungAnteil(sw);
+      const grund = artFarbe(sw.art);
+      const hell = mische(grund, "#ffffff", 0.4);
+      for (const k of keulen(sw)) {
+        /* Drei Körner **hinter** der Klinge, also bei kleinerem Radius:
+           Das ist der Weg, den sie schon zurückgelegt hat. */
+        for (let i = 1; i <= 3; i++) {
+          const zurueck = t - i * 0.13;
+          if (zurueck <= 0) continue;
+          const r = schwungRadius(sw, zurueck);
+          const seite = (streu(Math.round(s.x + k.x * r), Math.round(s.y + k.y * r), i) - 0.5) * 5;
+          c.fillStyle = i === 1 ? hell : grund;
+          c.fillRect(
+            Math.round(s.x + k.x * r - k.y * seite),
+            Math.round(s.y + k.y * r + k.x * seite), 1, 1
+          );
+        }
+      }
     }
   }
 }
@@ -531,13 +637,31 @@ export function zeichne(zeichner, welt, boden, sprites, zeit) {
     male(c, sprites.dinge.truheZu, t.x, y);
   }
 
-  /* Der Schlagbogen liegt unter den Figuren, damit er nicht das
-     Gesicht verdeckt. */
+  /* Der Schwung liegt unter den Figuren, damit er nicht das Gesicht
+     verdeckt.
+
+     ⚠️ **Jede Zahl hier kommt aus `spiel/schwung.mjs`** — Radius,
+     Öffnung, Klingenlage. Nichts davon wird hier noch einmal
+     ausgerechnet. Vorher malte diese Schleife einen einzigen Bogen in
+     **Laufrichtung**, sechs Bildpunkte vor der Figur, während der
+     Treffer im vollen Kreis bis zu 52 Bildpunkte weit fiel. Wer zusah,
+     sah ein Zucken und Gegner sterben, die es nie berührt hat. */
   for (const s of welt.spieler) {
-    if (s.schlagZeit <= 0 || s.zustand !== "lebt") continue;
-    const r = richtungsIndex(s.blickX, s.blickY);
-    const bild = sprites.schlagbogen[r];
-    male(c, bild, s.x + s.blickX * 6, s.y + s.blickY * 6);
+    if (s.zustand !== "lebt") continue;
+    for (const sw of s.schwuenge) {
+      /* Ein Nachschlag, der noch nicht dran ist (`zeit` negativ). */
+      if (sw.zeit <= 0) continue;
+      const radius = schwungRadius(sw, schwungAnteil(sw));
+      for (const k of keulen(sw)) {
+        /* Der Bogen der **Schadensart**, nicht ein gemeinsamer.
+           Der Rückfall auf `schnitt` ist kein Zierrat: Eine neue
+           Schadensart ohne eigenen Bogen malte sonst `undefined`,
+           und `drawImage` wirft dann mitten im Bild. */
+        const folge = sprites.schlagbogen[sw.art] ?? sprites.schlagbogen.schnitt;
+        const bild = folge[richtungsIndex(k.x, k.y)];
+        male(c, bild, s.x + k.x * radius, s.y + k.y * radius);
+      }
+    }
   }
 
   for (const g of welt.gegner) {
@@ -637,6 +761,12 @@ export function zeichne(zeichner, welt, boden, sprites, zeit) {
   /* Staub in der Szene — er wird vom Licht gedämpft, das Trefferzeichen
      weiter unten nicht. Warum, steht im Abschnitt „Treffer". */
   zeichneStaub(c, welt);
+  /* Der Schweif kommt **nach** dem Staub und über den Figuren: Er
+     gehört zur laufenden Bewegung und nicht zum Einschlag, und eine
+     Klinge, die hinter dem Gegner verschwindet, den sie gerade trifft,
+     wäre genau die Trennung von Bild und Wirkung, gegen die der ganze
+     Umbau geht. */
+  zeichneSchweif(c, welt);
 
   c.restore();
 

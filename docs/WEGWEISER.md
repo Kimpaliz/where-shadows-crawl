@@ -51,6 +51,8 @@ graph TD
 
   kampf --> waffen["katalog/waffen.mjs"]
   kampf --> werte["spiel/werte.mjs"]
+  kampf --> schwung["spiel/schwung.mjs<br/>wo der Schlag gerade liegt"]
+  zeichnen --> schwung
   bewegung --> werte
   beute --> werte
   laden --> gegenstaende["katalog/gegenstaende.mjs"]
@@ -78,6 +80,7 @@ Trennlinie von oben.
 | ein neues **Fundstück** | `spiel/katalog/gegenstaende.mjs` |
 | Wellen härter oder weicher | `spiel/katalog/wellen.mjs` (`budgetDerWelle`) und `gegner.mjs` (`LEBEN_JE_WELLE`) |
 | eine neue Waffen**wirkung** (Brand, Frost …) | `spiel/kampf.mjs`, Abschnitt `trefferAufGegner` |
+| wie ein Nahkampfschlag **aussieht und trifft** | `spiel/schwung.mjs` (Geometrie) und `bogen` im Waffenkatalog — der Zeichner rechnet nichts eigenes, das ist der Punkt |
 | was ein **Wert** bewirkt | `spiel/werte.mjs` — die Rechnung steht dort **einmal** |
 | Preise, Neuwürfeln, Verschmelzen | `spiel/laden.mjs` |
 | Aufstiegskarten: **was auf ihnen steht** | `spiel/katalog/karten.mjs` |

@@ -29,7 +29,7 @@
    `document` an. */
 
 import { FARBEN, JAEGER_FARBEN } from "./palette.js";
-import { JAEGER, SCHLAGBOGEN, GEGNER_BILDER, DINGE, GESCHOSSE, TREFFER } from "./sprite-daten.js";
+import { JAEGER, SCHLAGBOEGEN, GEGNER_BILDER, DINGE, GESCHOSSE, TREFFER } from "./sprite-daten.js";
 
 export const RICHTUNGEN = 16;
 
@@ -164,7 +164,12 @@ export function ladeSprites() {
   for (const [id, s] of Object.entries(GESCHOSSE)) geschosse[id] = alleRichtungen(s);
   const dinge = {};
   for (const [id, s] of Object.entries(DINGE)) dinge[id] = baueBild(s, null, 0);
-  const schlagbogen = alleRichtungen(SCHLAGBOGEN);
+  /* Ein Bogen je Schadensart, jeder in allen Richtungen: der Zeichner
+     greift mit `schlagbogen[art][richtung]` zu und braucht keine
+     Fallunterscheidung. Fünf mal sechzehn Bilder à 11 x 11 sind
+     zusammen weniger als ein einziger Jäger in vier Farben. */
+  const schlagbogen = {};
+  for (const [art, s] of Object.entries(SCHLAGBOEGEN)) schlagbogen[art] = alleRichtungen(s);
   /* Trefferzeichen: nicht gedreht (ein Einschlag hat einen Ort, keine
      Blickrichtung), aber als **Folge** geladen — `feuer` verglimmt über
      zwei Bilder, die übrigen vier haben genau eines. Der Zeichner

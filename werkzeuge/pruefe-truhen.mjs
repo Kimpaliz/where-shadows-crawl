@@ -280,50 +280,77 @@ const BEKANNTE_SORTEN = ["gold", "wissen", "gegenstand", "waffe"];
    einzufügen kann die Runde hängen lassen, ohne dass irgendetwas rot
    wird — bis man es merkt, weil man selbst zusieht. Gespielt wird mit
    demselben Kunstspieler wie `werkzeuge/balance.mjs` (`botEingabe`,
-   überlebt lange genug für echte Kills), bei einer Saat, die vorher
-   mit `spieleLauf` durchsucht wurde und nachweislich mindestens eine
-   Truhe hervorbringt (`node`-Suche über 60 Saaten, siehe
-   docs/rueckmeldung/truhen.md). Verlangt wird, dass der Lauf trotzdem
-   in „gewonnen" oder „verloren" endet. */
+   überlebt lange genug für echte Kills).
+
+   ⚠️ **Hier stand genau eine Saat (1955), und das war der Fehler.**
+   Sie war vorher durchsucht und brachte nachweislich eine Truhe — bis
+   zum 06.09.2026, als der Umbau der Nahkampfangriffe den Lauf um ein
+   paar hundert Schritte verschob. Danach fiel die Truhe zwar, aber der
+   Kunstspieler starb, bevor er sie aufhob: `truhenGefallen 1,
+   truhenAngekommen 0`. Die Prüfung wurde rot, obwohl an den Truhen
+   nichts kaputt war.
+
+   Eine Prüfung, die von **einer** Saat abhängt, misst die Saat und
+   nicht die Sache — dasselbe Muster wie bei der Wand-Sperre in
+   `pruefe-balance.mjs` (Fehlerbuch E4). Deshalb jetzt **acht** Saaten:
+   Jede muss regulär enden, und **mindestens eine** muss wirklich durch
+   die Phase „truhen" laufen. Alle acht wurden am 06.09.2026 gesucht
+   (Bereich 1900–1944) und lieferten damals jede für sich eine
+   angekommene Truhe; die Prüfung braucht davon nur noch eine. */
+const TRUHEN_SAATEN = [1906, 1907, 1909, 1919, 1924, 1926, 1928, 1944];
+
 {
-  const welt = starteLauf({ spielerzahl: 1, saat: 1955 });
-  naechsteWelle(welt);
-  let n = 0, sahTruhenPhase = false;
   const GRENZE = 60 * 60 * 20; /* 20 simulierte Minuten reichen weit — die
     echte Notbremse des Balance-Prüfstands liegt bei vier Stunden. Wird
     diese Grenze hier gerissen, ist das der Beweis für ein Hängenbleiben,
     nicht nur ein langer Lauf. */
 
-  while (!["gewonnen", "verloren"].includes(welt.phase) && n < GRENZE) {
-    if (welt.phase === "truhen") sahTruhenPhase = true;
-    if (welt.phase === "laden" || welt.phase === "vorspiel") {
-      if (welt.phase === "laden") {
-        if (!welt.spieler[0].angebote) oeffneKraemer(welt);
-        for (const s of welt.spieler) {
-          let idx;
-          while ((idx = s.angebote?.findIndex((a) => !a.gekauft && a.preis <= s.gold)) >= 0) {
-            if (!kaufe(s, idx)) break;
+  const berichte = [];
+  for (const saat of TRUHEN_SAATEN) {
+    const welt = starteLauf({ spielerzahl: 1, saat });
+    naechsteWelle(welt);
+    let n = 0, sahTruhenPhase = false;
+
+    while (!["gewonnen", "verloren"].includes(welt.phase) && n < GRENZE) {
+      if (welt.phase === "truhen") sahTruhenPhase = true;
+      if (welt.phase === "laden" || welt.phase === "vorspiel") {
+        if (welt.phase === "laden") {
+          if (!welt.spieler[0].angebote) oeffneKraemer(welt);
+          for (const s of welt.spieler) {
+            let idx;
+            while ((idx = s.angebote?.findIndex((a) => !a.gekauft && a.preis <= s.gold)) >= 0) {
+              if (!kaufe(s, idx)) break;
+            }
           }
         }
+        naechsteWelle(welt);
+      } else if (welt.phase === "wahl") {
+        for (const s of welt.spieler) {
+          let schutz = 0;
+          while (s.offeneWahlen > 0 && schutz++ < 20) nimmKarte(welt, s, 0);
+        }
+        schrittImLauf(welt, welt.spieler.map((s) => botEingabe(welt, s)));
+      } else {
+        schrittImLauf(welt, welt.spieler.map((s) => botEingabe(welt, s)));
       }
-      naechsteWelle(welt);
-    } else if (welt.phase === "wahl") {
-      for (const s of welt.spieler) {
-        let schutz = 0;
-        while (s.offeneWahlen > 0 && schutz++ < 20) nimmKarte(welt, s, 0);
-      }
-      schrittImLauf(welt, welt.spieler.map((s) => botEingabe(welt, s)));
-    } else {
-      schrittImLauf(welt, welt.spieler.map((s) => botEingabe(welt, s)));
+      n++;
     }
-    n++;
+
+    berichte.push({ saat, phase: welt.phase, n, sahTruhenPhase,
+      gefallen: welt.truhenGefallen, angekommen: welt.truhenAngekommen });
   }
 
-  melde(["gewonnen", "verloren"].includes(welt.phase),
-    'ein echter Lauf endet regulär, auch wenn er durch „truhen" läuft',
-    `Endphase ${welt.phase} nach ${n} Schritten`);
-  melde(sahTruhenPhase, "…und dabei wurde wirklich mindestens eine Truhe geöffnet",
-    `truhenGefallen ${welt.truhenGefallen}, truhenAngekommen ${welt.truhenAngekommen}`);
+  const haengen = berichte.filter((b) => !["gewonnen", "verloren"].includes(b.phase));
+  melde(haengen.length === 0,
+    'jeder echte Lauf endet regulär, auch wenn er durch „truhen" läuft',
+    haengen.map((b) => `Saat ${b.saat}: ${b.phase} nach ${b.n} Schritten`).join("; "));
+
+  const mitTruhe = berichte.filter((b) => b.sahTruhenPhase);
+  melde(mitTruhe.length >= 1,
+    "…und dabei wurde wirklich mindestens eine Truhe geöffnet",
+    berichte.map((b) => `${b.saat}: ${b.gefallen}/${b.angekommen}`).join(", "));
+
+  console.log(`  ${mitTruhe.length} von ${berichte.length} Läufen öffneten eine Truhe`);
 }
 
 ende();

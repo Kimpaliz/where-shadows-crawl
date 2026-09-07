@@ -3,6 +3,207 @@
 Oben das Neueste. Jeder Eintrag sagt **was**, **warum** und **womit
 gemessen** — nicht nur, dass etwas anders ist.
 
+## 0.10.0 — Der Schlag zeigt auf den Gegner (06.09.2026)
+
+Janniks Ansage, wörtlich: *„wo sind die eindeutigen initial attack
+animationnen? angriffe finde immer in richtigung der gegner statt und
+tgreffen nur wenn die Animation trifft. mehr passende partikeleffeke!"*
+— und dazu *„2 feuerwaffen / 2 schnitt / 2 stumpf / 2 gift / 2 eis"*.
+
+Er hat damit vier Dinge auf einmal beschrieben, und alle vier waren
+verletzt.
+
+### Was vorher wirklich passierte
+
+Ein Nahkampfschlag setzte `s.schlagZeit = 0.14` und teilte im **selben
+Bild** allen Zielen im **vollen Kreis** Schaden aus. Gezeichnet wurde
+dazu ein einziger Bogen, 11 × 11 Bildpunkte, in **Laufrichtung** — für
+alle sieben Nahkampfwaffen derselbe, in Flammenfarben.
+
+| gemessen am 06.09.2026 | |
+| --- | ---: |
+| Reichweite des gemalten Bogens | **11,8 Bildpunkte** |
+| Reichweite der Waffen | **30 bis 52** |
+| verschiedene Bögen für 7 Waffen | **1** |
+| Richtung des Bogens | Laufrichtung |
+| Richtung des Treffers | **überallhin** |
+
+Vier Fünftel der Trefferfläche waren nie zu sehen, und was zu sehen
+war, zeigte woandershin. Es war nichts kaputt — es war nur alles
+auseinander.
+
+### Der Schlag ist jetzt eine Bewegung
+
+`spiel/schwung.mjs` (neu) beschreibt einen Schwung als Kreisausschnitt,
+der in 0,14 s von innen nach außen fährt:
+
+- Die **Richtung** liegt beim Ausholen fest — auf den nächsten Gegner.
+- Der **Radius** wächst von 6 Bildpunkten bis zur Reichweite der Waffe.
+- Die **Öffnung** ist die Bauart der Waffe: `bogen` im Katalog, in Grad.
+- Getroffen wird, **wer beim Vorbeikommen im Band liegt** — jeder
+  höchstens einmal, und nur so viele, wie `ziele` erlaubt.
+
+| Waffe | Reichweite | Öffnung | was das heißt |
+| --- | ---: | ---: | --- |
+| Blutdorn | 30 | 55° | ein Stich |
+| Brandeisen | 28 | 60° | ein Stich, der weiterbrennt |
+| Sichel | 34 | 70° | gezogen, nicht geschwungen |
+| Pestkralle | 30 | 95° | vier Klauen nebeneinander |
+| Richtschwert | 40 | 110° | ein Hieb, aber nur einer stirbt |
+| Frostbeil | 36 | 125° | ein Beil holt aus |
+| Morgenstern | 32 | 140° | die Kette kreist |
+| Pechfackel | 40 | 150° | eine Fackel wischt breit |
+| Sense | 46 | 200° | fast alles vor einem |
+| Weihwasserkessel | 52 | 360° | „Auch das hinter dir" |
+
+**Der Zeichner rechnet nichts davon selbst nach.** Er holt Radius,
+Öffnung und Klingenlage aus derselben Datei wie der Treffer — und genau
+das ist der Punkt: Die gemalte Form **kann** von der treffenden nicht
+mehr abweichen. `pruefe-angriffe.mjs` wird rot, wenn jemand das trennt.
+
+### Zwei Fehler, die dabei gefunden wurden
+
+**1 · Derselbe Gegner nahm den Schaden zweimal.** Das Raster
+(`spiel/gitter.mjs`) schlüsselt seine Zellen mit
+`cx * 73856093 ^ cy * 19349663` und prüft die Zelle danach nicht nach;
+zwei Zellen können sich eine Liste teilen, und `umkreis()` reicht
+denselben Gegner dann zweimal durch. Gemessen auf einem Ring aus 24
+Gegnern: Die Pechfackel verbrauchte alle **drei** Ziele, aber nur
+**zwei** Gegner nahmen Schaden — einer bekam ihn doppelt. Ein
+Rundumschlag hätte so die Hälfte seiner Ziele an einen einzigen
+verschenkt.
+
+**2 · Der Rand fiel aus dem eigenen Ausschnitt.** Die äußersten Klingen
+liegen konstruktionsbedingt **auf** dem Rand der Öffnung, und ihr
+Richtungsvektor entsteht über einen anderen Rechenweg als die Grenze,
+gegen die geprüft wird. Bei Sense und Richtschwert lagen dadurch je zwei
+Klingen „außerhalb" ihres eigenen Ausschnitts. Beides hat die Prüfung
+gefunden, nicht das Auge.
+
+### Fünf Bögen, fünf Stäube
+
+Unterschieden wird auf **zwei** Kanälen, nicht auf einem. Wer die Farben
+nicht auseinanderhält — und im Dunkeln hält niemand Silber und Knochen
+auseinander —, sieht immer noch die Form:
+
+| Art | Bogen | Staub |
+| --- | --- | --- |
+| Schnitt | dünn, zwei scharfe Hörner | schmaler Strahl in Schlagrichtung |
+| Wucht | stumpf und dick | Ring, gleichmäßig, schnell |
+| Feuer | Zungen, ungleich hoch | Funken steigen auf |
+| Frost | Splitter in gleichem Abstand | Splitter fliegen und **fallen** |
+| Fluch | unterbrochen | Punkte drehen sich beim Fliegen |
+
+Dazu ein **Schweif** hinter jeder Klinge — drei Körner auf dem Weg, den
+sie schon zurückgelegt hat. Menge des Staubs je Einschlag: 5–12 vorher,
+**9–16** jetzt.
+
+⚠️ Nichts davon würfelt. Weder `Math.random` noch `welt.zufall`: Der
+Staub hängt am Ort des Einschlags, der Schweif am Schwung. Zwei Rechner
+im Netz-Koop sehen dieselbe Nacht, und eine Aufnahme lässt sich
+nachstellen. `pruefe-anzeige.mjs` wird rot, wenn jemand das ändert.
+
+### Mindestens zwei Waffen je Schadensart
+
+Gemessen hatten Feuer und Frost je **eine**. Wer einen Feuerbau spielen
+wollte, hatte genau eine Wahl, und das Verschmelzen (Bauteil 7) lief für
+ihn ins Leere. Drei neue Nahkampfwaffen:
+
+| Waffe | Art | was sie tut |
+| --- | --- | --- |
+| **Brandeisen** | Feuer | schmaler Stich, 15 Brand — „Der Stich ist das Wenigste daran." |
+| **Frostbeil** | Frost | zwei Ziele, 35 % langsamer — „Zwei bleiben stehen. Einer davon für immer." |
+| **Pestkralle** | Seuche/Fluch | schnell, schwach, 15 Gift — „Kratzt kaum. Was danach kommt, schon." |
+
+Damit: Schnitt 5, Wucht 2, Feuer 2, Frost 2, Fluch 4 — und das Merkmal
+„Seuche" auf zwei Waffen.
+
+**„Gift" ist keine sechste Schadensart geworden**, und das war Janniks
+Entscheidung. Es gibt genau **eine** Art, die an der Rüstung vorbeigeht
+(`fluch`); eine zweite wäre ein zweiter Weg um dieselbe Verteidigung,
+und Rüstung wäre kein Wert mehr. Gift ist deshalb ein **Merkmal** auf
+zwei Waffen der Art `fluch`.
+
+„2 je Art" ist als **mindestens** zwei gelesen: Schnitt hat fünf, Fluch
+vier, und die wieder wegzunehmen wäre eine seltsame Auslegung von
+„zwei".
+
+### Ein dritter Fehler, gefunden und behoben
+
+**Ein Schwung überlebte das Wellenende.** Zwischen zwei Wellen läuft
+kein Schritt — alles, was auf einer Uhr steht, verfällt deshalb nicht
+von selbst, sondern wartet. Wird eine Waffe im **letzten** Bild einer
+Welle bereit, holt aus, und die Welle endet, dann überlebt ihr Schwung
+Kartenwahl und Krämer und eröffnet die nächste Welle: in einer Richtung,
+in der der Gegner von vorhin stand, mit dem Schaden von **vor** dem
+Aufstieg. `starteWelle()` räumt Gegner, Geschosse, Beute und Funken seit
+jeher weg; die Schwünge fehlten in der Liste.
+
+⚠️ **Über 600 Läufe ändert diese Zeile keinen einzigen Wert** — die
+Messung danach ist bis auf die letzte Stelle dieselbe. Der Fall tritt
+also selten ein. Falsch war er trotzdem, und die Prüfung dafür ist rot
+gewesen, bevor sie grün wurde.
+
+### Was das an der Auslegung geändert hat — gemessen, nicht geschätzt
+
+600 Läufe (5 Saatbasen × 3 Spielerzahlen × 40 Läufe), vor und nach dem
+Umbau. **Wand** ist der Anteil aller Toten, die auf der schlimmsten
+Welle sterben; **ohne Ende** sind die Läufe, die die Notbremse bei
+Welle 130 erreichen, statt zu enden.
+
+| | Wand vorher | Wand jetzt | ohne Ende vorher | ohne Ende jetzt |
+| --- | ---: | ---: | ---: | ---: |
+| 1 Spieler | 60,7 % | **53,1 %** | 12 von 40 | **11 von 40** |
+| 2 Spieler | 40,0 % | **46,4 %** | 15 von 40 | **13 von 40** |
+| 4 Spieler | 78,9 % | **75,0 %** | 21 von 40 | **17 von 40** |
+
+(jeweils der schlimmste der fünf gemessenen Saatbasen)
+
+**Fünf von sechs Zahlen sind besser geworden.** Besonders die letzte
+Spalte: Ein Schlag, der nur noch trifft, wo er hinzeigt, macht den
+perfekt ausweichenden Kunstspieler nicht mehr unsterblich — zu viert
+enden vier Läufe mehr von selbst. Das ist die erste Änderung überhaupt,
+die diese Zahl senkt, und Vorgang #52 ist der Grund, warum sie überhaupt
+gezählt wird.
+
+⚠️ **Die eine schlechtere Zahl wird nicht versteckt.** Zu zweit ist die
+Wand von 40,0 auf 46,4 % gestiegen, und die Sperre in
+`pruefe-balance.mjs` musste dafür angehoben werden. Zwei Ursachen, beide
+gemessen: Der Bruch hat mehr Tote im Nenner, weil weniger Läufe ohne
+Ende ausgehen; und ein Schlag, der nur trifft, wo er hinzeigt, ist im
+Gedränge schwächer als einer, der rundum austeilt. Das Zweite ist genau
+das, was bestellt war.
+
+Die drei neuen Waffen retten daran mehr, als jedes Zahlendrehen könnte:
+**ohne** sie, nur mit dem Umbau, stand die Wand bei 61,1 / 47,1 / 81,8 %
+— mit ihnen bei 53,1 / 46,4 / 75,0 %.
+
+Die Abbruch-Sperre ist im selben Zug **verschärft** worden (12/18/21 →
+11/13/17), die Wand-Sperre allein und zu viert ebenfalls
+(0,59/0,79 → 0,54/0,75). Unterm Strich prüft die Kette schärfer als
+vorher, nicht lockerer — an genau einer Stelle lockerer.
+
+### Was der Umbau gekostet hat
+
+| | |
+| --- | ---: |
+| neue Datei | `spiel/schwung.mjs` — 196 Zeilen, reine Geometrie, kein Zufall |
+| neue Bildpunktraster | 5 × 11 × 11 — **kein** neues Bild für die Reichweite |
+| neue Prüfungen | **+207**: Angriffe 192→325, Anzeige 59→91, Katalog 438→470, Sprites 148→156, Kern 111→113 |
+| Rot-Beweise | 21 Sabotagen, jede einzeln gefahren |
+| Messläufe | 2 400 in vier vollen Fünf-Basen-Messungen |
+
+⚠️ **Kein einziges neues Bild für die Reichweite.** Ein Raster, das die
+volle Trefferfläche einer Waffe zeigt, wäre bei 52 Bildpunkten
+Reichweite 105 × 105 groß — **11 025 Felder für einen einzigen Bogen**,
+gegen **2 215 gesetzte Bildpunkte in allen 35 Rastern des Spiels
+zusammen** (gemessen 06.09.2026). Mal fünf Schadensarten wäre das das
+Fünfundzwanzigfache des ganzen Spiels, als Text im Repository.
+
+Der Bogen bleibt deshalb 11 × 11 — er wird **bewegt** statt gestreckt.
+Das ist keine Sparmaßnahme, sondern die Lösung: Ein Bogen, der von innen
+nach außen fährt, ist genau die Animation, die Jannik vermisst hat.
+
 ## 0.9.9 — Zwei Wächter, bevor der erste Schlag umgebaut wird (06.09.2026)
 
 Janniks Ansage zu den Angriffen lautet wörtlich: *„wo sind die

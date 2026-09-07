@@ -70,23 +70,113 @@ export const JAEGER = {
   ]
 };
 
-/* Der Schlag einer Nahkampfwaffe: ein Bogen vor der Figur. Er wird
-   mitgedreht und liegt deshalb immer in Laufrichtung. */
-export const SCHLAGBOGEN = {
-  zeichen: { w: "flammeHell", g: "flamme" },
-  bild: [
-    "..wwwwwww..",
-    ".wgggggggw.",
-    "wgg.....ggw",
-    "wg.......gw",
-    "g.........g",
-    "...........",
-    "...........",
-    "...........",
-    "...........",
-    "...........",
-    "..........."
-  ]
+/* Der Schwung einer Nahkampfwaffe — **fünf** Bögen, einer je
+   Schadensart.
+
+   ⚠️ **Hier stand genau ein Bogen**, in Flammenfarben, für alle sieben
+   Nahkampfwaffen. Sichel, Sense, Morgenstern und Weihwasserkessel sahen
+   damit identisch aus, und keiner von ihnen sah nach dem aus, was er
+   austeilt. Das ist derselbe Befund, den `werkzeuge/pruefe-angriffe.mjs`
+   für die Geschosse festhält — „nichts ist kaputt, es ist nur alles
+   dasselbe" —, nur eine Waffengattung weiter.
+
+   Unterschieden wird auf **zwei** Kanälen, nicht auf einem: Form und
+   Farbe. Wer die Farben nicht auseinanderhält (und im Dunkeln hält man
+   Silber und Knochen kaum auseinander), sieht immer noch, dass Frost
+   aus Splittern besteht und Wucht aus einem Klotz.
+
+   Alle fünf sind 11 x 11 groß und ungerade — bei gerader Kante läge die
+   Quellmitte auf einem halben Bildpunkt und das Bild wanderte bei jeder
+   Drehung (`werkzeuge/pruefe-angriffe.mjs`, Befund 3).
+
+   Der Bogen liegt **über** der Mitte des Rasters; gedreht wird er von
+   `alleRichtungen()` in die Richtung, in die der Schwung zeigt. */
+export const SCHLAGBOEGEN = {
+  /* Ein sauberer Schnitt: duenn, zwei scharfe Hoerner, sonst nichts. */
+  schnitt: {
+    zeichen: { G: "eisenGlanz", H: "eisenHell", E: "eisen" },
+    bild: [
+      "....GGG....",
+      "..GGHHHGG..",
+      ".GH.....HG.",
+      "EG.......GE",
+      "E.........E",
+      "...........",
+      "...........",
+      "...........",
+      "...........",
+      "...........",
+      "..........."
+    ]
+  },
+  /* Stumpf und dick. Wucht schneidet nicht, sie drueckt. */
+  wucht: {
+    zeichen: { K: "schrift", N: "knochen", D: "knochenDunkel" },
+    bild: [
+      "...KKKKK...",
+      "..KNNNNNK..",
+      ".KND...DNK.",
+      "ND.......DN",
+      "D.........D",
+      "...........",
+      "...........",
+      "...........",
+      "...........",
+      "...........",
+      "..........."
+    ]
+  },
+  /* Zungen, ungleich hoch — Feuer brennt nicht symmetrisch. */
+  feuer: {
+    zeichen: { M: "flammeGlanz", F: "flammeHell", T: "flammeTief" },
+    bild: [
+      "..M.MM.M...",
+      ".MFFFFFFFM.",
+      "MF.......FM",
+      "T.........T",
+      "...........",
+      "...........",
+      "...........",
+      "...........",
+      "...........",
+      "...........",
+      "..........."
+    ]
+  },
+  /* Splitter in gleichem Abstand — Eis bricht in Kanten. */
+  frost: {
+    zeichen: { R: "frostGlanz", H: "frostHell", T: "frostTief" },
+    bild: [
+      "..R.R.R.R..",
+      ".RHHHHHHHR.",
+      "RH.......HR",
+      "T.........T",
+      "...........",
+      "...........",
+      "...........",
+      "...........",
+      "...........",
+      "...........",
+      "..........."
+    ]
+  },
+  /* Unterbrochen. Ein Fluch ist nirgends ganz. */
+  fluch: {
+    zeichen: { B: "bannGlanz", H: "bannHell", T: "bannTief" },
+    bild: [
+      "..B.BBB.B..",
+      ".B.HHHHH.B.",
+      "BH.......HB",
+      "T.........T",
+      "...........",
+      "...........",
+      "...........",
+      "...........",
+      "...........",
+      "...........",
+      "..........."
+    ]
+  },
 };
 
 export const GEGNER_BILDER = {

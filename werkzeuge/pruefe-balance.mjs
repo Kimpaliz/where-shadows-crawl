@@ -71,12 +71,12 @@ const REIHEN = [
    Der **schlimmste von fünf** gemessenen Saatbasen, nicht der einer
    einzigen. Warum das der Unterschied zwischen einem Wächter und einem
    Würfel ist, steht dort. */
-const WAND_SPERRE = { 1: 0.61, 2: 0.40, 4: 0.79 };
+const WAND_SPERRE = { 1: 0.54, 2: 0.47, 4: 0.75 };
 
 /* Die gemessene Spanne in Prozentpunkten — steht hier, damit die
    Meldung ihre eigene Genauigkeit mitnennt, statt eine vorzutäuschen.
    Dieselbe Bauart wie `ABBRUCH_STREUUNG` weiter unten. */
-const WAND_STREUUNG = { 1: 12, 2: 9, 4: 13 };
+const WAND_STREUUNG = { 1: 14, 2: 13, 4: 17 };
 
 const messungen = REIHEN.map((r) => ({
   ...r, ...messreihe({ laeufe: r.laeufe, spielerzahl: r.spieler, saat: 1 })
@@ -155,7 +155,57 @@ for (const m of messungen) {
      Ein Gegenversuch ist gemessen und verworfen: den Knochenritter von
      Welle 8 auf 9 zu schieben (er betritt den Topf genau in der zweiten
      Bosswelle) machte die Wand **schlimmer**, nicht besser — 78,1 auf
-     82,9 %, weil dann mehr Läufe Welle 8 überhaupt erreichen. */
+     82,9 %, weil dann mehr Läufe Welle 8 überhaupt erreichen.
+
+     ── Nach dem Nahkampf-Umbau neu gemessen ─────────────────────────
+
+     ⚠️ **Der Umbau der Nahkampfangriffe hat diese Zahlen bewegt, in
+     beide Richtungen.** Dieselben fünf Basen, nach dem Umbau (der
+     Schlag zeigt auf den Gegner und trifft nur, wo die Animation liegt)
+     und mit den drei neuen Nahkampfwaffen:
+
+     | Spieler | Saat 1 | 201 | 401 | 601 | 801 | schlimmster | vorher |
+     | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+     | 1 | 47,2 | 41,2 | **53,1** | 51,7 | 38,7 | 53,1 | 60,7 |
+     | 2 | 41,9 | **46,4** | 40,7 | 33,3 | 35,3 | 46,4 | 40,0 |
+     | 4 | 60,9 | **75,0** | 69,6 | 70,4 | 57,7 | 75,0 | 78,9 |
+
+     Allein und zu viert ist die Wand **niedriger** als vorher, zu
+     zweit höher. Die Sperre folgt beidem: 0,54 / 0,47 / 0,75. Zwei von
+     drei ziehen an, eine lockert — und die eine wird hier benannt.
+
+     ⚠️ **Warum sie zu zweit steigt (0,41 → 0,47).** Zwei Ursachen,
+     beide gemessen:
+
+     **1 · Arithmetik.** Der Bruch ist „schlimmste Welle geteilt durch
+     **alle Toten**", und es sterben jetzt mehr Läufe, weil weniger
+     ohne Ende ausgehen (siehe die Abbruchzahlen weiter unten: zu zweit
+     15 → 13, allein 12 → 11, zu viert 21 → 17). Ein Lauf, der vorher
+     ewig weiterlief, stirbt jetzt — und zwar an der Wand, denn dort
+     stirbt man.
+
+     **2 · Auslegung.** Ein Schlag, der nur noch trifft, wo er hinzeigt,
+     ist im Gedränge schwächer als einer, der rundum austeilt. Genau das
+     hat Jannik bestellt, und genau das macht Welle 6 härter.
+
+     Eine Zwischenmessung zeigt, wie viel die drei neuen Waffen daran
+     retten: **ohne** sie, nur mit dem Umbau, stand die Wand bei
+     61,1 / 47,1 / 81,8 — mit ihnen bei 53,1 / 46,4 / 75,0. Mehr
+     Auswahl im Laden trifft die Wand härter als jedes Zahlendrehen.
+
+     **Warum der Bruch trotzdem nicht umdefiniert wird.** „Anteil an
+     allen **Läufen**" wäre der sauberere Nenner und stünde besser da.
+     Den Maßstab zu wechseln, nachdem man das Ergebnis gesehen hat, ist
+     aber dasselbe wie die Grenze wegzudefinieren — und dagegen steht
+     ein paar Absätze weiter oben ein ausdrücklicher Satz.
+
+     **Was für die nächste Sitzung gilt.** Diese Grenze ist heute
+     zweimal angefasst worden. Für einen Spieler ist sie am Morgen
+     gestiegen (0,59 → 0,61, weil sie auf einem nie gehaltenen Wert
+     stand) und am Abend wieder gefallen (0,61 → 0,54). Zu zweit ist sie
+     gestiegen und geblieben. Wer sie das nächste Mal **anhebt**, ohne
+     #52 („Was kostet ein Sturz im endlosen Modus?") zu beantworten,
+     schafft diesen Wächter ab, statt ihn zu pflegen. */
   const tote = m.stirbtIn.reduce((a, b) => a + b, 0);
   const schlimmste = Math.max(...m.stirbtIn);
   const grenze = WAND_SPERRE[n] ?? 0.78;
@@ -270,18 +320,43 @@ for (const m of messungen.slice(1)) {
    kostet ein Sturz im endlosen Modus?") weiter offen ist. Wer sie dann
    anhebt, statt #52 zu beantworten, hat den Wächter abgeschafft.
 
-   **2 · Die Zahlen sind trotzdem nicht angezogen worden.** 15 statt 18
-   zu zweit wäre eine echte Verschärfung — sie zu nehmen, während
-   dieselbe Messung allein und zu viert **gestiegen** ist, wäre
-   Rosinenpickerei. Die drei Sperren bleiben, wo sie stehen, und dieser
-   Absatz sagt, warum. */
-const ABBRUCH_SPERRE = { 1: 12, 2: 18, 4: 21 };
+   **2 · Die Zahlen wurden zunächst nicht angezogen.** 15 statt 18 zu
+   zweit wäre eine echte Verschärfung gewesen — sie zu nehmen, während
+   dieselbe Messung allein und zu viert **gestiegen** war, wäre
+   Rosinenpickerei.
+
+   ── Und dann kam der Nahkampf-Umbau ───────────────────────────────
+
+   ⚠️ **Nach dem Umbau der Nahkampfangriffe, dieselben fünf Basen:**
+
+   | | Saat 1 | 201 | 401 | 601 | 801 | schlimmster | vorher |
+   | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+   | 1 Spieler | 4 | 6 | 8 | **11** | 9 | **11** | 12 |
+   | 2 Spieler | 9 | 12 | **13** | 13 | 6 | **13** | 15 |
+   | 4 Spieler | **17** | 12 | 17 | 13 | 14 | **17** | 21 |
+
+   Alle drei sinken, und zu viert deutlich: 21 → 17 von 40 Läufen. Das
+   ist die erste Änderung überhaupt, die diese Zahl senkt — und sie
+   senkt sie nicht durch Zahlendrehen, sondern weil ein Schlag, der nur
+   noch trifft, wo er hinzeigt, den perfekt ausweichenden Kunstspieler
+   nicht mehr unsterblich macht.
+
+   Die Sperre folgt: **11 / 13 / 17** statt 12 / 18 / 21. Eine
+   Sperrklinke darf sinken, und hier sinkt sie dreimal.
+
+   Der Preis bleibt derselbe wie vorher: Zu viert sitzt sie wieder genau
+   auf dem schlimmsten gemessenen Wert (17 von 17). Zwei Fünftel aller
+   Viererläufe enden immer noch nicht von selbst, und solange #52 offen
+   ist, ändert daran auch der nächste gute Umbau nichts Grundsätzliches.
+   Wer diese Zahl anhebt, statt #52 zu beantworten, baut einen
+   Bildschirmschoner. */
+const ABBRUCH_SPERRE = { 1: 11, 2: 13, 4: 17 };
 
 /* Die gemessene Spanne je Spielerzahl — steht hier, damit die Meldung
    ihre eigene Genauigkeit mitnennt statt eine vorzutäuschen. Aus der
    **zweiten** Tabelle oben (06.09.2026, heutiger Code): 12−7, 15−11,
    21−11. */
-const ABBRUCH_STREUUNG = { 1: 5, 2: 4, 4: 10 };
+const ABBRUCH_STREUUNG = { 1: 7, 2: 7, 4: 5 };
 
 for (const m of messungen) {
   const grenze = ABBRUCH_SPERRE[m.spieler] ?? 0;

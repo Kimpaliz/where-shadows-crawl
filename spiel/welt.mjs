@@ -35,7 +35,7 @@ import { modus as holeModus, STANDARD_MODUS } from "./katalog/modi.mjs";
 import { bewegeSpieler, bewegeGegner } from "./bewegung.mjs";
 import { ruesteAusweichen } from "./ausweichen.mjs";
 import {
-  feuereWaffen, feuereGegner, bewegeGeschosse, wirkeZeitschaden,
+  feuereWaffen, schwungSchritt, feuereGegner, bewegeGeschosse, wirkeZeitschaden,
   beruehrung, heile, regeneriere
 } from "./kampf.mjs";
 import { bewegeBeute, raeumeBeute } from "./beute.mjs";
@@ -69,7 +69,13 @@ export function macheSpieler(id, spielerzahl) {
     gegenstaende: [],
     gold: 0, wissen: 0, stufe: 1, offeneWahlen: 0, karten: null,
     zustand: "lebt", aufheben: 0, unverwundbar: 0,
-    trefferZeit: 0, schlagZeit: 0, schlagWaffe: null,
+    trefferZeit: 0,
+    /* Die laufenden Schwünge dieser Figur (spiel/schwung.mjs).
+       Es ist eine **Liste**, weil sechs Waffen im Gürtel im selben
+       Bild bereit werden können — vorher überschrieb der letzte
+       Schlag den vorletzten (`schlagZeit`/`schlagWaffe` waren ein
+       einzelnes Feldpaar), und man sah einen Bogen statt sechs. */
+    schwuenge: [],
     getoetet: 0, angebote: null, malGewuerfelt: 0, bereit: false,
     /* Ungeöffnete Truhen, die diese Figur gerade trägt — geleert von
        `oeffneTruhen()` am Wellenende (spiel/truhen.mjs). */
@@ -129,6 +135,13 @@ export function starteWelle(welt, welle) {
     s.bereit = false;
     s.angebote = null;
     for (const w of s.waffen) w.bereitIn = 0;
+    /* Ein Schwung, der beim Wellenende noch lief, würde die neue Welle
+       eröffnen: Zwischen den Wellen läuft kein Schritt, also verfällt er
+       nicht — er trifft dann in eine Richtung, in der der Gegner von
+       vorhin stand, mit dem Schaden von **vor** dem Aufstieg. Klein,
+       still, und genau die Sorte Falle, für die `welt.gegner = []` drei
+       Zeilen weiter oben schon dasteht. */
+    s.schwuenge = [];
   }
 }
 
@@ -184,7 +197,6 @@ function altereListen(welt, dt) {
   welt.zahlen = welt.zahlen.filter((z) => z.zeit > 0);
   for (const s of welt.spieler) {
     if (s.trefferZeit > 0) s.trefferZeit -= dt;
-    if (s.schlagZeit > 0) s.schlagZeit -= dt;
   }
 }
 
@@ -226,6 +238,12 @@ export function schritt(welt, eingaben = []) {
 
   bewegeGegner(welt, dt);
   feuereWaffen(welt, dt);
+  /* **Nach** dem Ausholen, nicht davor: Ein Schwung, der in diesem
+     Bild begonnen hat, soll auch in diesem Bild schon sein erstes
+     Stück Weg zurücklegen. Sonst käme jeder Nahkampftreffer ein
+     Bild zu spät — bei achteinhalb Schritten Schwungdauer ist das
+     ein Achtel der ganzen Bewegung. */
+  schwungSchritt(welt, dt);
   feuereGegner(welt, dt);
   bewegeGeschosse(welt, dt);
   wirkeZeitschaden(welt, dt);

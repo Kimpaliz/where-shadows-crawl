@@ -14,11 +14,46 @@
    `schaden`      Grundschaden auf Stufe 1
    `mitschaden`   Anteil des Spieler-Schadens, der dazukommt (0…1,5)
    `ziele`        wie viele Gegner ein Schlag trifft
+   `bogen`        nur Nahkampf: wie weit der Schwung aufmacht, in Grad.
+                  360 ist ein Rundumschlag. Ohne Angabe 90 —
+                  siehe `spiel/schwung.mjs`
    `wirkung`      was der Treffer zusätzlich tut, siehe unten
    `merkmale`     die Fraktionen aus docs/SPIEL.md 3; vier gleiche
                   geben den Gruppenbonus
    `schadensart`  eine der fünf aus `spiel/schadensarten.mjs`
    `preis`        Grundpreis beim Krämer, Stufe 1
+
+   ── Mindestens zwei Waffen je Schadensart ──────────────────────────
+
+   Janniks Ansage vom 06.09.2026: *„2 feuerwaffen / 2 schnitt / 2 stumpf
+   / 2 gift / 2 eis"*. Gelesen als **mindestens** zwei — schnitt hat
+   fünf und fluch vier, und die wieder wegzunehmen wäre eine seltsame
+   Auslegung von „zwei".
+
+   „Gift" ist dabei keine eigene Schadensart geworden. Es gibt genau
+   **eine** Art, die an der Rüstung vorbeigeht (`fluch`,
+   `spiel/schadensarten.mjs`); eine zweite wäre ein zweiter Weg um
+   dieselbe Verteidigung, und Rüstung wäre kein Wert mehr. Gift ist
+   deshalb ein **Merkmal** („Seuche") auf zwei Waffen mit der Art
+   `fluch`: Seuchenglas und Pestkralle. Das war eine Entscheidung
+   Janniks, nicht eine Auslegung.
+
+   Nachgerechnet wird das in `werkzeuge/pruefe-katalog.mjs` — sonst
+   fiele es erst auf, wenn jemand einen Frostbau spielen will und
+   feststellt, dass es dafür nur eine Waffe gibt.
+
+   ── Warum `bogen` hier steht und nicht aus `ziele` gerechnet wird ──
+
+   Es wäre bequem, die Öffnung aus der Zielzahl abzuleiten: eins gleich
+   schmal, acht gleich rundum. Nur stimmt das nicht. Das **Richtschwert**
+   trifft einen und macht trotzdem weit auf — es ist ein Hieb, kein
+   Stich. Der **Blutdorn** trifft ebenfalls einen und ist ein Stich.
+   Beide hätten dieselbe gerechnete Öffnung und sähen gleich aus, und
+   genau das („fünf Waffen, die alle gleich schießen") ist der Befund,
+   wegen dem es `werkzeuge/pruefe-angriffe.mjs` überhaupt gibt.
+
+   Die Öffnung ist die **Bauart** der Waffe, und Bauart gehört in den
+   Katalog.
 
    ── Merkmal und Schadensart sind zweierlei ─────────────────────────
 
@@ -64,6 +99,8 @@ export const WAFFEN = [
     id: "sichel", name: "Sichel", merkmale: ["Schnitt"], schadensart: "schnitt",
     art: "nahkampf", reichweite: 34, abklingzeit: 0.42,
     schaden: 5, mitschaden: 0.8, ziele: 1, wirkung: {},
+    /* Eine Sichel wird gezogen, nicht geschwungen: schmal. */
+    bogen: 70,
     preis: 12,
     text: "Kurz und schnell. Wer nichts anderes hat, hat das."
   },
@@ -71,6 +108,8 @@ export const WAFFEN = [
     id: "sense", name: "Sense", merkmale: ["Schnitt", "Wucht"], schadensart: "schnitt",
     art: "nahkampf", reichweite: 46, abklingzeit: 1.0,
     schaden: 11, mitschaden: 1.0, ziele: 3, wirkung: { wucht: 8 },
+    /* Der weiteste Schwung im Spiel — fast alles vor einem. */
+    bogen: 200,
     preis: 28,
     text: "Trifft drei auf einmal. Dafür muss man sie erst schwingen."
   },
@@ -78,6 +117,8 @@ export const WAFFEN = [
     id: "richtschwert", name: "Richtschwert", merkmale: ["Schnitt"], schadensart: "schnitt",
     art: "nahkampf", reichweite: 40, abklingzeit: 1.35,
     schaden: 22, mitschaden: 1.3, ziele: 1, wirkung: {},
+    /* Ein Hieb, kein Stich: weit offen, aber nur einer stirbt. */
+    bogen: 110,
     preis: 40,
     text: "Ein Schlag, ein Toter. Wenn er sitzt."
   },
@@ -85,6 +126,8 @@ export const WAFFEN = [
     id: "morgenstern", name: "Morgenstern", merkmale: ["Wucht"], schadensart: "wucht",
     art: "nahkampf", reichweite: 32, abklingzeit: 1.1,
     schaden: 16, mitschaden: 1.1, ziele: 2, wirkung: { wucht: 24 },
+    /* Die Kette kreist, bevor sie einschlägt. */
+    bogen: 140,
     preis: 34,
     text: "Schlägt zurück, was zu nah kommt."
   },
@@ -115,6 +158,8 @@ export const WAFFEN = [
     id: "pechfackel", name: "Pechfackel", merkmale: ["Feuer"], schadensart: "feuer",
     art: "nahkampf", reichweite: 40, abklingzeit: 0.8,
     schaden: 6, mitschaden: 0.5, ziele: 3, wirkung: { brand: 9 },
+    /* Eine Fackel wischt breit — das Pech fliegt mit. */
+    bogen: 150,
     preis: 30,
     text: "Der Schlag ist schwach. Das Feuer danach nicht."
   },
@@ -146,6 +191,8 @@ export const WAFFEN = [
     id: "blutdorn", name: "Blutdorn", merkmale: ["Blut", "Schnitt"], schadensart: "schnitt",
     art: "nahkampf", reichweite: 30, abklingzeit: 0.55,
     schaden: 7, mitschaden: 0.9, ziele: 1, wirkung: { lebensraub: 1 },
+    /* Ein Stich. So schmal wie sonst nichts. */
+    bogen: 55,
     preis: 38,
     text: "Nimmt sich, was es braucht."
   },
@@ -153,6 +200,8 @@ export const WAFFEN = [
     id: "weihkessel", name: "Weihwasserkessel", merkmale: ["Segen", "Bann"], schadensart: "fluch",
     art: "nahkampf", reichweite: 52, abklingzeit: 1.8,
     schaden: 13, mitschaden: 0.9, ziele: 8, wirkung: { wucht: 14 },
+    /* Rundumschlag. Der Text sagt seit jeher „Auch das hinter dir“. */
+    bogen: 360,
     preis: 42,
     text: "Trifft alles im Umkreis. Auch das hinter dir."
   },
@@ -166,6 +215,34 @@ export const WAFFEN = [
        Ziel zurück, und der Umweg ist genau das, was man sieht. */
     salve: { form: "ring", geschosse: 3 },
     text: "Drei Steine, und jeder findet sein Ziel allein."
+  },
+  {
+    id: "brandeisen", name: "Brandeisen", merkmale: ["Feuer"], schadensart: "feuer",
+    art: "nahkampf", reichweite: 28, abklingzeit: 0.9,
+    schaden: 13, mitschaden: 1.0, ziele: 1, wirkung: { brand: 15 },
+    /* Ein Stich, kein Hieb — das schmalste Feuer im Spiel. */
+    bogen: 60,
+    preis: 33,
+    text: "Der Stich ist das Wenigste daran."
+  },
+  {
+    id: "frostbeil", name: "Frostbeil", merkmale: ["Frost", "Wucht"], schadensart: "frost",
+    art: "nahkampf", reichweite: 36, abklingzeit: 1.25,
+    schaden: 18, mitschaden: 1.1, ziele: 2, wirkung: { frost: 0.35, wucht: 6 },
+    /* Ein Beil holt aus. Breiter als das Brandeisen, enger als die Sense. */
+    bogen: 125,
+    preis: 37,
+    text: "Zwei bleiben stehen. Einer davon für immer."
+  },
+  {
+    id: "pestkralle", name: "Pestkralle", merkmale: ["Seuche", "Blut"], schadensart: "fluch",
+    art: "nahkampf", reichweite: 30, abklingzeit: 0.7,
+    schaden: 5, mitschaden: 0.6, ziele: 2, wirkung: { gift: 15 },
+    /* Vier Klauen nebeneinander — breiter, als die kurze Reichweite
+       vermuten lässt. */
+    bogen: 95,
+    preis: 31,
+    text: "Kratzt kaum. Was danach kommt, schon."
   }
 ];
 

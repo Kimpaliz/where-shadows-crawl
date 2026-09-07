@@ -148,6 +148,11 @@ function abdruck(welt) {
      `blickY`), und `waffe.bereitIn` — die Angriffsuhr — stand
      ueberhaupt nicht drin (Waffe: 4 Felder, 0 im Abdruck).
 
+     `schlagZeit` und `schlagWaffe` gibt es seit dem Umbau der
+     Nahkampfangriffe nicht mehr; an ihrer Stelle steht die Liste der
+     laufenden Schwuenge, und die traegt mehr Zustand als die beiden
+     Felder je hatten.
+
      Das ist kein Schoenheitsfehler. Ein Schlag, der auf zwei Rechnern
      verschieden lang laeuft oder in eine andere Richtung zeigt, bliebe
      unbemerkt, solange die Toten zufaellig gleich fallen. Und wenn sie
@@ -161,7 +166,14 @@ function abdruck(welt) {
   for (const s of welt.spieler) {
     teile.push(s.id, z(s.x), z(s.y), z(s.vx), z(s.vy), s.leben, s.lebenMax,
       s.gold, s.wissen, s.stufe, s.zustand, s.getoetet, z(s.aufheben),
-      z(s.schlagZeit), s.schlagWaffe ?? "", z(s.blickX), z(s.blickY));
+      z(s.blickX), z(s.blickY));
+    /* Der laufende Schwung (spiel/schwung.mjs): Richtung, Fortschritt
+       und wie viele Ziele er noch treffen darf. Alle drei entscheiden,
+       **wen** der naechste Tick trifft — laufen sie auseinander, stirbt
+       auf einem Rechner ein Gegner, den der andere noch stehen hat. */
+    for (const sw of s.schwuenge)
+      teile.push(sw.waffe, z(sw.zeit), z(sw.rx), z(sw.ry), sw.offen,
+        sw.getroffen.size);
     /* Die Uhr jeder Waffe: Sie entscheidet, in welchem Bild der
        naechste Schlag faellt. Zwei Rechner, die sie verschieden
        herunterzaehlen, schlagen in verschiedenen Bildern zu. */

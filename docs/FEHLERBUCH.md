@@ -389,6 +389,84 @@ einer Sekunde: **„lock wurde nie gerufen"**.
 
 ---
 
+### E6 · Der Nachbarschaftsindex reicht denselben Nachbarn zweimal durch
+
+`spiel/gitter.mjs` schlüsselt seine Zellen mit
+`cx * 73856093 ^ cy * 19349663` und prüft die Zelle danach **nicht**
+nach. Zwei verschiedene Zellen können sich damit eine Liste teilen, und
+`umkreis()` reicht deren Inhalt beim Absuchen eines Kreises zweimal
+durch.
+
+Gemessen am 06.09.2026 auf einem Ring aus 24 Gegnern: Die Pechfackel
+(drei Ziele) verbrauchte alle drei, aber nur **zwei** Gegner nahmen
+Schaden — einer bekam ihn doppelt. Kein Absturz, keine Fehlermeldung;
+im Spiel sieht das aus wie ein Gegner, der „zufällig" schneller
+stirbt, während ein anderer stehenbleibt.
+
+Der Unterschied zu den Geschossen, die dasselbe Raster benutzen und
+seit jeher heil sind: Die prüfen `getroffen.has(g)` **im
+Rückruf** und tragen sofort ein. Wer stattdessen erst eine Liste
+sammelt, sortiert und danach austeilt, hat die Dublette schon in der
+Liste.
+
+**Woran ich es früher merke:** Jede Rasterabfrage darf mehr liefern,
+als im Kreis liegt — das steht im Kommentar der Datei. Was dort nicht
+steht: Sie darf auch **dasselbe** zweimal liefern. Wer aus `umkreis()`
+sammelt, dedupliziert; wer direkt austeilt, trägt vor dem Austeilen
+ein. Zweiter Fallstrick derselben Familie: Die Abfrage muss den
+**Körperradius** des Gesuchten mitrechnen. `umkreis(x, y, r)` mit einer
+Trefferprüfung auf `r + g.radius` findet die dicken Gegner am äußeren
+Rand nur zufällig — je nach Zellgröße.
+
+---
+
+### E7 · Der Rand fällt aus seinem eigenen Bereich
+
+Ein Kreisausschnitt prüft mit `kosinus >= Math.cos(bogen / 2)`, ob eine
+Richtung dazugehört. Die äußersten gezeichneten Klingen liegen
+konstruktionsbedingt **auf** genau diesem Rand — nur entsteht ihr
+Richtungsvektor über zwei Multiplikationen und eine Addition, die
+Grenze dagegen über einen direkten `Math.cos`. Beide Wege enden ein
+paar Bitstellen auseinander.
+
+Ergebnis am 06.09.2026: Bei Sense und Richtschwert lagen je zwei von
+acht bzw. fünf Klingen „außerhalb" ihres eigenen Ausschnitts. Die
+Prüfung hat es gefunden, das Auge hätte es nie gesehen.
+
+**Woran ich es früher merke:** Überall, wo eine Grenze auf **beiden**
+Seiten aus verschiedenen Rechenwegen entsteht und der Gleichstand der
+Normalfall ist (Ränder, Anschläge, exakte Vielfache), gehört eine
+ausdrückliche, benannte Toleranz hin — nicht ein `>=` und die Hoffnung.
+Und die Toleranz braucht eine Begründung in ihrer eigenen Einheit:
+„1e-9 im Kosinus sind bei diesen Winkeln rund ein Milliardstel
+Bogenmaß" ist eine, „ein bisschen Luft" nicht.
+
+---
+
+### E8 · Was zwischen zwei Wellen wartet, verfällt nicht
+
+Zwischen zwei Wellen läuft **kein** Schritt: `starteWelle()` setzt die
+Welt neu auf, aber niemand zählt Uhren herunter. Alles, was beim
+Wellenende noch lief, wartet und läuft in der nächsten Welle weiter.
+
+`starteWelle()` leerte Gegner, Geschosse, Beute, Truhen, Funken und
+Zahlen — die laufenden Nahkampfschwünge (`spiel/schwung.mjs`) fehlten
+in der Liste. Ein Schwung, der im letzten Bild einer Welle begann,
+eröffnete damit die nächste: in einer Richtung, in der der Gegner von
+vorhin stand, mit dem Schaden von **vor** dem Aufstieg.
+
+Über 600 gemessene Läufe ändert die Aufräumzeile keinen einzigen Wert —
+der Fall ist selten. Falsch war er trotzdem.
+
+**Woran ich es früher merke:** Wer dem Spielerzustand ein Feld
+hinzufügt, das eine **Uhr** trägt (Restzeit, Fortschritt, Abklingen),
+sucht `starteWelle()` auf und fragt: Gehört das hier in die
+Aufräumliste? Die Liste ist die vollständige Antwort auf „was überlebt
+eine Wellenpause" — und sie ist nur so vollständig wie ihr letzter
+Eintrag.
+
+---
+
 ## F · Zu viel Kontext in einer Sitzung
 
 ### F1 · Zwei Besitzer für dieselbe Datei *(Startkapital)*

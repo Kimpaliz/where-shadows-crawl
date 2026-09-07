@@ -20,6 +20,7 @@
 
 import { macheMelder } from "./helfer.mjs";
 import { WAFFEN, MERKMALE, STUFEN_FAKTOR, STUFEN_PREIS, preisDerWaffe } from "../spiel/katalog/waffen.mjs";
+import { ART_IDS } from "../spiel/schadensarten.mjs";
 import { GEGNER, lebenInWelle, schadenInWelle } from "../spiel/katalog/gegner.mjs";
 import { VERHALTEN_IDS } from "../spiel/gegner-verhalten.mjs";
 import { GEGENSTAENDE, SELTEN_AB_WELLE } from "../spiel/katalog/gegenstaende.mjs";
@@ -85,6 +86,32 @@ for (const m of MERKMALE) {
   melde(n >= 1, `Merkmal "${m}" kommt vor`, `${n} Waffen`);
 }
 melde(WAFFEN.length >= WAFFEN_PLAETZE, "es gibt mehr Waffen als Gürtelplätze");
+
+/* ⚠️ **Jede Schadensart braucht mindestens zwei Waffen.**
+
+   Janniks Ansage vom 06.09.2026, wörtlich: „2 feuerwaffen / 2 schnitt /
+   2 stumpf / 2 gift / 2 eis". Gemessen am selben Tag hatten Feuer und
+   Frost **je eine** — wer einen Feuerbau spielen wollte, hatte genau
+   eine Wahl, und das Verschmelzen (Bauteil 7) lief für ihn ins Leere.
+
+   Das fällt ohne diese Prüfung nicht auf: Der Katalog ist in sich
+   stimmig, jede einzelne Waffe ist tadellos, und die Lücke sieht man
+   erst, wenn man selbst einen solchen Bau spielt.
+
+   „Gift" ist dabei ein **Merkmal**, keine sechste Schadensart — es gibt
+   genau eine Art, die an der Rüstung vorbeigeht (`spiel/schadensarten.mjs`).
+   Deshalb steht es hier eine Zeile tiefer eigens da. */
+{
+  const arten = new Map();
+  for (const w of WAFFEN) arten.set(w.schadensart, (arten.get(w.schadensart) ?? 0) + 1);
+  for (const a of ART_IDS) {
+    melde((arten.get(a) ?? 0) >= 2, `Schadensart "${a}" hat mindestens zwei Waffen`,
+      `${arten.get(a) ?? 0}`);
+  }
+  const seuche = WAFFEN.filter((w) => w.merkmale.includes("Seuche"));
+  melde(seuche.length >= 2, 'das Merkmal „Seuche" trägt mindestens zwei Waffen',
+    seuche.map((w) => w.id).join(", ") || "keine");
+}
 
 /* ── Gegner ──────────────────────────────────────────────────────── */
 
