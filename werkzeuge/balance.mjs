@@ -1,6 +1,6 @@
 /* [Aufgabe: Prüfwesen] Spielt ganze Läufe durch — ohne Browser.
 
-       node werkzeuge/balance.mjs [--laeufe 40] [--spieler 1] [--saat 1]
+       node werkzeuge/balance.mjs [--laeufe 40] [--spieler 1] [--saat 1] [--modus arena]
        node werkzeuge/balance.mjs --tabelle        (1 bis 4 Spieler)
 
    ── Wozu ───────────────────────────────────────────────────────────
@@ -29,6 +29,26 @@
    Ablauf spielen, statt ihn zweimal zu schreiben und auseinanderlaufen
    zu lassen.
 
+   ── Der Schalter `--modus` (08.09.2026) ─────────────────────────────
+
+   Mehrere Modi sind mehrere Balance-Räume (docs/ROADMAP.md, Phase 1).
+   Eine Tabelle ohne Modusnamen ist ab dem zweiten Modus eine Zahl ohne
+   Einheit: Sie sieht aus wie vorher und meint etwas anderes.
+   `--modus <kennung>` reicht die Kennung bis `starteLauf` durch, und
+   die Zeile unter der Tabelle nennt den Modus, den die Messreihe
+   wirklich gespielt hat — **nicht** den, der auf der Kommandozeile
+   stand. Das ist der Unterschied, der zählt: Vor Vorgang #4 verschluckte
+   `messreihe` den Modus, und eine Kopfzeile aus dem Schalter hätte das
+   nie verraten.
+
+   **Ein ungebauter Modus wird abgewiesen, nicht gemessen.** Die
+   Karawane trägt `gebaut: false` (spiel/katalog/modi.mjs): Ohne Kutsche
+   fällt ihre Endebedingung `ort` auf die Uhr zurück (spiel/welt.mjs),
+   und ihre Verliererbedingung greift nie. Gemessen am 08.09.2026 endete
+   ein Karawanenlauf (Saat 1, ein Spieler) in Phase „welle" bei Welle 201
+   — an der Notbremse. Vierzig solche Läufe sind keine Messung, sondern
+   vierzig Abbrüche.
+
    ── Arbeitet zusammen mit ───────────────────────────────────────────
 
    `spiel/lauf.mjs` (dieselbe Schnittstelle, die auch das Spiel
@@ -40,6 +60,7 @@ import { starteLauf, naechsteWelle, oeffneKraemer, schrittImLauf, SCHRITT, WELLE
 import { kaufe, wuerfleNeu, WAFFEN_PLAETZE } from "../spiel/laden.mjs";
 import { nimmKarte } from "../spiel/stufen.mjs";
 import { macheZufall } from "../spiel/zufall.mjs";
+import { modus, MODUS_NACH_ID, spielbareModi } from "../spiel/katalog/modi.mjs";
 import { basename } from "node:path";
 
 /* ── Der Kunstspieler ───────────────────────────────────────────────
@@ -193,9 +214,15 @@ export function spieleLauf({ spielerzahl = 1, saat = 1, modusId, beobachter } = 
   };
 }
 
-export function messreihe({ laeufe = 40, spielerzahl = 1, saat = 1 } = {}) {
+export function messreihe({ laeufe = 40, spielerzahl = 1, saat = 1, modusId } = {}) {
+  /* Einmal nachschlagen statt vierzigmal — und **vor** dem ersten Lauf
+     statt nach dem vierzigsten: `modus()` wirft bei einer unbekannten
+     Kennung, und ohne `modusId` liefert es den STANDARD_MODUS
+     (spiel/katalog/modi.mjs). */
+  const gemessenerModus = modus(modusId);
   const ergebnisse = [];
-  for (let i = 0; i < laeufe; i++) ergebnisse.push(spieleLauf({ spielerzahl, saat: saat + i * 977 }));
+  for (let i = 0; i < laeufe; i++)
+    ergebnisse.push(spieleLauf({ spielerzahl, saat: saat + i * 977, modusId: gemessenerModus.id }));
   const gewonnen = ergebnisse.filter((e) => e.phase === "gewonnen").length;
   const wellen = ergebnisse.map((e) => e.welle).sort((a, b) => a - b);
   const stufen = ergebnisse.map((e) => e.spieler[0].stufe);
@@ -213,6 +240,11 @@ export function messreihe({ laeufe = 40, spielerzahl = 1, saat = 1 } = {}) {
 
   return {
     laeufe, spielerzahl,
+    /* Der **gemessene** Modus, nicht der gewünschte: Die Kopfzeile liest
+       ihn hier ab und kann deshalb nichts anderes nennen, als wirklich
+       gespielt wurde (Fehlerbuch E2 — zwei Zahlen für dieselbe Sache
+       gehen gut, bis jemand eine ändert). */
+    modusId: gemessenerModus.id, modusName: gemessenerModus.name,
     siegquote: gewonnen / laeufe,
     welleMittel: mittel(wellen),
     welleMedian: wellen[Math.floor(wellen.length / 2)],
@@ -228,6 +260,12 @@ const wert = (name, standard) => {
   const i = process.argv.indexOf("--" + name);
   return i >= 0 ? Number(process.argv[i + 1]) : standard;
 };
+/* Wortgleich aus `werkzeuge/auswertung.mjs` übernommen: dasselbe
+   Werkzeugpaar liest denselben Schalter, also auf dieselbe Weise. */
+const textWert = (name) => {
+  const i = process.argv.indexOf("--" + name);
+  return i >= 0 ? process.argv[i + 1] : null;
+};
 
 /* Nur wenn **diese** Datei aufgerufen wurde. `endsWith("balance.mjs")`
    war falsch: `pruefe-balance.mjs` endet genauso, und der Pruefstand
@@ -235,23 +273,47 @@ const wert = (name, standard) => {
    Pruefkette. Verglichen wird deshalb der Dateiname als Ganzes. */
 const selbstAufgerufen = process.argv[1] && basename(process.argv[1]) === "balance.mjs";
 if (selbstAufgerufen) {
+  /* Ein falscher Modusname gibt eine Zeile Deutsch statt eines
+     Stapelauszugs, ein ungebauter gar keine Messung: Die Karawane läuft
+     ohne Kutsche bis zur Notbremse, und die Tabelle darunter wäre
+     gemessener Unsinn (Begründung oben in der Kopfnotiz). */
+  const modusId = textWert("modus") || undefined;
+  if (modusId) {
+    const gewaehlt = MODUS_NACH_ID.get(modusId);
+    if (!gewaehlt) {
+      console.error(`Unbekannter Modus: ${modusId}`);
+      console.error(`Bekannt sind: ${[...MODUS_NACH_ID.keys()].join(", ")}`);
+      process.exit(1);
+    }
+    if (gewaehlt.gebaut === false) {
+      console.error(`Der Modus ${modusId} ist noch nicht gebaut und wird nicht gemessen.`);
+      console.error(`Jeder Lauf liefe dort bis zur Notbremse bei Welle ${WELLEN_DECKEL}.`);
+      console.error(`Messbar ist heute: ${spielbareModi().map((m) => m.id).join(", ")}`);
+      process.exit(1);
+    }
+  }
   if (process.argv.includes("--tabelle")) {
     const laeufe = wert("laeufe", 24);
     console.log(`\n  Spieler  Siege  Welle Mittel  Median  schlechteste  Stufe`);
     console.log("  " + "-".repeat(60));
+    let gemessen = "";
     for (let n = 1; n <= 4; n++) {
-      const m = messreihe({ laeufe, spielerzahl: n, saat: 1 });
+      const m = messreihe({ laeufe, spielerzahl: n, saat: 1, modusId });
+      /* Aus der Messung gelesen, nicht aus der Kommandozeile: Wer den
+         Modus druckt, den er *wollte*, merkt nie, wenn die Messreihe ihn
+         verschluckt — genau der Zustand vor Vorgang #4. */
+      gemessen = `${m.modusId} (${m.modusName})`;
       console.log(`  ${String(n).padStart(7)}  ${(m.siegquote * 100).toFixed(0).padStart(4)}%  `
         + `${m.welleMittel.toFixed(1).padStart(11)}  ${String(m.welleMedian).padStart(6)}  `
         + `${String(m.welleSchlechteste).padStart(12)}  ${m.stufeMittel.toFixed(1).padStart(5)}   `
         + m.stirbtIn.slice(1).map((z) => z === 0 ? " ." : String(z).padStart(2)).join(""));
     }
-    console.log(`\n  ${laeufe} Laeufe je Spielerzahl\n`);
+    console.log(`\n  ${laeufe} Laeufe je Spielerzahl, Modus ${gemessen}\n`);
   } else {
     const m = messreihe({
-      laeufe: wert("laeufe", 40), spielerzahl: wert("spieler", 1), saat: wert("saat", 1)
+      laeufe: wert("laeufe", 40), spielerzahl: wert("spieler", 1), saat: wert("saat", 1), modusId
     });
-    console.log(`\n  ${m.laeufe} Laeufe, ${m.spielerzahl} Spieler`);
+    console.log(`\n  ${m.laeufe} Laeufe, ${m.spielerzahl} Spieler, Modus ${m.modusId} (${m.modusName})`);
     console.log(`  Siegquote        ${(m.siegquote * 100).toFixed(0)} %`);
     console.log(`  Welle im Mittel  ${m.welleMittel.toFixed(1)}`);
     console.log(`  Median           ${m.welleMedian}`);

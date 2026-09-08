@@ -54,13 +54,15 @@
    ── Arbeitet zusammen mit ───────────────────────────────────────────
 
    `github-zugang.mjs` (Token, Repo, Aufrufe), `helfer.mjs`
-   (Einstellung), `docs/ROADMAP.md` (die Quelle der Phasen) und
+   (Einstellung), `vorgangs-text.mjs` (der Rumpf als reiner Text),
+   `docs/ROADMAP.md` (die Quelle der Phasen) und
    `pruefe-vorgaenge.mjs`, die dieselben Formen **ohne Netz** prüft. */
 
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { liesEinstellung, WURZEL } from "./helfer.mjs";
 import { repoBestimmen, tokenHolen, api, alleSeiten } from "./github-zugang.mjs";
+import { schritteErgaenzen } from "./vorgangs-text.mjs";
 
 const argumente = process.argv.slice(2);
 const befehl = argumente[0];
@@ -180,14 +182,20 @@ async function befehlRoadmap() {
         await unterVorgang(phase.nummer, kind.id);
       }
     }
-    /* Aufgabenliste im Sammelvorgang — sie ergibt den Fortschrittsbalken. */
+    /* Aufgabenliste im Sammelvorgang — sie ergibt den Fortschrittsbalken.
+       Gesucht wird der **Verweis**, nicht der Haken: `- [x] #4` ist
+       derselbe Eintrag wie `- [ ] #4`, nur geschlossen. Wer den ganzen
+       ungehakten Block auf einmal vergleicht, hält ihn nach dem ersten
+       Haken für fehlend und hängt ihn ein zweites Mal an. Die beiden
+       Textfunktionen dazu stehen in `vorgangs-text.mjs` und werden von
+       `pruefe-vorgaenge.mjs` ohne Netz geprüft. */
     if (wirklich && phase.nummer && phase.schritte.length) {
       const alt = await api(`/repos/${repo}/issues/${phase.nummer}`, verbinden());
-      const liste = phase.schritte.filter((s) => s.nummer).map((s) => `- [ ] #${s.nummer}`).join("\n");
-      if (liste && !(alt.body || "").includes(liste))
+      const nummern = phase.schritte.filter((s) => s.nummer).map((s) => s.nummer);
+      const neuerRumpf = schritteErgaenzen(alt.body || "", nummern);
+      if (neuerRumpf)
         await api(`/repos/${repo}/issues/${phase.nummer}`, {
-          ...verbinden(), methode: "PATCH",
-          rumpf: { body: (alt.body || "") + "\n\n## Schritte\n\n" + liste + "\n" }
+          ...verbinden(), methode: "PATCH", rumpf: { body: neuerRumpf }
         });
     }
   }

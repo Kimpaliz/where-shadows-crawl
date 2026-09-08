@@ -19,6 +19,7 @@
    | 2 | jeder Schritt unter einer Phase ebenso |
    | 3 | keine Nummer zweimal — sonst zeigen zwei Stellen auf einen Vorgang |
    | 4 | die Roadmap behauptet keinen Stand (Regel 14 gilt auch hier) |
+   | 5 | der Schritte-Block eines Sammelvorgangs entsteht genau einmal |
 
    **Mit `--online`** kommt dazu, was nur GitHub weiß: ob es die Nummer
    gibt, ob sie das richtige Form-Label trägt, ob ein Schritt seinen
@@ -38,13 +39,15 @@
 
    ── Arbeitet zusammen mit ───────────────────────────────────────────
 
-   `helfer.mjs`, `docs/ROADMAP.md`, `CHANGELOG.md` und `vorgaenge.mjs`,
-   das dieselben Formen **anlegt**. Nur mit `--online` zusätzlich
+   `helfer.mjs`, `docs/ROADMAP.md`, `CHANGELOG.md`, `vorgangs-text.mjs`
+   (dieselben Funktionen, die den Rumpf bauen) und `vorgaenge.mjs`, das
+   dieselben Formen **anlegt**. Nur mit `--online` zusätzlich
    `github-zugang.mjs`. */
 
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { macheMelder, liesDatei, liesEinstellung, WURZEL } from "./helfer.mjs";
+import { nenntSchritt, schritteErgaenzen } from "./vorgangs-text.mjs";
 
 const { melde, ende } = macheMelder({ still: true });
 const online = process.argv.includes("--online");
@@ -140,6 +143,40 @@ melde(doppelt === 0, "keine Vorgangsnummer steht zweimal",
   doppelt ? `${doppelt} doppelt — zwei Stellen zeigen auf denselben Vorgang` : "");
 melde(standfunde === 0, "die Roadmap behauptet keinen Stand",
   standfunde ? `${standfunde} Stelle(n) — der Stand lebt im Vorgang (Regel 13/14)` : "");
+
+/* ── 5 · der Schritte-Block entsteht genau einmal ──────────────────
+
+   Ohne Netz nachgespielt, weil es ohne Netz falsch sein kann: Rumpf
+   einmal füllen, zwei Haken setzen (das tut GitHub, sobald ein Schritt
+   geschlossen wird), dann ein zweites Mal darüberlaufen lassen. Danach
+   darf **nichts** mehr zu ergänzen sein.
+
+   Der Fall, der ohne diese Prüfung falsch wäre: Ein Vergleich, der den
+   ungehakten Text sucht, findet einen gehakten Punkt nicht und hängt
+   die ganze Liste erneut an. Am 05.09.2026 trug der Sammelvorgang #1
+   die Überschrift deshalb zweimal, acht Punkte für vier Schritte. */
+const PROBE_ANFANG = "Begründung: `docs/ROADMAP.md`\n";
+const PROBE_NUMMERN = [2, 3, 4, 5];
+const koepfe = (t) => ((t || "").match(/^##\s+Schritte\s*$/gm) || []).length;
+const einmal = schritteErgaenzen(PROBE_ANFANG, PROBE_NUMMERN) || "";
+const gehakt = einmal.replace("- [ ] #2", "- [x] #2").replace("- [ ] #3", "- [X] #3");
+const nochmal = schritteErgaenzen(gehakt, PROBE_NUMMERN);
+const dazu = schritteErgaenzen(gehakt, [...PROBE_NUMMERN, 6]);
+
+melde(koepfe(einmal) === 1 && PROBE_NUMMERN.every((n) => nenntSchritt(einmal, n)),
+  "der Schritte-Block entsteht einmal, mit allen Schritten",
+  `${koepfe(einmal)} Überschrift(en) statt einer`);
+melde(nochmal === null, "ein gehakter Schritt gilt nicht als fehlend",
+  nochmal ? "der ganze Block würde ein zweites Mal angehängt" : "");
+melde(dazu !== null && koepfe(dazu) === 1 && !/- \[ \] #2/.test(dazu),
+  "ein neuer Schritt kommt unter die vorhandene Überschrift",
+  dazu ? `${koepfe(dazu)} Überschrift(en), alte Punkte doppelt` : "nichts ergänzt");
+melde(nenntSchritt("- [ ] #12", 12) && !nenntSchritt("- [ ] #12", 1),
+  "eine Nummer wird nicht in einer längeren gefunden",
+  "die Präfix-Falle: die 1 steckt in der 12");
+melde(/from "\.\/vorgangs-text\.mjs"/.test(liesDatei("werkzeuge/vorgaenge.mjs")),
+  "vorgaenge.mjs baut die Aufgabenliste mit den hier geprüften Funktionen",
+  "der Import fehlt — dann prüft diese Datei eine Funktion, die niemand aufruft");
 
 /* ── Mit --online: nachsehen, ob es die Vorgänge wirklich gibt ────── */
 if (online) {

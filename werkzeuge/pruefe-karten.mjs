@@ -15,6 +15,7 @@
    | `kartenwert` skaliert die Zahlen | dasselbe |
    | `neigung_<gruppe>` verschiebt die Gruppen | dasselbe |
    | jede Meta-Regel wirkt | eine Regel, die gesetzt, aber nirgends gefragt wird |
+   | **jede** Meta-Karte setzt beim Nehmen ihre Regel und keinen Wert | die sechste Meta-Karte, die still eine Zahl schiebt oder gar nichts tut — geprüft wurde bisher nur die erste |
    | jeder Titel lässt sich malen | ein Zeichen ohne Glyph wird still zu `?` |
 
    ⚠️ **Der Grund für die drei Ziehstatistiken:** Ein Wert, der „im
@@ -456,21 +457,85 @@ laut(`\n── Meta-Regeln ${"─".repeat(46)}\n`);
   melde(hatRegel(undefined, "weitsicht") === false, "und auch ohne Spieler nicht");
 }
 
-/* Eine Meta-Karte darf keine Zahl geben — das ist ihre Definition. */
+/* ── 6b · Das Fertig-Kriterium von 13.3, für jede Karte einzeln ──────
+
+   „Mindestens fünf Meta-Karten existieren, und jede ändert etwas, das
+   kein Zahlenwert ist." Die **Zahl** steht in Abschnitt 3; hier steht
+   die zweite Hälfte, und zwar für **jede** gebaute Meta-Karte.
+
+   ⚠️ Vorher stand hier `ziehbareKarten().find(istMeta)` — also immer
+   nur die erste, „weitsicht". Die Einzelprüfungen darüber setzen ihre
+   Regel selbst (`probeSpieler({}, { … })`), statt die Karte zu
+   **nehmen**. Eine Meta-Karte, deren Regel beim Nehmen gar nicht
+   gesetzt wird, kam damit still durch: gemessen am 08.09.2026 blieben
+   `pruefe-karten.mjs` (74) und `pruefe-kartenhand.mjs` (76) grün,
+   während fünf der sechs Regeln wirkungslos waren.
+
+   Zwei Hälften, beide nötig:
+
+   1. **Keine Zahl.** Die Karte nehmen, danach `spieler.werte`
+      zeichengleich vergleichen. Verschiebt sie einen der Werte, ist
+      sie eine Wertkarte mit anderem Etikett.
+   2. **Aber etwas.** Derselbe Ablauf mit und ohne die Regel, dieselbe
+      Saat — die Aufzeichnung muss auseinandergehen. Eine Regel, die
+      gesetzt wird und den Verlauf nicht ändert, ändert nichts. */
 {
-  const s = probeSpieler();
-  const vorher = JSON.stringify(s.werte);
-  const metaVorlage = ziehbareKarten().find(istMeta);
-  const welt = { zufall: macheZufall(2), gegner: [] };
-  s.offeneWahlen = 1;
-  s.karten = [{
-    id: metaVorlage.id, titel: metaVorlage.titel, text: metaVorlage.text,
-    seltenheit: metaVorlage.seltenheit, meta: true, wert: null, menge: 0,
-    regel: metaVorlage.wirkung.regel, zeilen: []
-  }];
-  nimmKarte(welt, s, 0);
-  melde(JSON.stringify(s.werte) === vorher, "eine Meta-Karte ändert keinen einzigen Wert");
-  melde(hatRegel(s, metaVorlage.wirkung.regel), "sondern setzt ihre Regel");
+  /* Ein fester Ablauf: vier Aufstiege, immer die erste Karte, dazu
+     zwei Gegner und ein angeschlagener Spieler — sonst blieben Regeln
+     unsichtbar, die nicht die Hand betreffen (`aderlass`, `blutzoll`). */
+  const verlauf = (regeln) => {
+    const welt = {
+      zufall: macheZufall(20260908),
+      gegner: [{ leben: 100, tot: false }, { leben: 60, tot: false }]
+    };
+    const s = probeSpieler({}, regeln);
+    s.leben = 5;
+    s.offeneWahlen = 4;
+    s.karten = ziehKarten(welt.zufall, s);
+    const schritte = [];
+    while (s.offeneWahlen > 0) {
+      schritte.push(s.karten.map((k) => k.id).join("+"));
+      nimmKarte(welt, s, 0);
+      schritte.push(`${s.leben}/${welt.gegner.map((g) => g.leben).join(",")}`);
+    }
+    return schritte.join(" | ");
+  };
+
+  const ohne = verlauf({});
+  const meta = ziehbareKarten().filter(istMeta);
+  let mitZahl = 0, ohneWirkung = 0, wirksam = 0;
+
+  for (const v of meta) {
+    /* 1 · Genau diese Karte nehmen — nicht irgendeine gezogene. */
+    const s = probeSpieler();
+    const vorher = JSON.stringify(s.werte);
+    const welt = { zufall: macheZufall(2), gegner: [] };
+    s.offeneWahlen = 1;
+    s.karten = [{
+      id: v.id, titel: v.titel, text: v.text, seltenheit: v.seltenheit,
+      meta: true, wert: null, menge: 0, regel: v.wirkung.regel, zeilen: []
+    }];
+    nimmKarte(welt, s, 0);
+
+    const zahl = JSON.stringify(s.werte) !== vorher;
+    const gesetzt = hatRegel(s, v.wirkung.regel);
+    /* 2 · Und der Verlauf muss auseinandergehen. */
+    const anders = verlauf({ [v.wirkung.regel]: true }) !== ohne;
+
+    if (zahl) { mitZahl++; console.log(`    verschiebt einen Wert: ${v.id}`); }
+    if (!gesetzt) { ohneWirkung++; console.log(`    setzt ihre Regel nicht: ${v.id}`); }
+    else if (!anders) { ohneWirkung++; console.log(`    ändert am Verlauf nichts: ${v.id}`); }
+    if (!zahl && gesetzt && anders) wirksam++;
+    laut(`  ${v.id.padEnd(12)} ${!gesetzt ? "Regel nicht gesetzt"
+      : anders ? "Verlauf verschieden" : "kein Unterschied"}`);
+  }
+
+  melde(mitZahl === 0, "keine Meta-Karte verschiebt einen Zahlenwert",
+    `${mitZahl} von ${meta.length}`);
+  melde(ohneWirkung === 0, "jede Meta-Karte ändert den Verlauf messbar",
+    `${ohneWirkung} von ${meta.length} ohne Wirkung`);
+  melde(wirksam >= 5, "mindestens fünf Meta-Karten ändern eine Regel statt einer Zahl",
+    `${wirksam} von ${meta.length}`);
 }
 
 /* ── 7 · Was auf der Karte steht ─────────────────────────────────── */

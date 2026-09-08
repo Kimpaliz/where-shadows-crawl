@@ -25,11 +25,19 @@ keinen Modus-Begriff: `spiel/lauf.mjs` kennt genau einen Ablauf und
 `spiel/welt.mjs` genau eine Arena. Das ist ein struktureller Eingriff
 und kein Feature — und er kommt deshalb zuerst.
 
-**2 · Der Bannkreis ist tragend.** Gemessen an 11 Stellen in vier
-Dateien: `arenaRadius()`, `welt.arena.radius`, das Setzen der Gegner
+**2 · Der Bannkreis ist tragend.** Zähleinheit sind die Fundstellen
+(Trefferzeilen) von `arenaRadius`, `arena.radius` und `haltImKreis` in
+den vier Produktivdateien — der Radius selbst, das Setzen der Gegner
 auf den Rand, `haltImKreis()` für Spieler und Gegner, die
-Kameraklemmung und der einmal gemalte Scheibenboden. Der
-Karawanen-Modus hat keinen Kreis — die Welt zieht an der Kutsche
+Kameraklemmung und der einmal gemalte Scheibenboden. Es sind **12**
+(`spiel/welt.mjs` 4, `spiel/bewegung.mjs` 5, `runtime/start.js` 2,
+`runtime/zeichnen.js` 1), gemessen am 08.09.2026 mit:
+
+```bash
+grep -n 'arenaRadius\|arena\.radius\|haltImKreis' spiel/welt.mjs spiel/bewegung.mjs runtime/start.js runtime/zeichnen.js | wc -l
+```
+
+Der Karawanen-Modus hat keinen Kreis — die Welt zieht an der Kutsche
 vorbei. **Das ist die eine teure Sache in der Liste.**
 
 **3 · Karawane und „endlos generierte Welt" sind dasselbe System.**
@@ -74,8 +82,11 @@ Diese Punkte hängen an keiner Phase und können jederzeit dazwischen:
   neuer Gegner braucht zusätzlich ein Raster in
   `runtime/sprite-daten.js`, und die Prüfung besteht auf beidem.
 - **Die zehn Sprite-Fassungen** aus der Pixel-Werkstatt — vier Jäger,
-  drei Knochenritter, drei Schlurfer, alle gemessen. Es fehlt nur
-  Janniks Wahl.
+  drei Knochenritter, drei Schlurfer. Zehn Entwürfe für drei Figuren,
+  weil bei elf Bildpunkten der Umriss entscheidet und nicht die Farbe.
+  Janniks Wahl vom 05.09.2026 (Vorgang #47): Jäger schmal,
+  Knochenritter wie heute, Schlurfer gebeugt — eingesetzt in
+  `527a930`.
 - **Netz-Koop.** Die Entscheidung steht in `SPIEL.md` 11.
 
 ---
@@ -315,10 +326,12 @@ Janniks Wunsch 2, und die Grundlage für Wunsch 4. Die Welt besteht
 nicht mehr aus einer festen Scheibe, sondern aus erzeugten Stücken,
 die nachwachsen.
 
-**Warum das teure Stück:** Der Bannkreis steckt an 11 Stellen in vier
-Dateien — Gegner setzen, Spieler und Gegner halten, Kamera klemmen,
-Boden malen. Alle vier müssen eine Weltform fragen, statt einen Kreis
-anzunehmen.
+**Warum das teure Stück:** Der Bannkreis steckt in vier Dateien —
+Gegner setzen, Spieler und Gegner halten, Kamera klemmen, Boden malen.
+Wie viele Fundstellen das genau sind und mit welchem Befehl man sie
+nachzählt, steht oben bei Befund 2; die Zahl wird hier absichtlich
+nicht wiederholt (Fehlerbuch E2). Alle vier müssen eine Weltform
+fragen, statt einen Kreis anzunehmen.
 
 **Fertig, wenn:** Der Arena-Modus läuft über die neue Weltform und
 liefert bei festen Saaten **dieselben** Zahlen wie vorher — der Umbau
@@ -546,8 +559,13 @@ erst nach Minuten, wenn die Welten sich schon widersprechen. Der
 Wächter `pruefe-kern.mjs` hält alle drei bereits fest; er ist ab dieser
 Entscheidung kein Ordnungsdienst mehr, sondern die Sicherung.
 
-**Der offene Punkt ist die Vermittlung** (Vorgang #46): Zwei Rechner
-hinter zwei Routern finden sich nicht von allein.
+**Die Vermittlung** (Vorgang #46, beantwortet am 05.09.2026): Zwei
+Rechner hinter zwei Routern finden sich nicht von allein, also
+vermittelt der öffentliche PeerJS-Vermittler den ersten Kontakt —
+dessen Protokoll das Spiel in `netz/broker.mjs` selbst spricht, ohne
+die PeerJS-Bibliothek und damit ohne jede Abhängigkeit. Danach laufen
+alle Spieldaten direkt von Browser zu Browser. Gebaut in Schritt 11.4
+(Vorgang #57).
 
 **Fertig, wenn:** Zwei Browser auf zwei Rechnern spielen dieselbe
 Nacht, und ein Vergleich der Weltzustände nach fünf Minuten zeigt

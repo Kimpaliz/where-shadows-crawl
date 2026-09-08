@@ -236,6 +236,43 @@ Prüfzahl vergleichen: Sie muss wieder die von vorher sein.
 
 ---
 
+### C7 · Ein Platzhalter-Token und ein Proxy, den Node nicht kennt
+
+`pruefe-vorgaenge.mjs --online` meldete **18 tote Vorgangsnummern** und
+**7 tote Nummern im Changelog** — darunter #1, #43, #53 und #86, die
+alle unbestreitbar existieren. Das sah aus wie ein echter Befund: als
+hätte jemand Vorgänge gelöscht.
+
+**Was herauskam:** `GitHub 401: Bad credentials`, von der Prüfung als
+„gibt es nicht" gedeutet. Das `GITHUB_TOKEN` dieser Umgebung ist
+**14 Zeichen** lang, also kein echter Token, sondern ein Platzhalter.
+Ein Proxy tauscht ihn unterwegs gegen den echten — aber nur für das,
+was auch wirklich durch den Proxy geht. `curl` liest `HTTPS_PROXY` von
+sich aus und bekam 200; Node 22 tut das bei `fetch` **nicht** und
+schickte den Platzhalter direkt an GitHub.
+
+**Warum:** Nicht der Code war falsch und nicht das Repository, sondern
+die Umgebung. Und die Prüfung übersetzt jeden Fehlschlag in dieselbe
+Aussage — ein 404 („gibt es nicht") und ein 401 („ich darf nicht
+fragen") sind für sie ununterscheidbar. Eine Ausrede für eine falsche
+Meldung ist das nicht: Sie behauptet etwas über das Repository, obwohl
+sie über die Leitung stolpert.
+
+**Woran ich es früher merke:** Bevor man einer Netzprüfung glaubt, die
+etwas Unglaubliches behauptet, einen einzigen Aufruf von Hand
+gegenprüfen — `curl -o /dev/null -w "%{http_code}"` auf dieselbe
+Adresse. Stimmen die beiden nicht überein, liegt es an der Leitung und
+nicht am Gemessenen. In dieser Umgebung ist der Aufruf
+
+```bash
+NODE_USE_ENV_PROXY=1 node werkzeuge/pruefe-vorgaenge.mjs --online
+```
+
+— gemessen am 08.09.2026: ohne die Variable 2 Fehler, mit ihr
+9 Prüfungen und 0 Fehler, am selben Stand.
+
+---
+
 ## D · Die eigene Erwartung ist falsch, nicht der Code
 
 ### D1 · Das Fließgleichgewicht *(Startkapital)*
@@ -464,6 +501,30 @@ sucht `starteWelle()` auf und fragt: Gehört das hier in die
 Aufräumliste? Die Liste ist die vollständige Antwort auf „was überlebt
 eine Wellenpause" — und sie ist nur so vollständig wie ihr letzter
 Eintrag.
+
+---
+
+### E9 · Der Vergleich las den Stand mit, statt nur den Verweis
+
+**Was ich tat:** `vorgaenge.mjs roadmap --wirklich` ein zweites Mal
+laufen lassen, nachdem zwei Schritte geschlossen waren.
+**Was herauskam:** Sammelvorgang #1 trug „## Schritte" zweimal — acht
+Punkte für vier Schritte, die zweite Liste für immer ungehakt.
+**Warum:** Der Vergleich suchte den ganzen zusammengefügten Block im
+ungehakten Wortlaut (`includes(liste)`). Ein Punkt der Aufgabenliste
+besteht aber aus zwei Dingen: dem **Verweis** `#4`, der bleibt, und dem
+**Haken** davor, den GitHub beim Schließen selbst setzt. Wer beide
+zusammen sucht, sucht Verbindung und Stand in einem — und findet die
+Verbindung nicht mehr, sobald der Stand sich ändert. Dazu kam, dass der
+Vergleich alles auf einmal prüfte: Auch ein einzelner neuer Schritt
+ließ den ganzen Block als fehlend gelten.
+**Woran ich es früher merke:** Ein Vergleich, der entscheidet, ob etwas
+schon **da** ist, darf nur die unveränderlichen Teile lesen. Alles, was
+sich von außen ändern kann — Haken, Groß- und Kleinschreibung,
+Reihenfolge —, gehört aus dem Muster heraus. Und geprüft wird je
+Eintrag, nicht der ganze Block: Sonst macht ein einziger neuer Eintrag
+alle alten noch einmal. Gegenprobe ohne Netz: dieselbe Änderung zweimal
+anwenden; beim zweiten Mal muss nichts mehr passieren.
 
 ---
 

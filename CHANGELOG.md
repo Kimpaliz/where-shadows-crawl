@@ -3,7 +3,7 @@
 Oben das Neueste. Jeder Eintrag sagt **was**, **warum** und **womit
 gemessen** — nicht nur, dass etwas anders ist.
 
-## 0.10.1 — Der Vorhang: die Seite bittet, nicht gelistet zu werden (08.09.2026)
+## 0.10.6 — Der Vorhang: die Seite bittet, nicht gelistet zu werden (08.09.2026)
 
 Janniks Frage, wörtlich: *„ich habe nun auch das github abo. bekommen
 wir das nur nur sichtbar für freubde und mich?"* — und auf die
@@ -96,6 +96,215 @@ Diese Änderung fasst zwei Systeme an — `index.html` (Bedienung) und
 `claude/scotophobia-granit-hoehle-wsp1as`. Das weicht von Regel 2 ab
 und ist hier so vorgegeben. Getrennt wären es zwei Zweige, von denen
 einer ohne den anderen sinnlos ist: eine Prüfung ohne das Geprüfte.
+## 0.10.5 — Der Prüfstand nennt den gemessenen Modus (08.09.2026)
+
+Roadmap 1.3, Vorgang **#4**: *„`balance.mjs --modus arena` läuft und
+die Tabelle sagt, welcher Modus gemessen wurde."*
+
+**Was vorher wirklich passierte:** `--modus` gab es in `balance.mjs`
+gar nicht. Der einzige Schalterleser konnte nur Zahlen, also wurde der
+Schalter stumm verschluckt. `spieleLauf` reichte den Modus schon
+durch — aber `messreihe` dazwischen nahm ihn nicht einmal entgegen.
+
+**Der Rot-Beweis, vor dem Umbau gemessen:** Der Wächter meldete
+**7 Fehler** von 35 Prüfungen. Der sprechendste Satz daraus:
+
+    ein anderer Modus kommt bis in den Lauf durch
+    Bannkreis: verloren in Welle 6, Karawane: verloren in Welle 6
+
+Zwei verschiedene Modi, zeichengleich dasselbe Ergebnis — die Leitung
+war unterbrochen. **Ein Vergleich „arena gegen Standard" hätte das nie
+gefunden:** Ohne Weitergabe spielt jeder Lauf ohnehin den Bannkreis,
+also wäre er auch auf dem kaputten Stand grün gewesen. Gemessen wird
+deshalb gegen die Karawane, den einzigen Modus, der sich heute anders
+verhält (sie läuft bis zur Notbremse, statt in Welle 6 zu enden).
+
+**Der Beweis, auf dem Phase 1 besteht** — „am Spiel darf sich nichts
+ändern":
+
+| 3 Läufe je 1/2/4 Spielern, Saat 1, alle Einzelergebnisse | |
+| --- | --- |
+| vorher | `fb1603ee…d33c12` |
+| nachher | `fb1603ee…d33c12` |
+| Vergleich | **bitgleich**, `diff` ohne Ausgabe |
+| Dauer | 56,2 s |
+
+**Was jetzt geht:**
+
+| Aufruf | Ergebnis |
+| --- | --- |
+| `--modus arena --laeufe 3 --spieler 1` | Kopfzeile „3 Laeufe, 1 Spieler, Modus arena (Bannkreis)" |
+| ohne `--modus` | dieselbe Kopfzeile, dieselben Zahlen |
+| `--tabelle` | Fußzeile nennt den Modus mit |
+| `--modus quatsch` | „Unbekannter Modus: quatsch / Bekannt sind: arena, karawane", Rückgabewert 1 |
+| `--modus karawane` | „ist noch nicht gebaut und wird nicht gemessen", Rückgabewert 1 |
+
+Kein Stapelauszug in beiden Fehlerfällen (`grep -c "^    at "` → 0).
+Der Modus in der Kopfzeile kommt aus `m.modusId`, nicht aus dem
+Schalter — sonst nennte der Prüfstand, was man wollte, statt was er
+gespielt hat (Fehlerbuch E2).
+
+Der Wächter prüft außerdem den **Aufruf**, nicht nur die Bibliothek:
+drei Kindprozesse über `spawnSync`, wie in `pruefe-protokoll.mjs`.
+Ohne das prüft niemand die Kommandozeile (Fehlerbuch E1).
+
+Nachher: **35 Prüfungen, 0 Fehler**, gemessen 778,2 s. Die ganze
+Kette über alle fünf Änderungen dieses Tages: **26 von 26 bestanden,
+0 Fehler, 800,4 s** (`node werkzeuge/pruefe-alles.mjs`, 08.09.2026).
+
+**Nebenbei berichtigt**, weil dieselbe Messung sie widerlegt: Die
+Kopfnotiz der Prüfung behauptete „rund 60 Sekunden" für 40 Läufe je
+Spielerzahl — gemessen sind es 778,2 s, mehr als das Zehnfache. Und
+die Hochrechnung für drei Saatbasen stand auf „880 s statt 250"; sie
+lautet jetzt „rund 2.300 s" und sagt dazu, dass sie hochgerechnet und
+nicht gemessen ist.
+
+## 0.10.4 — Zahlen, die neben der Wahrheit standen (08.09.2026)
+
+Keine Zeile Spiellogik geändert. Berichtigt wurden fünf Angaben, die
+überholt oder schlicht falsch waren — jede gegen die Quelle geprüft,
+die sie beschreibt.
+
+| Stelle | stand da | ist gemessen | womit nachgerechnet |
+| --- | --- | --- | --- |
+| `CHANGELOG.md` 190 | Notbremse bei Welle 130 | 200 | `git log -S "WELLEN_DECKEL" -- werkzeuge/balance.mjs` |
+| `docs/ROADMAP.md` 77 | „Es fehlt nur Janniks Wahl" | Vorgang #47, 05.09.2026, in `527a930` | GitHub-Vorgang #47 |
+| `docs/ROADMAP.md` 549 | „Der offene Punkt ist die Vermittlung" | Vorgang #46, 05.09.2026 | GitHub-Vorgang #46, `netz/broker.mjs` |
+| `docs/SPIEL.md` 214/234/239/240/247 | zwölf Wellen, „Nachtzehrer", geteilte Tastatur | endlos, „Where Shadows Crawl", nur Lobby | Vorgänge #46 #48 #49 |
+| `docs/ROADMAP.md` 28/318 | 11 Stellen in vier Dateien | **12** | der `grep`-Befehl, der jetzt daneben steht |
+
+**Die 130 war nie eine Grenze.** `git log -S "WELLEN_DECKEL" --
+werkzeuge/balance.mjs` nennt genau einen Commit, `ce0e81e`, und der
+führt den Deckel schon mit 200 ein. Es war ein Schreibfehler in einem
+Eintrag, nicht die Erinnerung an einen alten Stand — deshalb steht die
+Berichtigung dort als datierte Korrektur und ersetzt den Satz nicht
+lautlos.
+
+**Warum drei Zählungen des Bannkreises drei Zahlen ergaben:** Es gab
+keine Zähleinheit. Jetzt steht sie da — Trefferzeilen der Bezeichner
+`arenaRadius`, `arena.radius`, `haltImKreis` in den vier
+Produktivdateien — und der Befehl gleich darunter. `grep -o` zählt
+15, weil drei Zeilen zwei Bezeichner tragen; mit `werkzeuge/` sind es
+19. Ohne Einheit ist jede dieser Zahlen richtig und keine brauchbar.
+
+**Was ausdrücklich stehen geblieben ist:** die Drei-Wege-Tabelle in
+`docs/SPIEL.md` 253-257 (Handvermittlung, Vermittlungsdienst, eigener
+Server). Sie ist die Abwägung, nicht der Stand — und Abwägungen
+veralten nicht.
+
+**Der Wächter dafür:** `pruefe-doku-status.mjs` kannte „noch offen",
+aber nicht „Der offene Punkt ist …" und nicht „Es fehlt nur …".
+Beides ist jetzt ein Muster mehr. Zuerst rot gemacht: Zeile 549 der
+ROADMAP auf den alten Wortlaut zurückgesetzt → die Prüfung meldet
+`docs/ROADMAP.md:549  offener Punkt`; zurückgenommen → grün.
+
+## 0.10.3 — Jede Meta-Karte, nicht nur die erste (08.09.2026)
+
+Vorgang #68 (Schritt 13.3) verlangt: *„Mindestens fünf Meta-Karten
+existieren, und jede ändert etwas, das kein Zahlenwert ist."* Die erste
+Hälfte war seit Phase 13 geprüft (`pruefe-karten.mjs`, Abschnitt 3:
+mindestens fünf ziehbare Meta-Karten). Die zweite war es **nicht**: Die
+Stelle prüfte `ziehbareKarten().find(istMeta)` — also immer nur
+„weitsicht". Die sechs Einzelprüfungen darüber setzen ihre Regel selbst,
+statt die Karte zu nehmen.
+
+Was dadurch still durchkam, ist gemessen, nicht behauptet: Wird
+`spiel/stufen.mjs` in `nimmKarte()` auf eine einzige Regel eingeengt,
+tun fünf der sechs Meta-Karten beim Nehmen gar nichts — und beide
+Prüfungen bleiben grün.
+
+| gemessen am 08.09.2026, im Zweig selbst nachgestellt | Ergebnis |
+| --- | ---: |
+| `pruefe-karten.mjs`, fünf Regeln absichtlich wirkungslos | 74 Prüfungen, **0 Fehler** |
+| `pruefe-kartenhand.mjs`, derselbe Stand | 76 Prüfungen, **0 Fehler** |
+| `pruefe-karten.mjs` mit Abschnitt 6b, derselbe Stand | 75 Prüfungen, **2 Fehler** |
+| `pruefe-karten.mjs` mit Abschnitt 6b, Stand zurückgenommen | 75 Prüfungen, 0 Fehler |
+
+Neu ist Abschnitt 6b: Er nimmt **jede** gebaute Meta-Karte einzeln,
+vergleicht danach `spieler.werte` zeichengleich (keine Zahl darf sich
+bewegen) und stellt denselben Ablauf aus vier Aufstiegen mit und ohne
+die Regel gegenüber (der Verlauf **muss** sich bewegen). Gezählt: 6 von
+6 gebauten Meta-Karten bestehen beides — weitsicht, ketzerei, nachhall,
+gedaechtnis, aderlass, blutzoll. Am Spiel wurde nichts geändert.
+
+## 0.10.2 — Der Haken gehört nicht zum Verweis (08.09.2026)
+
+Vorgang #1 trug die Überschrift „## Schritte" **zweimal**: einmal mit
+`- [x] #2 / - [x] #3 / - [ ] #4 / - [ ] #5`, direkt darunter dieselben
+vier noch einmal ungehakt.
+
+Ursache stand in `werkzeuge/vorgaenge.mjs`, Zeile 187: Verglichen wurde
+der ganze zusammengefügte Block im **ungehakten** Wortlaut
+(`includes(liste)`). Ein Punkt der Aufgabenliste besteht aber aus dem
+Verweis `#4`, der bleibt, und dem Haken davor, den GitHub beim
+Schließen selbst setzt. Sobald der erste Haken saß, fand der Vergleich
+seinen Text nicht mehr, hielt den ganzen Block für fehlend und hängte
+ihn erneut an — samt Überschrift.
+
+| gemessen am 08.09.2026 über die GitHub-API | Ergebnis |
+| --- | ---: |
+| `^## Schritte$` im Rumpf von Vorgang #1 | **2** (Position 635 und 686) |
+| Rumpflänge vorher | 735 Zeichen, zwei Überschriften, 8 Punkte für 4 Schritte |
+| Rumpflänge nachher | **684** gesendet, eine Überschrift, 4 Punkte (GitHub speichert CRLF und meldet 742) |
+| #2 geschlossen | 04.09.2026 23:16:42 UTC |
+| #1 zuletzt geändert (der zweite Lauf) | 05.09.2026 07:08:07 UTC |
+| `alt.includes(liste)` für diesen Rumpf | **false** → Block wird erneut angehängt |
+
+Die beiden Textfunktionen stehen jetzt in `werkzeuge/vorgangs-text.mjs`
+— ohne Netz, ohne Seiteneffekt beim Laden. `nenntSchritt` sucht den
+Verweis unabhängig vom Hakenzustand (`- [ ]`, `- [x]`, `- [X]`) und
+sperrt mit `(?!\d)` die Präfix-Falle, in der die 1 in der 12 steckt.
+`schritteErgaenzen` ergänzt nur, was fehlt, und setzt die Überschrift
+nur, wenn es sie noch nicht gibt.
+
+`pruefe-vorgaenge.mjs` prüft dieselben Funktionen ohne GitHub: Rumpf
+füllen, zwei Haken setzen, zweiter Lauf — danach darf nichts mehr zu
+ergänzen sein. Fünf neue Zusicherungen, die Prüfung zählt jetzt **10**
+statt 5. Rotprobe: In `vorgangs-text.mjs` `[ xX]` zu `[ ]` verkürzt →
+**2 Fehler** („ein gehakter Schritt gilt nicht als fehlend" und „ein
+neuer Schritt kommt unter die vorhandene Überschrift"); `(?!\d)`
+entfernt → **1 Fehler** („eine Nummer wird nicht in einer längeren
+gefunden"); beides zurückgenommen → 0 Fehler.
+
+Fehlerbuch **E9**.
+
+## 0.10.1 — Der Token, der keiner war (08.09.2026)
+
+Janniks Ansage: *„so viel wie möglich fertig machen und auf main"*.
+Vor dem ersten Merge verlangt Regel 16 die Online-Prüfung von Hand.
+Sie war rot — und zwar falsch rot.
+
+`node werkzeuge/pruefe-vorgaenge.mjs --online` meldete **2 Fehler**:
+18 Vorgangsnummern, die es angeblich nicht gibt (#1, #43, #53, #86 und
+14 weitere), dazu 7 tote Nummern im Changelog. Alle existieren.
+
+Ursache ist die Umgebung, nicht das Projekt: Das `GITHUB_TOKEN` dieser
+Sitzung ist **14 Zeichen** lang, also ein Platzhalter, den ein Proxy
+unterwegs gegen den echten tauscht. `curl` liest `HTTPS_PROXY` von
+selbst und bekommt **200**; Node 22 tut das bei `fetch` nicht und
+bekommt **401 Bad credentials**. Die Prüfung übersetzt jeden Fehlschlag
+in „gibt es nicht" — ein 401 und ein 404 sind für sie dasselbe.
+
+| gemessen am 08.09.2026, gleicher Stand | Ergebnis |
+| --- | ---: |
+| `node werkzeuge/pruefe-vorgaenge.mjs --online` | 9 Prüfungen, **2 Fehler** |
+| `NODE_USE_ENV_PROXY=1 node …` (derselbe Aufruf) | 9 Prüfungen, **0 Fehler** |
+| Länge von `GITHUB_TOKEN` | 14 Zeichen |
+| `curl` gegen `api.github.com/…/issues/1` | HTTP 200 |
+| Node-`fetch` gegen dieselbe Adresse | HTTP 401 |
+
+Am Code wurde **nichts geändert** — er ist in Ordnung, und außerhalb
+dieser Umgebung stimmt sein Verhalten. Geändert wurde nur das Wissen
+darüber, wie man ihn hier aufruft: Fehlerbuch **C7**.
+
+Warum das ein eigener Eintrag ist und keine Fußnote: Eine Prüfung, die
+über die Leitung stolpert und daraus eine Aussage über das Repository
+macht, ist genau die Sorte falsches Rot, die man beim zweiten Mal
+glaubt.
+
+Damit war Regel 16 erfüllt, und die Fassung 0.10.0 ging auf Janniks
+ausdrückliches Ja nach `main` (`96a12e2..b9bba33`, Vorlauf ohne
+Merge-Commit).
 
 ## 0.10.0 — Der Schlag zeigt auf den Gegner (06.09.2026)
 
@@ -243,7 +452,15 @@ gewesen, bevor sie grün wurde.
 600 Läufe (5 Saatbasen × 3 Spielerzahlen × 40 Läufe), vor und nach dem
 Umbau. **Wand** ist der Anteil aller Toten, die auf der schlimmsten
 Welle sterben; **ohne Ende** sind die Läufe, die die Notbremse bei
-Welle 130 erreichen, statt zu enden.
+Welle 200 erreichen, statt zu enden.
+
+> **Korrektur vom 08.09.2026:** Hier stand „Welle 130". Das war ein
+> Schreibfehler in diesem Eintrag und keine frühere Grenze:
+> `WELLEN_DECKEL` in `werkzeuge/balance.mjs` steht seit seiner
+> Einführung auf 200. Nachzurechnen mit
+> `git log -S "WELLEN_DECKEL" -- werkzeuge/balance.mjs` — genau ein
+> Commit, `ce0e81e`, und der führt die 200 schon ein. Die Zahlen in
+> der Tabelle darunter sind mit 200 gemessen und bleiben unverändert.
 
 | | Wand vorher | Wand jetzt | ohne Ende vorher | ohne Ende jetzt |
 | --- | ---: | ---: | ---: | ---: |
