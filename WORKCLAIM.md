@@ -12,7 +12,7 @@ einzige Stelle, an der sich zwei Sitzungen sehen.
 
 | Bereich | Besitzer | Ziel | Seit |
 | --- | --- | --- | --- |
-| — | frei | niemand schreibt gerade | 07.09.2026 00:20 |
+| — | frei | niemand schreibt gerade | 08.09.2026 10:35 |
 
 ## Format
 

@@ -3,6 +3,100 @@
 Oben das Neueste. Jeder Eintrag sagt **was**, **warum** und **womit
 gemessen** — nicht nur, dass etwas anders ist.
 
+## 0.10.1 — Der Vorhang: die Seite bittet, nicht gelistet zu werden (08.09.2026)
+
+Janniks Frage, wörtlich: *„ich habe nun auch das github abo. bekommen
+wir das nur nur sichtbar für freubde und mich?"* — und auf die
+Rückfrage „reicht dir ein Vorhang, oder willst du ein Schloss" seine
+Antwort: **der Vorhang.**
+
+### Was das Abo wirklich ändert, und was nicht
+
+Nachgeschlagen, nicht erinnert — GitHubs eigene Unterlagen:
+
+| | mit GitHub Pro |
+| --- | --- |
+| Pages aus einem **privaten** Repository | ja |
+| die veröffentlichte Seite bleibt trotzdem öffentlich erreichbar | ja |
+| Zugangssperre für die Seite selbst | **nein** |
+
+Eine Pages-Seite, die nur bestimmte Leute öffnen dürfen, gibt es
+ausschließlich in GitHub Enterprise Cloud, und dort nur für
+Repositories, die einer **Organisation** gehören. `Kimpaliz` ist ein
+persönliches Konto; beides trifft nicht zu.
+
+Damit ist Vorgang **#92** von einer anderen Seite noch einmal offen:
+Er wurde am 05.09.2026 mit *„ja. aber über github freigeben?? nicht
+wlan!!!!!"* zugunsten von Möglichkeit **A** (öffentlich) entschieden —
+Möglichkeit **B** dort lautete wörtlich *„Privat lassen und für die
+Adresse zahlen. GitHub Pro (rund 4 $ im Monat)"*, und genau die ist
+seit heute gekauft. Der Schalter steht bei Jannik, nicht hier.
+
+### Was gebaut wurde
+
+**Eine Zeile in `index.html`:** `<meta name="robots" content="noindex,
+nofollow">`, mit der Begründung darüber. Sie bittet Suchmaschinen,
+die Seite nicht in ihre Trefferlisten aufzunehmen. Wer die Adresse
+nicht kennt, findet sie dann nicht.
+
+**Und `werkzeuge/pruefe-sichtbarkeit.mjs`,** damit diese Zeile nicht
+lautlos wieder verschwindet. Sie ist genau die Sorte Zeile, die beim
+nächsten Umbau des Kopfbereichs mitgeht, ohne dass irgendetwas rot
+wird — bemerkt würde es erst, wenn jemand den Spielnamen sucht und die
+Seite findet. Ein Fehler ohne Symptom, mit langer Zündschnur.
+
+### Die Falle, die genau umgekehrt aussieht
+
+**Bewusst keine `robots.txt`.** Sie wirkt strenger und ist die
+schlechtere Lösung: Sie verbietet das **Lesen** der Seite. Die
+Suchmaschine sieht den Vermerk im Kopf dann nie und darf die Adresse
+trotzdem listen — ohne Beschreibung, aber auffindbar. Google rät
+selbst davon ab, `robots.txt` zum Verstecken zu benutzen. Die Prüfung
+hält deshalb **beides** fest: dass der Vermerk da ist, und dass es
+keine `robots.txt` gibt.
+
+### Zuerst rot gemacht, jede Zusicherung einzeln
+
+| Zustand | Ergebnis |
+| --- | --- |
+| ohne die Zeile | 4 Prüfungen, **2 Fehler** |
+| `content="index, follow"` | 4 Prüfungen, **2 Fehler** |
+| `robots.txt` angelegt | 4 Prüfungen, **1 Fehler** |
+| Endstand | 4 Prüfungen, **0 Fehler** |
+
+Die dritte Zusicherung („nimmt sich nicht selbst zurück") geht ins
+Leere, solange es gar keinen Vermerk gibt — deshalb ist sie mit
+`index, follow` getrennt rot gemacht worden statt mitgezählt.
+
+### Gemessen
+
+Die ganze Kette nach der Änderung: **27 Prüfungen, alles grün**, 813,5 s
+bei bis zu 4 gleichzeitig (`node werkzeuge/pruefe-alles.mjs`, 08.09.2026).
+Die neue `sichtbarkeit` läuft darin mit; keine bestehende Prüfung hat
+sich verändert.
+
+### Bewusst nicht gebaut
+
+- **Keine eigene Domain.** Für eine Adresse wie `shadows.de` wird
+  binnen Minuten ein Sicherheitszeugnis auf genau diesen Namen
+  ausgestellt und in öffentliche, durchsuchbare Verzeichnisse
+  eingetragen (Certificate Transparency). Eine gekaufte Adresse wäre
+  damit **auffindbarer** als `kimpaliz.github.io`, nicht weniger.
+- **Kein Passwort, kein Konto, kein fremder Dienst.** Alle drei
+  standen zur Wahl und sind an Janniks Vorgabe gescheitert, dass die
+  Freunde nichts merken sollen.
+- **Das Repository selbst wurde nicht umgestellt.** Das ist eine
+  Einstellung an Janniks Konto und geht von hier aus nicht — und
+  Sichtbarkeit des Repositorys fällt ohnehin unter Regel 3.
+
+### Der Zweig
+
+Diese Änderung fasst zwei Systeme an — `index.html` (Bedienung) und
+`werkzeuge/` (Prüfwesen) — und liegt trotzdem auf **einem** Zweig,
+`claude/scotophobia-granit-hoehle-wsp1as`. Das weicht von Regel 2 ab
+und ist hier so vorgegeben. Getrennt wären es zwei Zweige, von denen
+einer ohne den anderen sinnlos ist: eine Prüfung ohne das Geprüfte.
+
 ## 0.10.0 — Der Schlag zeigt auf den Gegner (06.09.2026)
 
 Janniks Ansage, wörtlich: *„wo sind die eindeutigen initial attack
