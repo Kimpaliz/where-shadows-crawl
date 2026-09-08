@@ -3,6 +3,67 @@
 Oben das Neueste. Jeder Eintrag sagt **was**, **warum** und **womit
 gemessen** — nicht nur, dass etwas anders ist.
 
+## 0.10.5 — Der Prüfstand nennt den gemessenen Modus (08.09.2026)
+
+Roadmap 1.3, Vorgang **#4**: *„`balance.mjs --modus arena` läuft und
+die Tabelle sagt, welcher Modus gemessen wurde."*
+
+**Was vorher wirklich passierte:** `--modus` gab es in `balance.mjs`
+gar nicht. Der einzige Schalterleser konnte nur Zahlen, also wurde der
+Schalter stumm verschluckt. `spieleLauf` reichte den Modus schon
+durch — aber `messreihe` dazwischen nahm ihn nicht einmal entgegen.
+
+**Der Rot-Beweis, vor dem Umbau gemessen:** Der Wächter meldete
+**7 Fehler** von 35 Prüfungen. Der sprechendste Satz daraus:
+
+    ein anderer Modus kommt bis in den Lauf durch
+    Bannkreis: verloren in Welle 6, Karawane: verloren in Welle 6
+
+Zwei verschiedene Modi, zeichengleich dasselbe Ergebnis — die Leitung
+war unterbrochen. **Ein Vergleich „arena gegen Standard" hätte das nie
+gefunden:** Ohne Weitergabe spielt jeder Lauf ohnehin den Bannkreis,
+also wäre er auch auf dem kaputten Stand grün gewesen. Gemessen wird
+deshalb gegen die Karawane, den einzigen Modus, der sich heute anders
+verhält (sie läuft bis zur Notbremse, statt in Welle 6 zu enden).
+
+**Der Beweis, auf dem Phase 1 besteht** — „am Spiel darf sich nichts
+ändern":
+
+| 3 Läufe je 1/2/4 Spielern, Saat 1, alle Einzelergebnisse | |
+| --- | --- |
+| vorher | `fb1603ee…d33c12` |
+| nachher | `fb1603ee…d33c12` |
+| Vergleich | **bitgleich**, `diff` ohne Ausgabe |
+| Dauer | 56,2 s |
+
+**Was jetzt geht:**
+
+| Aufruf | Ergebnis |
+| --- | --- |
+| `--modus arena --laeufe 3 --spieler 1` | Kopfzeile „3 Laeufe, 1 Spieler, Modus arena (Bannkreis)" |
+| ohne `--modus` | dieselbe Kopfzeile, dieselben Zahlen |
+| `--tabelle` | Fußzeile nennt den Modus mit |
+| `--modus quatsch` | „Unbekannter Modus: quatsch / Bekannt sind: arena, karawane", Rückgabewert 1 |
+| `--modus karawane` | „ist noch nicht gebaut und wird nicht gemessen", Rückgabewert 1 |
+
+Kein Stapelauszug in beiden Fehlerfällen (`grep -c "^    at "` → 0).
+Der Modus in der Kopfzeile kommt aus `m.modusId`, nicht aus dem
+Schalter — sonst nennte der Prüfstand, was man wollte, statt was er
+gespielt hat (Fehlerbuch E2).
+
+Der Wächter prüft außerdem den **Aufruf**, nicht nur die Bibliothek:
+drei Kindprozesse über `spawnSync`, wie in `pruefe-protokoll.mjs`.
+Ohne das prüft niemand die Kommandozeile (Fehlerbuch E1).
+
+Nachher: **35 Prüfungen, 0 Fehler**, gemessen 778,2 s.
+
+**Nebenbei berichtigt**, weil dieselbe Messung sie widerlegt: Die
+Kopfnotiz der Prüfung behauptete „rund 60 Sekunden" für 40 Läufe je
+Spielerzahl — gemessen sind es 778,2 s, mehr als das Zehnfache. Und
+die Hochrechnung für drei Saatbasen stand auf „880 s statt 250"; sie
+lautet jetzt „rund 2.300 s" und sagt dazu, dass sie hochgerechnet und
+nicht gemessen ist.
+
 ## 0.10.4 — Zahlen, die neben der Wahrheit standen (08.09.2026)
 
 Keine Zeile Spiellogik geändert. Berichtigt wurden fünf Angaben, die

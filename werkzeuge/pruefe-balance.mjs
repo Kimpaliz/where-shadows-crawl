@@ -34,7 +34,8 @@
    `werkzeuge/balance.mjs` (spielt), `spiel/*` (wird gespielt),
    `spiel/katalog/modi.mjs` (was „Ende" überhaupt heißt). */
 
-import { macheMelder } from "./helfer.mjs";
+import { spawnSync } from "node:child_process";
+import { macheMelder, WURZEL } from "./helfer.mjs";
 import { messreihe, WELLEN_DECKEL } from "./balance.mjs";
 import { modus } from "../spiel/katalog/modi.mjs";
 
@@ -58,9 +59,13 @@ const arena = modus("arena");
    Wächter, dessen Urteil bei einer echten Verbesserung umkippt, ist
    ein Würfel mit Meinung.
 
-   40 Läufe je Spielerzahl kosten rund 60 Sekunden. Das ist der Preis
-   dafür, dass die Zahl unten etwas bedeutet. Wer sie senkt, senkt
-   nicht die Laufzeit, sondern die Aussagekraft. */
+   40 Läufe je Spielerzahl sind der Preis dafür, dass die Zahl unten
+   etwas bedeutet. Wie hoch der Preis ist, gemessen am 08.09.2026 auf
+   dem Rechner dieser Sitzung: **778,2 s** (12 min 58,2 s) für den
+   ganzen Lauf dieser Datei, Ausgabe „35 Prüfungen, 0 Fehler".
+   Nachzurechnen mit `time node werkzeuge/pruefe-balance.mjs`.
+   Wer die Zahl senkt, senkt nicht die Laufzeit, sondern die
+   Aussagekraft. */
 const REIHEN = [
   { spieler: 1, laeufe: 40 },
   { spieler: 2, laeufe: 40 },
@@ -290,8 +295,9 @@ for (const m of messungen.slice(1)) {
    (je 40 Läufe, mit dem heutigen Stand) sind es **9,0 / 13,0 / 17,7**.
    Der Anstieg bei vier Spielern ist also echt und nicht nur Rauschen —
    nur eben nicht auf einen Lauf genau messbar. Eine Prüfung, die drei
-   Basen misst, bräuchte 880 s statt 250; das kostet mehr, als sie wert
-   ist.
+   Basen misst, bräuchte das Dreifache der oben gemessenen 778,2 s —
+   hochgerechnet, nicht gemessen: rund 2.300 s; das kostet mehr, als
+   sie wert ist.
 
    Deshalb steht die Grenze jetzt auf dem **schlechtesten der fünf
    gemessenen Werte**, plus nichts. Sie fängt damit keine kleinen
@@ -389,6 +395,77 @@ melde(arena.endet(1) === "zeit", "eine normale Welle endet auf die Uhr");
 melde(arena.endet(4) === "elite", "eine Hauptmannswelle endet mit dem Hauptmann");
 melde(arena.endet(8) === "elite" && arena.endet(7) === "zeit",
   `jede ${arena.elitewelleJede}. Welle ist eine Hauptmannswelle`);
+
+/* ── Kommt der Modus wirklich an? ─────────────────────────────────── */
+
+/* ⚠️ **Der Vergleich „arena gegen Standard" wäre hier wertlos.** Er war
+   grün, solange `messreihe` den Modus verschluckt hat: Ohne Weitergabe
+   spielt jeder Lauf ohnehin den Bannkreis, also kommt zweimal dasselbe
+   heraus. Gemessen am 08.09.2026, vor Vorgang #4:
+   `messreihe({ laeufe: 1, saat: 1, modusId: "karawane" })` lieferte
+   Zeichen für Zeichen dasselbe wie mit `"arena"` — beide „verloren" in
+   Welle 6, je 1696 Zeichen JSON.
+
+   Rot wird nur ein Modus, der sich **anders verhält**. Die Karawane ist
+   heute der einzige: Sie ist nicht gebaut, ihre Verliererbedingung
+   greift ohne Kutsche nie, und deshalb läuft sie bis zur Notbremse
+   `WELLEN_DECKEL`, statt in Welle 6 zu enden. Gemessen wird hier also
+   **nicht die Karawane**, sondern die Leitung von `--modus` bis in
+   `starteLauf`. Kosten: ein Lauf je Seite, gemessen rund 8 s. */
+{
+  const bannkreis = messreihe({ laeufe: 1, spielerzahl: 1, saat: 1, modusId: "arena" });
+  const karawane = messreihe({ laeufe: 1, spielerzahl: 1, saat: 1, modusId: "karawane" });
+  melde(JSON.stringify(bannkreis.ergebnisse[0]) !== JSON.stringify(karawane.ergebnisse[0]),
+    "ein anderer Modus kommt bis in den Lauf durch",
+    `Bannkreis: ${bannkreis.ergebnisse[0].phase} in Welle ${bannkreis.ergebnisse[0].welle}, `
+    + `Karawane: ${karawane.ergebnisse[0].phase} in Welle ${karawane.ergebnisse[0].welle}`);
+
+  melde(bannkreis.modusId === arena.id && bannkreis.modusName === arena.name,
+    "die Messreihe nennt den Modus, den sie gespielt hat",
+    `${bannkreis.modusId} (${bannkreis.modusName})`);
+
+  /* Kostenlos: `messungen[0]` ist die Reihe ohne Modusangabe, die diese
+     Prüfung ohnehin schon gefahren hat (oben, REIHEN). */
+  melde(messungen[0].modusId === arena.id,
+    "ohne --modus wird der Bannkreis gemessen", `${messungen[0].modusId}`);
+
+  let geworfen = null;
+  try { messreihe({ laeufe: 1, spielerzahl: 1, saat: 1, modusId: "gibtesnicht" }); }
+  catch (f) { geworfen = f; }
+  melde(geworfen !== null && /gibtesnicht/.test(geworfen.message),
+    "eine unbekannte Moduskennung fällt vor dem ersten Lauf auf",
+    geworfen ? geworfen.message : "kein Fehler geworfen");
+}
+
+/* ── Die Kommandozeile: ein falscher Modus stürzt nicht ab ────────── */
+
+/* Dass der Prüfstand *messen* kann, sagt noch nicht, dass sein Aufruf
+   sich benimmt (Fehlerbuch E1: Werkzeuge außerhalb der Kette gehen
+   still kaputt). Die ersten beiden Kindprozesse brechen ab, bevor der
+   erste Lauf beginnt, und kosten deshalb fast nichts; der dritte misst
+   einen einzigen Lauf. Dieselbe Bauart wie in
+   `werkzeuge/pruefe-protokoll.mjs`. */
+{
+  const rufe = (...argumente) => spawnSync(process.execPath,
+    ["werkzeuge/balance.mjs", ...argumente], { encoding: "utf8", cwd: WURZEL });
+
+  const quatsch = rufe("--modus", "gibtesnicht");
+  melde(quatsch.status === 1 && /Unbekannter Modus/.test(quatsch.stderr || ""),
+    "ein unbekannter Modus endet mit einer deutschen Meldung",
+    (quatsch.stderr || "").split("\n")[0]);
+  melde(!/^\s+at /m.test(quatsch.stderr || ""),
+    "und ohne Stapelauszug", (quatsch.stderr || "").split("\n").slice(0, 2).join(" · "));
+
+  const karawane = rufe("--modus", "karawane");
+  melde(karawane.status === 1 && /noch nicht gebaut/.test(karawane.stderr || ""),
+    "ein ungebauter Modus wird gar nicht erst gemessen",
+    (karawane.stderr || "").split("\n")[0]);
+
+  const arenaRuf = rufe("--modus", "arena", "--laeufe", "1", "--spieler", "1");
+  melde(arenaRuf.status === 0 && /Modus arena \(Bannkreis\)/.test(arenaRuf.stdout || ""),
+    "die Kopfzeile nennt den gemessenen Modus",
+    (arenaRuf.stdout || "").split("\n").filter(Boolean)[0]);
+}
 
 /* ── Beute kommt an ──────────────────────────────────────────────── */
 
