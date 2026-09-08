@@ -12,7 +12,10 @@ einzige Stelle, an der sich zwei Sitzungen sehen.
 
 | Bereich | Besitzer | Ziel | Seit |
 | --- | --- | --- | --- |
-| — | frei | niemand schreibt gerade | 07.09.2026 00:20 |
+| `spiel/stufen.mjs`, `runtime/oberflaeche.js` | Claude (Sitzung Weltenschmiede-Aufgaben) | #58 — Aufstiegsmenü friert nicht mehr ein, wenn einer wegbricht | 08.09.2026 13:17 |
+| `werkzeuge/balance.mjs` | Claude (Sitzung Weltenschmiede-Aufgaben) | #4 — der Prüfstand nennt den gemessenen Modus | 08.09.2026 13:17 |
+| `werkzeuge/vorgaenge.mjs` | Claude (Sitzung Weltenschmiede-Aufgaben) | doppelter Schritte-Block wird nicht mehr angehängt | 08.09.2026 13:17 |
+| `docs/`, `CHANGELOG.md` | Claude (Sitzung Weltenschmiede-Aufgaben) | sechs veraltete Angaben berichtigen | 08.09.2026 13:17 |
 
 ## Format
 

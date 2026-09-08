@@ -3,6 +3,44 @@
 Oben das Neueste. Jeder Eintrag sagt **was**, **warum** und **womit
 gemessen** — nicht nur, dass etwas anders ist.
 
+## 0.10.1 — Der Token, der keiner war (08.09.2026)
+
+Janniks Ansage: *„so viel wie möglich fertig machen und auf main"*.
+Vor dem ersten Merge verlangt Regel 16 die Online-Prüfung von Hand.
+Sie war rot — und zwar falsch rot.
+
+`node werkzeuge/pruefe-vorgaenge.mjs --online` meldete **2 Fehler**:
+18 Vorgangsnummern, die es angeblich nicht gibt (#1, #43, #53, #86 und
+14 weitere), dazu 7 tote Nummern im Changelog. Alle existieren.
+
+Ursache ist die Umgebung, nicht das Projekt: Das `GITHUB_TOKEN` dieser
+Sitzung ist **14 Zeichen** lang, also ein Platzhalter, den ein Proxy
+unterwegs gegen den echten tauscht. `curl` liest `HTTPS_PROXY` von
+selbst und bekommt **200**; Node 22 tut das bei `fetch` nicht und
+bekommt **401 Bad credentials**. Die Prüfung übersetzt jeden Fehlschlag
+in „gibt es nicht" — ein 401 und ein 404 sind für sie dasselbe.
+
+| gemessen am 08.09.2026, gleicher Stand | Ergebnis |
+| --- | ---: |
+| `node werkzeuge/pruefe-vorgaenge.mjs --online` | 9 Prüfungen, **2 Fehler** |
+| `NODE_USE_ENV_PROXY=1 node …` (derselbe Aufruf) | 9 Prüfungen, **0 Fehler** |
+| Länge von `GITHUB_TOKEN` | 14 Zeichen |
+| `curl` gegen `api.github.com/…/issues/1` | HTTP 200 |
+| Node-`fetch` gegen dieselbe Adresse | HTTP 401 |
+
+Am Code wurde **nichts geändert** — er ist in Ordnung, und außerhalb
+dieser Umgebung stimmt sein Verhalten. Geändert wurde nur das Wissen
+darüber, wie man ihn hier aufruft: Fehlerbuch **C7**.
+
+Warum das ein eigener Eintrag ist und keine Fußnote: Eine Prüfung, die
+über die Leitung stolpert und daraus eine Aussage über das Repository
+macht, ist genau die Sorte falsches Rot, die man beim zweiten Mal
+glaubt.
+
+Damit war Regel 16 erfüllt, und die Fassung 0.10.0 ging auf Janniks
+ausdrückliches Ja nach `main` (`96a12e2..b9bba33`, Vorlauf ohne
+Merge-Commit).
+
 ## 0.10.0 — Der Schlag zeigt auf den Gegner (06.09.2026)
 
 Janniks Ansage, wörtlich: *„wo sind die eindeutigen initial attack
