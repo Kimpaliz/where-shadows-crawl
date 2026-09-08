@@ -19,7 +19,7 @@
    | `pruefe-altlasten.mjs` | neue Dateien unter der Zeilengrenze; geführte Altlasten wachsen nie | die Altlast, die „nur diesmal" um dreißig Zeilen wächst |
    | `pruefe-doku-status.mjs` | kein Dokument behauptet einen Zustand | das „noch offen", das seit vier Monaten falsch ist und das jeder glaubt |
    | `pruefe-sprache.mjs` | die gewählte Sprachtrennung, über eine Wortliste | der eine deutsche Bezeichner zwischen 300 englischen |
-   | `pruefe-vorgaenge.mjs` | jede Phase und jeder Schritt hat einen Vorgang, keine Nummer doppelt | die Vorgangsnummer, die beim Umschreiben der Roadmap unter die falsche Phase gerutscht ist |
+   | `pruefe-vorgaenge.mjs` | jede Phase und jeder Schritt hat einen Vorgang, keine Nummer doppelt, und der Schritte-Block eines Sammelvorgangs entsteht genau einmal | die Vorgangsnummer, die beim Umschreiben der Roadmap unter die falsche Phase gerutscht ist — und die Aufgabenliste, die nach dem ersten Haken ein zweites Mal angehängt wird |
    | `pruefe-arbeitsweise.mjs` | nie auf dem Hauptzweig, nichts ohne Changelog-Eintrag | genau die zwei Regeln, die man beim Arbeiten vergisst |
 
    ── Die Fachprüfungen dieses Spiels ─────────────────────────────────

@@ -504,6 +504,30 @@ Eintrag.
 
 ---
 
+### E9 · Der Vergleich las den Stand mit, statt nur den Verweis
+
+**Was ich tat:** `vorgaenge.mjs roadmap --wirklich` ein zweites Mal
+laufen lassen, nachdem zwei Schritte geschlossen waren.
+**Was herauskam:** Sammelvorgang #1 trug „## Schritte" zweimal — acht
+Punkte für vier Schritte, die zweite Liste für immer ungehakt.
+**Warum:** Der Vergleich suchte den ganzen zusammengefügten Block im
+ungehakten Wortlaut (`includes(liste)`). Ein Punkt der Aufgabenliste
+besteht aber aus zwei Dingen: dem **Verweis** `#4`, der bleibt, und dem
+**Haken** davor, den GitHub beim Schließen selbst setzt. Wer beide
+zusammen sucht, sucht Verbindung und Stand in einem — und findet die
+Verbindung nicht mehr, sobald der Stand sich ändert. Dazu kam, dass der
+Vergleich alles auf einmal prüfte: Auch ein einzelner neuer Schritt
+ließ den ganzen Block als fehlend gelten.
+**Woran ich es früher merke:** Ein Vergleich, der entscheidet, ob etwas
+schon **da** ist, darf nur die unveränderlichen Teile lesen. Alles, was
+sich von außen ändern kann — Haken, Groß- und Kleinschreibung,
+Reihenfolge —, gehört aus dem Muster heraus. Und geprüft wird je
+Eintrag, nicht der ganze Block: Sonst macht ein einziger neuer Eintrag
+alle alten noch einmal. Gegenprobe ohne Netz: dieselbe Änderung zweimal
+anwenden; beim zweiten Mal muss nichts mehr passieren.
+
+---
+
 ## F · Zu viel Kontext in einer Sitzung
 
 ### F1 · Zwei Besitzer für dieselbe Datei *(Startkapital)*

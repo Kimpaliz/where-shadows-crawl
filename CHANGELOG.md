@@ -3,6 +3,47 @@
 Oben das Neueste. Jeder Eintrag sagt **was**, **warum** und **womit
 gemessen** — nicht nur, dass etwas anders ist.
 
+## 0.10.2 — Der Haken gehört nicht zum Verweis (08.09.2026)
+
+Vorgang #1 trug die Überschrift „## Schritte" **zweimal**: einmal mit
+`- [x] #2 / - [x] #3 / - [ ] #4 / - [ ] #5`, direkt darunter dieselben
+vier noch einmal ungehakt.
+
+Ursache stand in `werkzeuge/vorgaenge.mjs`, Zeile 187: Verglichen wurde
+der ganze zusammengefügte Block im **ungehakten** Wortlaut
+(`includes(liste)`). Ein Punkt der Aufgabenliste besteht aber aus dem
+Verweis `#4`, der bleibt, und dem Haken davor, den GitHub beim
+Schließen selbst setzt. Sobald der erste Haken saß, fand der Vergleich
+seinen Text nicht mehr, hielt den ganzen Block für fehlend und hängte
+ihn erneut an — samt Überschrift.
+
+| gemessen am 08.09.2026 über die GitHub-API | Ergebnis |
+| --- | ---: |
+| `^## Schritte$` im Rumpf von Vorgang #1 | **2** (Position 635 und 686) |
+| Rumpflänge vorher | 735 Zeichen, zwei Überschriften, 8 Punkte für 4 Schritte |
+| Rumpflänge nachher | **684** gesendet, eine Überschrift, 4 Punkte (GitHub speichert CRLF und meldet 742) |
+| #2 geschlossen | 04.09.2026 23:16:42 UTC |
+| #1 zuletzt geändert (der zweite Lauf) | 05.09.2026 07:08:07 UTC |
+| `alt.includes(liste)` für diesen Rumpf | **false** → Block wird erneut angehängt |
+
+Die beiden Textfunktionen stehen jetzt in `werkzeuge/vorgangs-text.mjs`
+— ohne Netz, ohne Seiteneffekt beim Laden. `nenntSchritt` sucht den
+Verweis unabhängig vom Hakenzustand (`- [ ]`, `- [x]`, `- [X]`) und
+sperrt mit `(?!\d)` die Präfix-Falle, in der die 1 in der 12 steckt.
+`schritteErgaenzen` ergänzt nur, was fehlt, und setzt die Überschrift
+nur, wenn es sie noch nicht gibt.
+
+`pruefe-vorgaenge.mjs` prüft dieselben Funktionen ohne GitHub: Rumpf
+füllen, zwei Haken setzen, zweiter Lauf — danach darf nichts mehr zu
+ergänzen sein. Fünf neue Zusicherungen, die Prüfung zählt jetzt **10**
+statt 5. Rotprobe: In `vorgangs-text.mjs` `[ xX]` zu `[ ]` verkürzt →
+**2 Fehler** („ein gehakter Schritt gilt nicht als fehlend" und „ein
+neuer Schritt kommt unter die vorhandene Überschrift"); `(?!\d)`
+entfernt → **1 Fehler** („eine Nummer wird nicht in einer längeren
+gefunden"); beides zurückgenommen → 0 Fehler.
+
+Fehlerbuch **E9**.
+
 ## 0.10.1 — Der Token, der keiner war (08.09.2026)
 
 Janniks Ansage: *„so viel wie möglich fertig machen und auf main"*.

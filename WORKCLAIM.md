@@ -12,9 +12,11 @@ einzige Stelle, an der sich zwei Sitzungen sehen.
 
 | Bereich | Besitzer | Ziel | Seit |
 | --- | --- | --- | --- |
-| `spiel/stufen.mjs`, `runtime/oberflaeche.js` | Claude (Sitzung Weltenschmiede-Aufgaben) | #58 — Aufstiegsmenü friert nicht mehr ein, wenn einer wegbricht | 08.09.2026 13:17 |
-| `werkzeuge/balance.mjs` | Claude (Sitzung Weltenschmiede-Aufgaben) | #4 — der Prüfstand nennt den gemessenen Modus | 08.09.2026 13:17 |
-| `werkzeuge/vorgaenge.mjs` | Claude (Sitzung Weltenschmiede-Aufgaben) | doppelter Schritte-Block wird nicht mehr angehängt | 08.09.2026 13:17 |
+| `spiel/stufen.mjs`, `runtime/oberflaeche.js`, `runtime/karten-hand.js`, `runtime/start.js`, `werkzeuge/pruefe-netz.mjs` | Claude (Sitzung Weltenschmiede-Aufgaben) | #58 — Aufstiegsmenü friert nicht mehr ein, wenn einer wegbricht | 08.09.2026 13:17 |
+| `werkzeuge/balance.mjs`, `werkzeuge/pruefe-balance.mjs` | Claude (Sitzung Weltenschmiede-Aufgaben) | #4 — der Prüfstand nennt den gemessenen Modus | 08.09.2026 13:17 |
+| `werkzeuge/vorgaenge.mjs`, `werkzeuge/vorgangs-text.mjs`, `werkzeuge/pruefe-vorgaenge.mjs` | Claude (Sitzung Weltenschmiede-Aufgaben) | doppelter Schritte-Block wird nicht mehr angehängt | 08.09.2026 13:17 |
+| `werkzeuge/pruefe-karten.mjs` | Claude (Sitzung Weltenschmiede-Aufgaben) | #68 — das Fertig-Kriterium der Meta-Karten wird maschinell festgehalten | 08.09.2026 14:05 |
+| `werkzeuge/pruefe-alles.mjs`, `werkzeuge/pruefe-doku-status.mjs` | Claude (Sitzung Weltenschmiede-Aufgaben) | neue Prüfungen in die Kette und in die Wegweiser-Tabelle | 08.09.2026 14:05 |
 | `docs/`, `CHANGELOG.md` | Claude (Sitzung Weltenschmiede-Aufgaben) | sechs veraltete Angaben berichtigen | 08.09.2026 13:17 |
 
 ## Format
