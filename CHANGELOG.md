@@ -3,6 +3,45 @@
 Oben das Neueste. Jeder Eintrag sagt **was**, **warum** und **womit
 gemessen** — nicht nur, dass etwas anders ist.
 
+## 0.10.4 — Zahlen, die neben der Wahrheit standen (08.09.2026)
+
+Keine Zeile Spiellogik geändert. Berichtigt wurden fünf Angaben, die
+überholt oder schlicht falsch waren — jede gegen die Quelle geprüft,
+die sie beschreibt.
+
+| Stelle | stand da | ist gemessen | womit nachgerechnet |
+| --- | --- | --- | --- |
+| `CHANGELOG.md` 190 | Notbremse bei Welle 130 | 200 | `git log -S "WELLEN_DECKEL" -- werkzeuge/balance.mjs` |
+| `docs/ROADMAP.md` 77 | „Es fehlt nur Janniks Wahl" | Vorgang #47, 05.09.2026, in `527a930` | GitHub-Vorgang #47 |
+| `docs/ROADMAP.md` 549 | „Der offene Punkt ist die Vermittlung" | Vorgang #46, 05.09.2026 | GitHub-Vorgang #46, `netz/broker.mjs` |
+| `docs/SPIEL.md` 214/234/239/240/247 | zwölf Wellen, „Nachtzehrer", geteilte Tastatur | endlos, „Where Shadows Crawl", nur Lobby | Vorgänge #46 #48 #49 |
+| `docs/ROADMAP.md` 28/318 | 11 Stellen in vier Dateien | **12** | der `grep`-Befehl, der jetzt daneben steht |
+
+**Die 130 war nie eine Grenze.** `git log -S "WELLEN_DECKEL" --
+werkzeuge/balance.mjs` nennt genau einen Commit, `ce0e81e`, und der
+führt den Deckel schon mit 200 ein. Es war ein Schreibfehler in einem
+Eintrag, nicht die Erinnerung an einen alten Stand — deshalb steht die
+Berichtigung dort als datierte Korrektur und ersetzt den Satz nicht
+lautlos.
+
+**Warum drei Zählungen des Bannkreises drei Zahlen ergaben:** Es gab
+keine Zähleinheit. Jetzt steht sie da — Trefferzeilen der Bezeichner
+`arenaRadius`, `arena.radius`, `haltImKreis` in den vier
+Produktivdateien — und der Befehl gleich darunter. `grep -o` zählt
+15, weil drei Zeilen zwei Bezeichner tragen; mit `werkzeuge/` sind es
+19. Ohne Einheit ist jede dieser Zahlen richtig und keine brauchbar.
+
+**Was ausdrücklich stehen geblieben ist:** die Drei-Wege-Tabelle in
+`docs/SPIEL.md` 253-257 (Handvermittlung, Vermittlungsdienst, eigener
+Server). Sie ist die Abwägung, nicht der Stand — und Abwägungen
+veralten nicht.
+
+**Der Wächter dafür:** `pruefe-doku-status.mjs` kannte „noch offen",
+aber nicht „Der offene Punkt ist …" und nicht „Es fehlt nur …".
+Beides ist jetzt ein Muster mehr. Zuerst rot gemacht: Zeile 549 der
+ROADMAP auf den alten Wortlaut zurückgesetzt → die Prüfung meldet
+`docs/ROADMAP.md:549  offener Punkt`; zurückgenommen → grün.
+
 ## 0.10.3 — Jede Meta-Karte, nicht nur die erste (08.09.2026)
 
 Vorgang #68 (Schritt 13.3) verlangt: *„Mindestens fünf Meta-Karten
@@ -257,7 +296,15 @@ gewesen, bevor sie grün wurde.
 600 Läufe (5 Saatbasen × 3 Spielerzahlen × 40 Läufe), vor und nach dem
 Umbau. **Wand** ist der Anteil aller Toten, die auf der schlimmsten
 Welle sterben; **ohne Ende** sind die Läufe, die die Notbremse bei
-Welle 130 erreichen, statt zu enden.
+Welle 200 erreichen, statt zu enden.
+
+> **Korrektur vom 08.09.2026:** Hier stand „Welle 130". Das war ein
+> Schreibfehler in diesem Eintrag und keine frühere Grenze:
+> `WELLEN_DECKEL` in `werkzeuge/balance.mjs` steht seit seiner
+> Einführung auf 200. Nachzurechnen mit
+> `git log -S "WELLEN_DECKEL" -- werkzeuge/balance.mjs` — genau ein
+> Commit, `ce0e81e`, und der führt die 200 schon ein. Die Zahlen in
+> der Tabelle darunter sind mit 200 gemessen und bleiben unverändert.
 
 | | Wand vorher | Wand jetzt | ohne Ende vorher | ohne Ende jetzt |
 | --- | ---: | ---: | ---: | ---: |

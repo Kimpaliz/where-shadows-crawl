@@ -61,6 +61,7 @@ const STATUS_MUSTER = [
   ["ist deployt",     /\b(ist|sind) (bereits |schon )?(deployt|ausgeliefert|veröffentlicht)\b/i],
   ["läuft bereits",   /\bläuft (bereits|schon|jetzt)\b/i],
   ["noch offen",      /\b(noch offen|steht noch aus|bislang nicht|noch nicht gebaut)\b/i],
+  ["offener Punkt",   /\b(der offene Punkt|es fehlt nur|bleibt offen|noch nicht entschieden)\b/i],
   ["erledigt",        /\b(erledigt|abgeschlossen|fertiggestellt)\b/i],
   ["nächster Schritt",/\bn(ä|ae)chste[rns]? (Schritt|Schritte)\b/i],
   ["TODO",            /\b(TODO|FIXME)\b/],

@@ -211,8 +211,12 @@ nicht Ordnungsliebe:
 
 ## 9 · Ein Lauf
 
-Zwölf Wellen, die Stunden einer Nacht. In festen Abständen kommt ein
-Hauptmann. Wer die letzte Welle übersteht, sieht den Morgen.
+Endlose Wellen zu je 30 Sekunden; jede vierte bringt einen Hauptmann,
+und sie dauert, bis er liegt. Es gibt kein Gewinnen, nur ein „wie
+weit". So hat Jannik es am 05.09.2026 entschieden (Vorgang #49).
+Davor waren es zwölf Wellen und ein Morgen — mit ihnen ist der
+Untertitel „ZWÖLF STUNDEN, EIN BANNKREIS" gegangen; heute steht dort
+„EIN BANNKREIS · EINE FACKEL · KEIN MORGEN".
 
 ---
 
@@ -231,21 +235,25 @@ Death-Must-Dies Bau kommt aus dem Boden.** Zerlegt und einsortiert in
 
 | # | Frage | Empfehlung |
 | --- | --- | --- |
-| 1 | Der Name **Nachtzehrer** — bleibt er? | Arbeitstitel, steht an einer Stelle und ist in einer Minute geändert |
+| 1 | Wie heißt das Spiel? | **Where Shadows Crawl** — Janniks Wahl vom 05.09.2026 (Vorgang #48). Der Ordner heißt weiter `Nachtzehrer`: Umbenennen bräche jeden notierten Pfad und brächte nichts. |
 | 2 | Eigenes Gold je Spieler? (4.1) | ja |
 | 3 | Niedergeschlagen statt tot? (4.2) | ja |
 | 4 | Ein gemeinsames Bild? (4.3) | ja |
 | 5 | Wellen skalieren über die Zahl der Gegner? (4.4) | ja |
-| 6 | **Am selben Rechner oder über das Netz?** (11) | erst am selben Rechner |
-| 7 | Zwölf Wellen — zu kurz, zu lang? | zwölf, dann messen |
+| 6 | **Am selben Rechner oder über das Netz?** (11) | Über das Netz — Janniks Wort vom 05.09.2026 (Vorgang #46): *„Nur lobby beitritt, kein lokal auf der selben tastatur."* Ein Rechner steuert eine Figur. |
+| 7 | Wie lang ist ein Lauf? | Endlos — Janniks Antwort vom 05.09.2026 (Vorgang #49): Wellen zu 30 Sekunden, Bosswellen bis der Boss liegt. |
 | 8 | Figuren mit Sonderregeln (Bauteil 8) — gleich oder später? | später, sie brauchen einen fertigen Kern |
 
 ---
 
 ## 11 · Die Koop-Frage mit ihrem Preis
 
-Zu viert an **einem** Rechner geht ohne alles: vier Gamepads oder eine
-geteilte Tastatur, ein Bild. Kein Netz, kein Server, kein Konto.
+Zu viert an **einem** Rechner wäre ohne alles zu haben gewesen: vier
+Gamepads oder eine geteilte Tastatur, ein Bild, kein Netz, kein
+Server, kein Konto. Dieser Weg ist am 05.09.2026 verworfen worden
+(Vorgang #46) — Janniks Wort dazu: *„Nur lobby beitritt, kein lokal
+auf der selben tastatur."* Er steht hier trotzdem, weil er der
+Maßstab für den Preis aller übrigen Wege ist.
 
 Über das Internet finden sich zwei Rechner hinter zwei Routern **nicht
 von allein**. Es braucht eine Vermittlungsstelle. Drei Wege:
