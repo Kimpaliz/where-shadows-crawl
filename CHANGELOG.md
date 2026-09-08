@@ -3,6 +3,35 @@
 Oben das Neueste. Jeder Eintrag sagt **was**, **warum** und **womit
 gemessen** — nicht nur, dass etwas anders ist.
 
+## 0.10.3 — Jede Meta-Karte, nicht nur die erste (08.09.2026)
+
+Vorgang #68 (Schritt 13.3) verlangt: *„Mindestens fünf Meta-Karten
+existieren, und jede ändert etwas, das kein Zahlenwert ist."* Die erste
+Hälfte war seit Phase 13 geprüft (`pruefe-karten.mjs`, Abschnitt 3:
+mindestens fünf ziehbare Meta-Karten). Die zweite war es **nicht**: Die
+Stelle prüfte `ziehbareKarten().find(istMeta)` — also immer nur
+„weitsicht". Die sechs Einzelprüfungen darüber setzen ihre Regel selbst,
+statt die Karte zu nehmen.
+
+Was dadurch still durchkam, ist gemessen, nicht behauptet: Wird
+`spiel/stufen.mjs` in `nimmKarte()` auf eine einzige Regel eingeengt,
+tun fünf der sechs Meta-Karten beim Nehmen gar nichts — und beide
+Prüfungen bleiben grün.
+
+| gemessen am 08.09.2026, im Zweig selbst nachgestellt | Ergebnis |
+| --- | ---: |
+| `pruefe-karten.mjs`, fünf Regeln absichtlich wirkungslos | 74 Prüfungen, **0 Fehler** |
+| `pruefe-kartenhand.mjs`, derselbe Stand | 76 Prüfungen, **0 Fehler** |
+| `pruefe-karten.mjs` mit Abschnitt 6b, derselbe Stand | 75 Prüfungen, **2 Fehler** |
+| `pruefe-karten.mjs` mit Abschnitt 6b, Stand zurückgenommen | 75 Prüfungen, 0 Fehler |
+
+Neu ist Abschnitt 6b: Er nimmt **jede** gebaute Meta-Karte einzeln,
+vergleicht danach `spieler.werte` zeichengleich (keine Zahl darf sich
+bewegen) und stellt denselben Ablauf aus vier Aufstiegen mit und ohne
+die Regel gegenüber (der Verlauf **muss** sich bewegen). Gezählt: 6 von
+6 gebauten Meta-Karten bestehen beides — weitsicht, ketzerei, nachhall,
+gedaechtnis, aderlass, blutzoll. Am Spiel wurde nichts geändert.
+
 ## 0.10.2 — Der Haken gehört nicht zum Verweis (08.09.2026)
 
 Vorgang #1 trug die Überschrift „## Schritte" **zweimal**: einmal mit
