@@ -55,7 +55,9 @@ Der Wächter prüft außerdem den **Aufruf**, nicht nur die Bibliothek:
 drei Kindprozesse über `spawnSync`, wie in `pruefe-protokoll.mjs`.
 Ohne das prüft niemand die Kommandozeile (Fehlerbuch E1).
 
-Nachher: **35 Prüfungen, 0 Fehler**, gemessen 778,2 s.
+Nachher: **35 Prüfungen, 0 Fehler**, gemessen 778,2 s. Die ganze
+Kette über alle fünf Änderungen dieses Tages: **26 von 26 bestanden,
+0 Fehler, 800,4 s** (`node werkzeuge/pruefe-alles.mjs`, 08.09.2026).
 
 **Nebenbei berichtigt**, weil dieselbe Messung sie widerlegt: Die
 Kopfnotiz der Prüfung behauptete „rund 60 Sekunden" für 40 Läufe je
